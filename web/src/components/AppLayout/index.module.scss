@@ -1,0 +1,138 @@
+/**
+ * 应用骨架样式
+ * 布局要点：
+ * 1. 左栏两态宽度恒为 --sidebar-width，切换时只有内容变化、宽度不跳动
+ * 2. 右栏是周报态专属，备忘态下不渲染，中栏因此吃满剩余宽度
+ * 3. 窗口变窄时先压缩右栏，再出现横向滚动（中栏由 --center-min-width 兜底）
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 窄屏提示：仅在小视口出现，不做移动端布局 */
+.narrowNotice {
+  display: none;
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 1023px) {
+  .narrowNotice {
+    display: block;
+  }
+}
+
+.layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
+}
+
+/* 左栏：页签 + 内容 + 底部账号区 */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+.tabs {
+  display: flex;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab,
+.tabActive {
+  flex: 1 1 50%;
+  padding: var(--space-3) 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+/* 选中页签：主色文字 + 主色下划线 */
+.tabActive {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.sidebarBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 中栏：自适应，最小宽度由变量兜底 */
+.center {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: var(--center-min-width);
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--color-bg);
+}
+
+/* 右栏：固定宽度，窗口变窄时第一个被压缩 */
+.drawer {
+  display: flex;
+  flex: 0 1 var(--drawer-width);
+  width: var(--drawer-width);
+  min-width: 0;
+  border-left: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+/* 收起后的窄条，仅保留展开入口 */
+.drawerCollapsed {
+  display: flex;
+  flex: 0 0 24px;
+  width: 24px;
+  justify-content: center;
+  padding-top: var(--space-3);
+  border-left: 1px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+}
+
+.drawerToggle {
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-faint);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.drawerToggle:hover {
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+}
+
+.drawerBody {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+}

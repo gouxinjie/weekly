@@ -1,0 +1,143 @@
+/**
+ * 工作台（周报）样式
+ * 布局要点：标题栏与空态提示固定在顶部，编辑 / 预览区占据剩余高度，工具条钉在底部。
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titleArea {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.range {
+  color: var(--color-text-faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+/* 保存态：已保存用绿色，保存失败用红色 */
+.saveState {
+  min-width: 48px;
+  color: var(--color-saved);
+  font-size: 12px;
+  text-align: right;
+}
+
+.saveStateError {
+  min-width: 48px;
+  color: var(--color-danger);
+  font-size: 12px;
+  text-align: right;
+}
+
+.charCount {
+  color: var(--color-text-faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.navButton {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.navButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.navButton:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+.modeSwitch {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.mode,
+.modeActive {
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.mode:hover {
+  color: var(--color-accent);
+}
+
+/* 选中的模式：主色底 + 白字 */
+.modeActive {
+  background-color: var(--color-accent);
+  color: #ffffff;
+}
+
+.emptyBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.emptyAction {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-accent);
+  font-size: 12px;
+}
+
+.emptyAction:hover {
+  text-decoration: underline;
+}
+
+.hint {
+  padding: var(--space-4);
+  color: var(--color-text-faint);
+  font-size: 13px;
+}
+
+.error,
+.saveError {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-danger);
+  font-size: 12px;
+}

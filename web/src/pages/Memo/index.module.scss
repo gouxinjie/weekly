@@ -1,0 +1,60 @@
+/**
+ * 工作台（备忘）样式
+ * 布局要点：新建输入框常驻顶部，清单占据剩余高度并可滚动；备忘态没有右栏。
+ */
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.composerInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  font-size: 13px;
+}
+
+.composerInput:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.composerButton {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.composerButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.composerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}

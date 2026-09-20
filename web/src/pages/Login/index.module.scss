@@ -1,0 +1,133 @@
+/**
+ * 登录 / 注册页样式
+ * 说明：独立的全屏居中卡片，宽 --login-card-width，不参与登录后的两种骨架。
+ */
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: var(--color-bg-subtle);
+}
+
+.card {
+  width: var(--login-card-width);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+}
+
+.brand {
+  margin-bottom: var(--space-6);
+  color: var(--color-accent);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+/* 跨页面跳转后带回的提示（如「已登出所有设备」） */
+.notice {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-saved);
+  font-size: 12px;
+  text-align: center;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab,
+.tabActive {
+  flex: 1 1 50%;
+  padding: var(--space-2) 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tabActive {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  font-size: 14px;
+}
+
+.input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.hint {
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.submit {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.submit:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.contact {
+  margin-top: var(--space-4);
+  color: var(--color-text-faint);
+  font-size: 12px;
+  text-align: center;
+}

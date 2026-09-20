@@ -1,0 +1,270 @@
+/**
+ * 全局重置与基础样式
+ * 说明：只放跨页面共享的极简重置，组件样式一律写在各自的 .module.scss 里。
+ */
+
+@use './variables';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* 键盘可访问性：统一聚焦环取自主色 */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* 滚动条：保持细窄，避免抢视觉 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/**
+ * 所见即所得编辑器内容排版
+ * 说明：.weekly-editor 是 TipTap 可编辑区域（ProseMirror）的稳定类名，
+ * 该区域的 DOM 由 ProseMirror 在运行时生成，无法用 CSS Modules 作用域覆盖，
+ * 因此以唯一前缀 .weekly-editor 做隔离，避免污染其它组件。
+ */
+
+.weekly-editor {
+  min-height: 100%;
+  outline: none;
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.weekly-editor > * + * {
+  margin-top: var(--space-2);
+}
+
+.weekly-editor h1,
+.weekly-editor h2,
+.weekly-editor h3,
+.weekly-editor h4,
+.weekly-editor h5,
+.weekly-editor h6 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.weekly-editor h1 {
+  font-size: 20px;
+}
+
+.weekly-editor h2 {
+  font-size: 17px;
+}
+
+.weekly-editor h3 {
+  font-size: 15px;
+}
+
+.weekly-editor h4,
+.weekly-editor h5,
+.weekly-editor h6 {
+  font-size: 14px;
+}
+
+.weekly-editor p {
+  margin: var(--space-2) 0;
+}
+
+.weekly-editor ul,
+.weekly-editor ol {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-6);
+}
+
+.weekly-editor ul {
+  list-style: disc;
+}
+
+.weekly-editor ol {
+  list-style: decimal;
+}
+
+.weekly-editor li {
+  margin: var(--space-1) 0;
+}
+
+.weekly-editor blockquote {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--color-border);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+}
+
+.weekly-editor code {
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-subtle);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.weekly-editor pre {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-subtle);
+  overflow-x: auto;
+}
+
+.weekly-editor pre code {
+  padding: 0;
+  background-color: transparent;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.weekly-editor hr {
+  margin: var(--space-4) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+/* TipTap 表格：补上边框与内边距，与预览效果一致 */
+.weekly-editor table {
+  width: 100%;
+  margin: var(--space-3) 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.weekly-editor th,
+.weekly-editor td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.weekly-editor th {
+  background-color: var(--color-bg-subtle);
+  font-weight: 600;
+}
+
+/* 表格选中单元格的高亮，便于理解光标所在位置 */
+.weekly-editor .selectedCell {
+  background-color: var(--color-bg-active);
+}
+
+/* 占位符：空文档时给出提示 */
+.weekly-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+/* TipTap 待办列表：勾选框替代列表符号，完成后划线置灰 */
+.weekly-editor ul[data-type='taskList'] {
+  padding-left: var(--space-1);
+  list-style: none;
+}
+
+.weekly-editor ul[data-type='taskList'] li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.weekly-editor ul[data-type='taskList'] li > label {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.weekly-editor ul[data-type='taskList'] li > label input[type='checkbox'] {
+  margin: 0;
+}
+
+.weekly-editor ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.weekly-editor ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--color-text-faint);
+  text-decoration: line-through;
+}

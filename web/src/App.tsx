@@ -1,0 +1,97 @@
+/**
+ * @component 应用根组件
+ * @description 定义 4 条路由与登录态守卫；登录页与设置页不属于两种骨架
+ * @author gouxinjie
+ * @created 2026-09-18
+ * @updated 2026-09-18
+ */
+import type { ReactElement } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import Login from '@/pages/Login';
+import Memo from '@/pages/Memo';
+import Settings from '@/pages/Settings';
+import Weekly from '@/pages/Weekly';
+import { getCurrentWeek } from '@/utils/week';
+import styles from './App.module.scss';
+
+/** 受保护路由属性 */
+interface RequireAuthProps {
+  /** 需要登录才能访问的页面 */
+  children: ReactElement;
+}
+
+/**
+ * 登录态守卫
+ * @param props - 受保护的子节点
+ * @returns 已登录时返回子节点，否则重定向到登录页并带上原路径
+ */
+const RequireAuth = ({ children }: RequireAuthProps) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <div className={styles.loading}>加载中…</div>;
+  }
+
+  if (user === null) {
+    const from = `${location.pathname}${location.search}`;
+    return <Navigate to="/login" replace state={{ from }} />;
+  }
+
+  return children;
+};
+
+/**
+ * 跳转到当前 ISO 周
+ * @returns 重定向节点
+ */
+const RedirectToCurrentWeek = () => {
+  const current = getCurrentWeek();
+  return <Navigate to={`/weekly/${current.year}/${current.week}`} replace />;
+};
+
+/** 应用根组件 */
+const App = () => (
+  <BrowserRouter>
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<RedirectToCurrentWeek />} />
+
+        {/* /weekly 不带参数时补全为当前 ISO 年的当前周 */}
+        <Route path="/weekly" element={<RedirectToCurrentWeek />} />
+        <Route
+          path="/weekly/:year/:week"
+          element={
+            <RequireAuth>
+              <Weekly />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/memo"
+          element={
+            <RequireAuth>
+              <Memo />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <Settings />
+            </RequireAuth>
+          }
+        />
+
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<RedirectToCurrentWeek />} />
+      </Routes>
+    </AuthProvider>
+  </BrowserRouter>
+);
+
+export default App;

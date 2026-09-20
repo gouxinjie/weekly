@@ -1,0 +1,12 @@
+/**
+ * 应用根组件样式
+ * 说明：只承载受保护路由的首屏加载态，其余布局由各页面负责。
+ */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,186 @@
+/**
+ * 备忘清单样式
+ * 说明：三段分组纵向排列；过期未完成的条目用灰底提示，仅视觉、不改变分组。
+ */
+
+.list {
+  padding: var(--space-3) var(--space-4) var(--space-6);
+}
+
+.group {
+  margin-bottom: var(--space-4);
+}
+
+.groupTitle,
+.groupToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.groupToggle:hover {
+  color: var(--color-accent);
+}
+
+.caret,
+.caretOpen {
+  display: inline-block;
+  color: var(--color-text-faint);
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.caretOpen {
+  transform: rotate(90deg);
+}
+
+.item,
+.itemOverdue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.itemOverdue {
+  background-color: var(--color-bg-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkbox {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.text,
+.textDone,
+.textInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  text-align: left;
+  word-break: break-word;
+}
+
+.text:hover {
+  color: var(--color-accent);
+}
+
+.textDone {
+  color: var(--color-text-faint);
+  text-decoration: line-through;
+}
+
+.textInput {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: calc(14px + var(--space-2));
+}
+
+.tag {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.action,
+.actionActive,
+.actionDanger {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.action:hover {
+  color: var(--color-accent);
+}
+
+.actionActive {
+  color: var(--color-accent);
+}
+
+.actionDanger:hover {
+  color: var(--color-danger);
+}
+
+.tagPanel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0 0 calc(14px + var(--space-2));
+}
+
+.select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  font-size: 11px;
+}
+
+.error {
+  padding-left: calc(14px + var(--space-2));
+  color: var(--color-danger);
+  font-size: 11px;
+}
+
+.hint {
+  padding: var(--space-2) 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-accent);
+  font-size: 12px;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

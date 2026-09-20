@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    /* 运行时为 Node.js 22，输出 CommonJS 便于原生模块与 systemd 直接启动 */
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022"],
+    "types": ["node"],
+
+    /* 输入输出：源码在 src/，构建产物在 dist/ */
+    "rootDir": "src",
+    "outDir": "dist",
+
+    /* 类型安全：禁止隐式 any，禁止 any 逃逸 */
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    /* 互操作 */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src/**/*.ts"]
+}

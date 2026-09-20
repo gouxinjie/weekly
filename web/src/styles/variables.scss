@@ -1,0 +1,73 @@
+/**
+ * 全局设计变量
+ * 说明：所有颜色、尺寸、间距只能取自本文件，组件样式里禁止写魔法值。
+ * 尺寸变量与界面骨架规格一一对应，改宽度只改这里一处。
+ */
+
+:root {
+  /* 背景 */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f7f7f5;
+  --color-bg-active: #eef4fb;
+
+  /* 文字 */
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b6b6b;
+  --color-text-faint: #9a9a9a;
+
+  /* 边框 */
+  --color-border: #e5e5e2;
+
+  /* 主色：蓝。用于选中态、主按钮、链接、聚焦环、周节点选中高亮条 */
+  --color-accent: #2f6fb0;
+
+  /* 状态色：绿。用于已写角标、已保存提示 */
+  --color-saved: #4a8b3c;
+
+  /* 危险色：红。用于删除、错误提示 */
+  --color-danger: #b03a2e;
+
+  /* 骨架尺寸：与 PRD §五 界面结构一一对应 */
+  --sidebar-width: 232px;
+  --drawer-width: 200px;
+  --center-min-width: 480px;
+  --login-card-width: 360px;
+  --settings-max-width: 480px;
+
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  /* 字体 */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'SF Mono', Consolas, 'Courier New', monospace;
+
+  /* 层级：抽屉与 Toast 需要盖在内容之上 */
+  --z-drawer: 10;
+  --z-toast: 100;
+}
+
+/**
+ * 深色模式变量预留（Q16：成本极低但 MVP 不暴露切换入口）
+ * 启用方式：给根元素加上 data-theme="dark" 即可，当前代码不设置该属性，
+ * 因此默认始终使用上面的亮色变量。
+ */
+[data-theme='dark'] {
+  --color-bg: #1b1b1a;
+  --color-bg-subtle: #232322;
+  --color-bg-active: #21303d;
+  --color-text: #ececea;
+  --color-text-muted: #a5a5a2;
+  --color-text-faint: #7c7c79;
+  --color-border: #35352f;
+  --color-accent: #5b96d4;
+  --color-saved: #6fae5c;
+  --color-danger: #d2645a;
+}

@@ -1,0 +1,13 @@
+/**
+ * Markdown 编辑器样式
+ * 说明：这里只负责让编辑器铺满中栏可用高度并承载滚动；
+ * 内容排版（标题 / 列表 / 表格等）由全局的 .weekly-editor 样式统一处理，
+ * 因为 ProseMirror 的 DOM 是运行时生成的，无法用 CSS Modules 作用域覆盖。
+ */
+
+.editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}

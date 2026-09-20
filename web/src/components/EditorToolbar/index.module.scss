@@ -1,0 +1,49 @@
+/**
+ * 编辑工具条样式
+ * 说明：位于编辑区上方、标题栏下方；左侧是分组格式按钮，右侧是导出与复制。
+ * 窗口较窄时允许换行，避免按钮被压缩到不可点。
+ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.group {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.button {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* 激活态：主色描边 + 主色文字 + 浅蓝底，标识当前段落/选区所用格式 */
+.active {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+}
+
+.button:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}

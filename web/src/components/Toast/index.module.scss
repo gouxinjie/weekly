@@ -1,0 +1,18 @@
+/**
+ * 顶部提示样式
+ * 说明：固定在视口顶部居中，层级高于抽屉。
+ */
+
+.toast {
+  position: fixed;
+  top: var(--space-4);
+  left: 50%;
+  z-index: var(--z-toast);
+  transform: translateX(-50%);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-text);
+  color: var(--color-bg);
+  font-size: 13px;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 18%);
+}

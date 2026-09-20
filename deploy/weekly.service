@@ -1,0 +1,25 @@
+# weekly API 服务的 systemd 单元
+# 放置位置：/etc/systemd/system/weekly.service
+# 改完必须执行：sudo systemctl daemon-reload && sudo systemctl restart weekly
+
+[Unit]
+Description=weekly API service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+
+# WorkingDirectory 必须是 server/，否则相对路径形式的 DB_PATH 会解析错
+WorkingDirectory=/var/www/weekly/server
+ExecStart=/usr/bin/node dist/index.js
+
+# 崩溃自动重启，避免 OOM 或异常退出后服务长时间不可用
+Restart=always
+RestartSec=5
+
+# 所有配置集中在这一份 .env 中，仓库内不提交真实值
+EnvironmentFile=/var/www/weekly/.env
+
+[Install]
+WantedBy=multi-user.target

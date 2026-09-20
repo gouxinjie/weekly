@@ -1,0 +1,73 @@
+/**
+ * 本周参考样式
+ * 说明：条目为纯只读展示，已完成的条目加删除线以示区分。
+ */
+
+.reference {
+  padding: var(--space-3);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin-top: var(--space-1);
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.hint {
+  margin-top: var(--space-3);
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.error {
+  margin-top: var(--space-3);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-accent);
+  font-size: 12px;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.list {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.item,
+.itemDone {
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.itemDone {
+  color: var(--color-text-faint);
+  text-decoration: line-through;
+}
