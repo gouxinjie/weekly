@@ -1,24 +1,15 @@
 /**
- * @component 周次树
- * @description 左侧「年 > 周」两层导航树，未写的周同样列出，支持折叠展开、定位本周与跳转周次
+ * @component 周次时间轴
+ * @description 左栏「年 > 周」两层导航，以带圆点连线的垂直时间轴呈现；
+ * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
 import { COLLAPSED_YEARS_KEY, MAX_WEEK, START_YEAR } from '@/constants';
 import { formatWeekRangeShort } from '@/utils/format';
-import { getCurrentWeek, getWeekRange, isValidWeek } from '@/utils/week';
-import styles from './index.module.scss';
-
-/** 树对外暴露的命令能力，供页面快捷键调用 */
-export interface TreeHandle {
-  /** 折叠 / 展开全部年节点 */
-  toggleAll: () => void;
-  /** 聚焦「跳转到周次」输入框 */
-  focusJump: () => void;
-}
+import { getCurrentWeek, getWeekRange } from '@/utils/week';import styles from './index.module.scss';
 
 /** Tree 属性 */
 interface TreeProps {
@@ -28,17 +19,15 @@ interface TreeProps {
   week: number;
   /** 选中周变化时的回调 */
   onChange: (year: number, week: number) => void;
-  /** 已写周次集合，元素形如「2026-38」，用于状态角标 */
+  /** 已写周次集合，元素形如「2026-38」，用于状态圆点 */
   written: Set<string>;
-  /** 命令引用，用于快捷键操作，可选 */
-  treeRef?: RefObject<TreeHandle | null>;
 }
 
 /** 单个周节点 */
 interface WeekNode {
   /** ISO 周次 */
   week: number;
-  /** 形如「09/14–09/20」 */
+  /** 形如「09/14 - 09/20」 */
   range: string;
   /** 是否已写 */
   written: boolean;
@@ -96,26 +85,11 @@ const writeCollapsedYears = (years: number[]): void => {
 };
 
 /**
- * 解析跳转输入
- * @param input - 用户输入，如「2026 年第 15 周」
- * @returns 解析出的周次；无法解析或越界时返回 null
- */
-const parseJumpInput = (input: string): { year: number; week: number } | null => {
-  const matched = input.match(/(\d{4})\D*(\d{1,2})/);
-  if (matched === null) return null;
-
-  const year = Number(matched[1]);
-  const week = Number(matched[2]);
-  return isValidWeek(year, week) ? { year, week } : null;
-};
-
-/**
- * 周次树
+ * 周次时间轴
  * @param props - 见 TreeProps
- * @returns 两层树节点
+ * @returns 时间轴节点
  */
-const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
-  const current = useMemo(() => getCurrentWeek(), []);
+const Tree = ({ year, week, onChange, written }: TreeProps) => {
   const years = useMemo(() => buildYears(year), [year]);
 
   const [collapsedYears, setCollapsedYears] = useState<number[]>(() => {
@@ -123,10 +97,6 @@ const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
     // 首次使用：展开当年，其余年份折叠
     return stored ?? buildYears(year).filter((item) => item !== getCurrentWeek().year);
   });
-
-  const [jumpInput, setJumpInput] = useState('');
-  const [jumpError, setJumpError] = useState('');
-  const jumpInputRef = useRef<HTMLInputElement | null>(null);
 
   /** 树数据：一次性算好周次与日期，避免渲染期重复计算 */
   const treeData = useMemo<YearNode[]>(
@@ -138,7 +108,7 @@ const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
           const range = getWeekRange(item, weekNo);
           return {
             week: weekNo,
-            range: formatWeekRangeShort(range.start, range.end),
+            range: formatWeekRangeShort(range.start, range.end).replace('–', ' - '),
             written: written.has(`${item}-${weekNo}`),
           };
         }),
@@ -171,90 +141,16 @@ const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
     [collapsedYears, updateCollapsed],
   );
 
-  /** 收起全部年节点 */
-  const collapseAll = useCallback((): void => {
-    updateCollapsed(years);
-  }, [years, updateCollapsed]);
+  // 选中周变化时，把该节点滚动到可视区域
+  const selectedRef = useRef<HTMLButtonElement | null>(null);
 
-  /** 展开全部年节点 */
-  const expandAll = useCallback((): void => {
-    updateCollapsed([]);
-  }, [updateCollapsed]);
-
-  /** 折叠 / 展开全部：已全部折叠时展开，否则收起 */
-  const toggleAll = useCallback((): void => {
-    const allCollapsed = years.every((item) => collapsedYears.includes(item));
-    updateCollapsed(allCollapsed ? [] : years);
-  }, [years, collapsedYears, updateCollapsed]);
-
-  // 供页面快捷键（Ctrl+B / Ctrl+K）调用
   useEffect(() => {
-    if (treeRef === undefined) return undefined;
-
-    treeRef.current = {
-      toggleAll,
-      focusJump: () => jumpInputRef.current?.focus(),
-    };
-
-    return () => {
-      treeRef.current = null;
-    };
-  }, [treeRef, toggleAll]);
-
-  /** 定位到当前 ISO 周 */
-  const goCurrentWeek = useCallback((): void => {
-    onChange(current.year, current.week);
-  }, [current, onChange]);
-
-  /** 执行跳转 */
-  const handleJump = useCallback((): void => {
-    const parsed = parseJumpInput(jumpInput);
-    if (parsed === null) {
-      setJumpError('请输入形如「2026 年第 15 周」的周次');
-      return;
-    }
-    setJumpError('');
-    setJumpInput('');
-    onChange(parsed.year, parsed.week);
-  }, [jumpInput, onChange]);
-
-  const isCurrentWeek = year === current.year && week === current.week;
+    selectedRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [year, week]);
 
   return (
     <div className={styles.tree}>
-      <div className={styles.toolbar}>
-        <button type="button" className={styles.toolButton} onClick={expandAll}>
-          展开全部
-        </button>
-        <button type="button" className={styles.toolButton} onClick={collapseAll}>
-          收起全部
-        </button>
-        <button
-          type="button"
-          className={styles.toolButton}
-          onClick={goCurrentWeek}
-          disabled={isCurrentWeek}
-        >
-          定位本周
-        </button>
-      </div>
-
-      <div className={styles.jump}>
-        <input
-          ref={jumpInputRef}
-          className={styles.jumpInput}
-          value={jumpInput}
-          placeholder="跳转：2026 年第 15 周"
-          onChange={(event) => setJumpInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') handleJump();
-          }}
-        />
-        <button type="button" className={styles.jumpButton} onClick={handleJump}>
-          跳转
-        </button>
-      </div>
-      {jumpError !== '' ? <p className={styles.jumpError}>{jumpError}</p> : null}
+      <h2 className={styles.title}>时间轴</h2>
 
       <div className={styles.years}>
         {treeData.map((node) => {
@@ -267,7 +163,7 @@ const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
                 onClick={() => toggleYear(node.year)}
               >
                 <span className={collapsed ? styles.caret : styles.caretOpen}>▸</span>
-                <span className={styles.yearLabel}>{node.year} 年</span>
+                <span className={styles.yearLabel}>{node.year}</span>
               </button>
 
               {collapsed ? null : (
@@ -275,20 +171,34 @@ const Tree = ({ year, week, onChange, written, treeRef }: TreeProps) => {
                   {node.weeks.map((item) => {
                     const selected = node.year === year && item.week === week;
                     return (
-                      <li key={`${node.year}-${item.week}`}>
+                      <li key={`${node.year}-${item.week}`} className={styles.weekItem}>
                         <button
                           type="button"
+                          ref={selected ? selectedRef : undefined}
                           className={selected ? styles.weekActive : styles.week}
                           onClick={() => onChange(node.year, item.week)}
                         >
-                          <span className={item.written ? styles.weekText : styles.weekTextEmpty}>
-                            第 {item.week} 周
-                          </span>
-                          <span className={styles.weekRange}>{item.range}</span>
+                          {/* 时间轴圆点：当前选中带描边圈，已写为实心绿点，未写为灰点 */}
                           <span
-                            className={item.written ? styles.dotSaved : styles.dotEmpty}
+                            className={
+                              selected
+                                ? styles.dotActive
+                                : item.written
+                                  ? styles.dotSaved
+                                  : styles.dotEmpty
+                            }
                             aria-label={item.written ? '已写' : '未写'}
                           />
+                          <span className={styles.weekTexts}>
+                            <span
+                              className={
+                                item.written || selected ? styles.weekText : styles.weekTextEmpty
+                              }
+                            >
+                              第 {item.week} 周
+                            </span>
+                            <span className={styles.weekRange}>{item.range}</span>
+                          </span>
                         </button>
                       </li>
                     );

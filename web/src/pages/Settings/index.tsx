@@ -1,13 +1,15 @@
 /**
  * @component 设置页
- * @description 单列居中布局（宽 480px），包含修改密码、登出与登出所有设备、数据备份说明
+ * @description 应用骨架内的单列布局：账号信息卡、账号安全（修改密码 / 退出登录）、
+ * 系统信息与通栏退出登录按钮
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AppLayout from '@/components/AppLayout';
 import { CONTACT_PHONE } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { maskPhone } from '@/utils/format';
@@ -15,6 +17,9 @@ import styles from './index.module.scss';
 
 /** 密码强度：必须同时含数字与字母，长度不少于 8 位 */
 const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
+
+/** 应用版本号：与 package.json 保持一致 */
+const APP_VERSION = 'v1.0.0';
 
 /**
  * 设置页
@@ -24,6 +29,7 @@ const Settings = () => {
   const { user, signOut, signOutAll, updatePassword } = useAuth();
   const navigate = useNavigate();
 
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,121 +74,141 @@ const Settings = () => {
     }
   };
 
-  /** 登出当前设备 */
+  /** 退出登录（当前设备）：回到登录页 */
   const handleSignOut = async (): Promise<void> => {
     await signOut();
     navigate('/login', { replace: true });
   };
 
-  /** 登出所有设备：跳到登录页并带上提示 */
+  /** 退出所有设备：回到登录页并带上提示 */
   const handleSignOutAll = async (): Promise<void> => {
     await signOutAll();
     navigate('/login', { replace: true, state: { message: '已登出所有设备' } });
   };
 
   return (
-    <div className={styles.page}>
-      <div className={styles.panel}>
-        <header className={styles.header}>
-          <button type="button" className={styles.back} onClick={() => navigate('/weekly')}>
-            ← 返回
-          </button>
+    <AppLayout activeTab="settings">
+      <div className={styles.page}>
+        <div className={styles.panel}>
           <h1 className={styles.title}>设置</h1>
-        </header>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>账号</h2>
-          <p className={styles.row}>
-            <span className={styles.rowLabel}>手机号</span>
-            <span className={styles.rowValue}>{user === null ? '' : maskPhone(user.phone)}</span>
-          </p>
-        </section>
+          {/* 账号信息 */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>账号信息</h2>
+            <div className={styles.profile}>
+              <span className={styles.avatar} aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 1.9c-3.6 0-7 1.9-7 4.4 0 .9.7 1.5 1.6 1.5h10.8c.9 0 1.6-.6 1.6-1.5 0-2.5-3.4-4.4-7-4.4Z" />
+                </svg>
+              </span>
+              <div className={styles.profileTexts}>
+                <span className={styles.profileName}>weekly 用户</span>
+                <span className={styles.profilePhone}>
+                  {user === null ? '' : maskPhone(user.phone)}
+                </span>
+              </div>
+            </div>
+          </section>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>修改密码</h2>
-          <form className={styles.form} onSubmit={(event) => void handleChangePassword(event)}>
-            <label className={styles.field}>
-              <span className={styles.label}>原密码</span>
-              <input
-                className={styles.input}
-                type="password"
-                autoComplete="current-password"
-                value={oldPassword}
-                onChange={(event) => setOldPassword(event.target.value)}
-              />
-            </label>
+          {/* 账号安全 */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>账号安全</h2>
 
-            <label className={styles.field}>
-              <span className={styles.label}>新密码</span>
-              <input
-                className={styles.input}
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-            </label>
-
-            <label className={styles.field}>
-              <span className={styles.label}>确认新密码</span>
-              <input
-                className={styles.input}
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-              />
-            </label>
-
-            <p className={styles.hint}>密码需包含数字与字母，长度不少于 8 位</p>
-            {error !== '' ? <p className={styles.error}>{error}</p> : null}
-            {success !== '' ? <p className={styles.success}>{success}</p> : null}
-
-            <button type="submit" className={styles.primary} disabled={pending}>
-              {pending ? '提交中…' : '更新密码'}
-            </button>
-          </form>
-        </section>
-
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>登录状态</h2>
-          <div className={styles.actions}>
             <button
               type="button"
-              className={styles.secondary}
-              onClick={() => void handleSignOut()}
+              className={styles.rowButton}
+              onClick={() => setPasswordOpen(!passwordOpen)}
+              aria-expanded={passwordOpen}
             >
-              登出当前设备
+              <span>修改密码</span>
+              <span className={passwordOpen ? styles.chevronOpen : styles.chevron}>›</span>
             </button>
+
+            {passwordOpen ? (
+              <form className={styles.form} onSubmit={(event) => void handleChangePassword(event)}>
+                <label className={styles.field}>
+                  <span className={styles.label}>原密码</span>
+                  <input
+                    className={styles.input}
+                    type="password"
+                    autoComplete="current-password"
+                    value={oldPassword}
+                    onChange={(event) => setOldPassword(event.target.value)}
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span className={styles.label}>新密码</span>
+                  <input
+                    className={styles.input}
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span className={styles.label}>确认新密码</span>
+                  <input
+                    className={styles.input}
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                  />
+                </label>
+
+                <p className={styles.hint}>密码需包含数字与字母，长度不少于 8 位</p>
+                {error !== '' ? <p className={styles.error}>{error}</p> : null}
+                {success !== '' ? <p className={styles.success}>{success}</p> : null}
+
+                <button type="submit" className={styles.primary} disabled={pending}>
+                  {pending ? '提交中…' : '更新密码'}
+                </button>
+              </form>
+            ) : null}
+
             <button
               type="button"
-              className={styles.danger}
+              className={styles.rowButton}
               onClick={() => void handleSignOutAll()}
+              title="登出所有设备（包括当前设备）"
             >
-              登出所有设备
+              <span>退出所有设备</span>
+              <span className={styles.chevron}>›</span>
             </button>
-          </div>
-        </section>
+          </section>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>数据与备份</h2>
-          <p className={styles.note}>
-            数据存放于服务器的 SQLite 文件 <code>data/weekly.db</code>，即唯一数据源。
-          </p>
-          <p className={styles.note}>
-            备份必须在服务运行时用 <code>VACUUM INTO</code> 生成一致性快照，不要直接复制文件：
-          </p>
-          <pre className={styles.code}>
-            {`sqlite3 data/weekly.db "VACUUM INTO 'backup/weekly-$(date +%F).db'"`}
-          </pre>
-          <p className={styles.note}>
-            恢复方式：停服务 → 用备份文件覆盖 <code>data/weekly.db</code> → 删除残留的{' '}
-            <code>-wal</code> / <code>-shm</code> → 启服务。
-          </p>
-          <p className={styles.note}>忘记密码请联系 {CONTACT_PHONE}，人工核对后重置。</p>
-        </section>
+          {/* 系统信息 */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>系统信息</h2>
+            <p className={styles.row}>
+              <span className={styles.rowLabel}>版本号</span>
+              <span className={styles.rowValue}>{APP_VERSION}</span>
+            </p>
+            <p className={styles.row}>
+              <span className={styles.rowLabel}>服务地址</span>
+              <span className={styles.rowValue}>{window.location.host}</span>
+            </p>
+            <p className={styles.row}>
+              <span className={styles.rowLabel}>数据存储</span>
+              <span className={styles.rowValue}>SQLite（data/weekly.db）</span>
+            </p>
+            <p className={styles.note}>忘记密码请联系 {CONTACT_PHONE}，人工核对后重置。</p>
+          </section>
+
+          {/* 通栏退出登录按钮 */}
+          <button
+            type="button"
+            className={styles.logoutAll}
+            onClick={() => void handleSignOut()}
+          >
+            退出登录
+          </button>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 

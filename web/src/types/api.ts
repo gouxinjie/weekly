@@ -35,6 +35,8 @@ export interface CreateMemoBody {
   year?: number | null;
   /** 标记的 ISO 周次 */
   week?: number | null;
+  /** 分类标识，缺省表示未分类 */
+  category?: string;
 }
 
 /** 更新备忘入参（全量提交） */
@@ -49,6 +51,8 @@ export interface UpdateMemoBody {
   year: number | null;
   /** 标记的 ISO 周次 */
   week: number | null;
+  /** 分类标识，空串表示未分类 */
+  category: string;
 }
 
 /** 注册 / 登录 / me 接口出参 */

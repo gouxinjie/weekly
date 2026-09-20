@@ -71,17 +71,4 @@ export const isPastWeek = (year: number, week: number): boolean => {
   return week < current.week;
 };
 
-/**
- * 生成自起点年份到指定年份的全部周次
- * @param endYear - 结束年份（含）
- * @returns 周次列表，每年固定 maxWeek 周（上限 53，不写死 52）
- */
-export const buildWeekRange = (endYear: number): WeekRef[] => {
-  const result: WeekRef[] = [];
-  for (let year = config.startYear; year <= endYear; year += 1) {
-    for (let week = 1; week <= config.maxWeek; week += 1) {
-      result.push({ year, week });
-    }
-  }
-  return result;
-};
+

@@ -72,31 +72,4 @@ export const isPastWeek = (year: number, week: number): boolean => {
   return week < current.week;
 };
 
-/**
- * 计算相对某周偏移若干周后的周次
- * @param year - 起始 ISO 年
- * @param week - 起始 ISO 周次
- * @param offset - 偏移量，可为负数
- * @returns 目标周次；越界时返回 null
- */
-export const shiftWeek = (year: number, week: number, offset: number): WeekRef | null => {
-  const range = getWeekRange(year, week);
-  const target = dayjs(range.start).add(offset * 7, 'day');
-  const result: WeekRef = { year: target.isoWeekYear(), week: target.isoWeek() };
-  return isValidWeek(result.year, result.week) ? result : null;
-};
 
-/**
- * 生成从起点年份到结束年份的全部周次
- * @param endYear - 结束年份（含）
- * @returns 周次列表，每年 MAX_WEEK 周（上限 53，不写死 52）
- */
-export const buildWeekRange = (endYear: number): WeekRef[] => {
-  const result: WeekRef[] = [];
-  for (let year = START_YEAR; year <= endYear; year += 1) {
-    for (let week = 1; week <= MAX_WEEK; week += 1) {
-      result.push({ year, week });
-    }
-  }
-  return result;
-};

@@ -2,7 +2,7 @@
  * 应用骨架样式
  * 布局要点：
  * 1. 左栏两态宽度恒为 --sidebar-width，切换时只有内容变化、宽度不跳动
- * 2. 右栏是周报态专属，备忘态下不渲染，中栏因此吃满剩余宽度
+ * 2. 右侧区域 = 可选顶栏 + 内容行（中栏 + 右栏抽屉），顶栏横跨中栏与右栏
  * 3. 窗口变窄时先压缩右栏，再出现横向滚动（中栏由 --center-min-width 兜底）
  */
 
@@ -18,7 +18,7 @@
   display: none;
   flex: 0 0 auto;
   padding: var(--space-2) var(--space-4);
-  background-color: var(--color-bg-active);
+  background-color: var(--color-accent-soft);
   color: var(--color-accent);
   text-align: center;
   font-size: 12px;
@@ -37,49 +37,120 @@
   overflow-x: auto;
 }
 
-/* 左栏：页签 + 内容 + 底部账号区 */
+/* ===== 左栏：logo + 页签 + 内容 + 账号区 ===== */
+
 .sidebar {
   display: flex;
   flex-direction: column;
   flex: 0 0 var(--sidebar-width);
   width: var(--sidebar-width);
   border-right: 1px solid var(--color-border);
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-bg);
 }
 
+/* 品牌 logo */
+.brand {
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* 品牌名后的叶片符号 */
+.brandLeaf {
+  margin-left: 2px;
+  color: var(--color-accent);
+}
+
+/* 纵向页签 */
 .tabs {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
   flex: 0 0 auto;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-2);
 }
 
 .tab,
 .tabActive {
-  flex: 1 1 50%;
-  padding: var(--space-3) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--space-2);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-muted);
-  font-size: 14px;
-  transition: color 0.15s ease;
+  font-size: 13px;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .tab:hover {
+  background-color: var(--color-bg-subtle);
   color: var(--color-text);
 }
 
-/* 选中页签：主色文字 + 主色下划线 */
+/* 选中页签：浅底 + 主色文字 */
 .tabActive {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+  background-color: var(--color-bg-active);
+  color: var(--color-text);
   font-weight: 600;
+}
+
+.tabIcon {
+  display: flex;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+}
+
+.tabActive .tabIcon {
+  color: var(--color-accent);
+}
+
+.tabIcon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .sidebarBody {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* ===== 右侧区域：可选顶栏 + 内容行 ===== */
+
+.main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 顶栏：横跨中栏与右栏 */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex: 0 0 var(--topbar-height);
+  height: var(--topbar-height);
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.contentRow {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: auto;
 }
 
 /* 中栏：自适应，最小宽度由变量兜底 */

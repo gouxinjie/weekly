@@ -1,13 +1,14 @@
 /**
  * @component 备忘清单
- * @description 三段分组（置顶 / 未完成 / 已完成）的待办清单，支持勾选、就地编辑、删除、置顶与周次标记
+ * @description 按创建日期分组（今天 / 昨天 / 具体日期）的待办清单，支持勾选、就地编辑、删除、
+ * 置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useMemo, useState } from 'react';
-import { MAX_WEEK, START_YEAR } from '@/constants';
-import { formatWeekLabel } from '@/utils/format';
+import dayjs from 'dayjs';
+import { MAX_WEEK, MEMO_CATEGORIES, START_YEAR } from '@/constants';
 import { getCurrentWeek, isPastWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
 import type { Memo } from '@/types/models';
@@ -19,6 +20,16 @@ interface EmptyAction {
   label: string;
   /** 点击回调 */
   onClick: () => void;
+}
+
+/** 日期分组 */
+interface DateGroup {
+  /** 分组键：YYYY-MM-DD */
+  key: string;
+  /** 展示标签：今天 / 昨天 / MM-DD */
+  label: string;
+  /** 该组备忘 */
+  memos: Memo[];
 }
 
 /** MemoList 属性 */
@@ -47,14 +58,45 @@ interface MemoItemProps {
   onDelete: (memo: Memo) => void;
   /** 周次标记可选的年份列表 */
   yearOptions: number[];
+  /** 菜单是否展开（受控，保证同一时间只展开一个菜单） */
+  menuOpen: boolean;
+  /** 切换菜单展开状态 */
+  onToggleMenu: () => void;
 }
+
+/** 分类标识 → 样式类名映射（CSS Modules 不便动态拼接，显式映射） */
+const CATEGORY_CLASS: Record<string, string> = {
+  product: styles.catProduct,
+  dev: styles.catDev,
+  test: styles.catTest,
+  doc: styles.catDoc,
+  life: styles.catLife,
+};
+
+/** 分类标识 → 展示文案映射 */
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  MEMO_CATEGORIES.map((item) => [item.value, item.label]),
+);
+
+/**
+ * 生成分组的展示标签
+ * @param key - 分组键 YYYY-MM-DD
+ * @returns 今天 / 昨天 / MM-DD
+ */
+const groupLabel = (key: string): string => {
+  const date = dayjs(key);
+  const today = dayjs().startOf('day');
+  if (date.isSame(today)) return '今天';
+  if (date.isSame(today.subtract(1, 'day'))) return '昨天';
+  return date.format('MM-DD');
+};
 
 /**
  * 单条备忘
  * @param props - 见 MemoItemProps
  * @returns 条目节点
  */
-const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
+const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMenu }: MemoItemProps) => {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(memo.text);
   const [tagging, setTagging] = useState(false);
@@ -81,6 +123,16 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
     if (next !== memo.text) {
       onUpdate(memo, { text: next });
     }
+  };
+
+  /**
+   * 菜单项公共行为：先收起菜单再执行动作
+   * @param action - 菜单动作
+   * @returns 无
+   */
+  const runMenuAction = (action: () => void): void => {
+    onToggleMenu();
+    action();
   };
 
   return (
@@ -122,40 +174,82 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
             {memo.text}
           </button>
         )}
+
+        <div className={styles.meta}>
+          {/* 分类标签：彩色胶囊 */}
+          {memo.category !== '' ? (
+            <span className={`${styles.category} ${CATEGORY_CLASS[memo.category] ?? ''}`}>
+              {CATEGORY_LABEL[memo.category] ?? memo.category}
+            </span>
+          ) : null}
+
+          {/* 周次标记标签 */}
+          {tagged ? (
+            <span className={styles.weekTag}>
+              {memo.week} 周 · {String(memo.year).slice(-2)}
+            </span>
+          ) : null}
+
+          <span className={styles.date}>{dayjs(memo.createdAt).format('MM-DD')}</span>
+
+          {/* 「⋯」菜单 */}
+          <div className={styles.menuWrap}>
+            <button
+              type="button"
+              className={styles.menuButton}
+              onClick={onToggleMenu}
+              aria-label="更多操作"
+              aria-expanded={menuOpen}
+            >
+              ⋯
+            </button>
+
+            {menuOpen ? (
+              <div className={styles.menu}>
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => runMenuAction(() => setTagging(!tagging))}
+                >
+                  {tagged ? '改标记' : '标记周次'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => runMenuAction(() => onUpdate(memo, { pinned: !memo.pinned }))}
+                >
+                  {memo.pinned ? '取消置顶' : '置顶'}
+                </button>
+                <div className={styles.menuCategories}>
+                  {MEMO_CATEGORIES.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={
+                        memo.category === option.value
+                          ? styles.menuCatActive
+                          : styles.menuCat
+                      }
+                      onClick={() => runMenuAction(() => onUpdate(memo, { category: option.value }))}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                  onClick={() => runMenuAction(() => onDelete(memo))}
+                >
+                  删除
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div className={styles.meta}>
-        {tagged ? (
-          <span className={styles.tag}>
-            {formatWeekLabel(memo.year as number, memo.week as number)}
-          </span>
-        ) : null}
-
-        <button
-          type="button"
-          className={styles.action}
-          onClick={() => setTagging(!tagging)}
-          title="标记所属周次"
-        >
-          {tagged ? '改标记' : '标记周'}
-        </button>
-        <button
-          type="button"
-          className={memo.pinned ? styles.actionActive : styles.action}
-          onClick={() => onUpdate(memo, { pinned: !memo.pinned })}
-          title={memo.pinned ? '取消置顶' : '置顶'}
-        >
-          {memo.pinned ? '已置顶' : '置顶'}
-        </button>
-        <button
-          type="button"
-          className={styles.actionDanger}
-          onClick={() => onDelete(memo)}
-          title="删除"
-        >
-          删除
-        </button>
-      </div>
+      {memo.pinned ? <span className={styles.pinMark}>置顶</span> : null}
 
       {tagging ? (
         <div className={styles.tagPanel}>
@@ -183,7 +277,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
           </select>
           <button
             type="button"
-            className={styles.action}
+            className={styles.tagAction}
             onClick={() => {
               setTagging(false);
               onUpdate(memo, { year: draftYear, week: draftWeek });
@@ -193,7 +287,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
           </button>
           <button
             type="button"
-            className={styles.action}
+            className={styles.tagAction}
             onClick={() => {
               setTagging(false);
               onUpdate(memo, { year: null, week: null });
@@ -214,15 +308,9 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions }: MemoItemProps) => {
  * @param props - 见 MemoListProps
  * @returns 分组清单节点
  */
-const MemoList = ({
-  memos,
-  loading,
-  onUpdate,
-  onDelete,
-  emptyHint,
-  emptyAction,
-}: MemoListProps) => {
-  const [doneCollapsed, setDoneCollapsed] = useState(true);
+const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }: MemoListProps) => {
+  /** 当前展开菜单的备忘 ID，null 表示全部收起 */
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   /** 年份可选项：从起点年份到当前年份 */
   const yearOptions = useMemo(() => {
@@ -234,14 +322,27 @@ const MemoList = ({
     return options;
   }, []);
 
-  const groups = useMemo(() => {
-    const done = memos.filter((memo) => memo.done);
-    const active = memos.filter((memo) => !memo.done);
-    return {
-      done,
-      pinned: active.filter((memo) => memo.pinned),
-      undone: active.filter((memo) => !memo.pinned),
-    };
+  /** 按创建日期分组，新日期在前；组内置顶优先、创建先后 */
+  const groups = useMemo<DateGroup[]>(() => {
+    const sorted = [...memos].sort((a, b) => {
+      const byDate = dayjs(b.createdAt).startOf('day').valueOf() - dayjs(a.createdAt).startOf('day').valueOf();
+      if (byDate !== 0) return byDate;
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return a.id - b.id;
+    });
+
+    const map = new Map<string, Memo[]>();
+    for (const memo of sorted) {
+      const key = dayjs(memo.createdAt).format('YYYY-MM-DD');
+      const bucket = map.get(key);
+      if (bucket === undefined) {
+        map.set(key, [memo]);
+      } else {
+        bucket.push(memo);
+      }
+    }
+
+    return [...map.entries()].map(([key, list]) => ({ key, label: groupLabel(key), memos: list }));
   }, [memos]);
 
   if (loading) {
@@ -263,65 +364,29 @@ const MemoList = ({
 
   return (
     <div className={styles.list}>
-      {groups.pinned.length > 0 ? (
-        <section className={styles.group}>
-          <h3 className={styles.groupTitle}>置顶</h3>
+      {groups.map((group) => (
+        <section key={group.key} className={styles.group}>
+          <h3 className={styles.groupTitle}>
+            {group.label} <span className={styles.groupDate}>{group.key.slice(5)}</span>
+            <span className={styles.groupCount}>（{group.memos.length}）</span>
+          </h3>
           <ul>
-            {groups.pinned.map((memo) => (
+            {group.memos.map((memo) => (
               <MemoItem
                 key={memo.id}
                 memo={memo}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 yearOptions={yearOptions}
+                menuOpen={openMenuId === memo.id}
+                onToggleMenu={() =>
+                  setOpenMenuId(openMenuId === memo.id ? null : memo.id)
+                }
               />
             ))}
           </ul>
         </section>
-      ) : null}
-
-      <section className={styles.group}>
-        <h3 className={styles.groupTitle}>未完成 · {groups.undone.length}</h3>
-        {groups.undone.length === 0 ? (
-          <p className={styles.hint}>没有未完成的待办</p>
-        ) : (
-          <ul>
-            {groups.undone.map((memo) => (
-              <MemoItem
-                key={memo.id}
-                memo={memo}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                yearOptions={yearOptions}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className={styles.group}>
-        <button
-          type="button"
-          className={styles.groupToggle}
-          onClick={() => setDoneCollapsed(!doneCollapsed)}
-        >
-          <span className={doneCollapsed ? styles.caret : styles.caretOpen}>▸</span>
-          已完成 · {groups.done.length}
-        </button>
-        {doneCollapsed ? null : (
-          <ul>
-            {groups.done.map((memo) => (
-              <MemoItem
-                key={memo.id}
-                memo={memo}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                yearOptions={yearOptions}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
+      ))}
     </div>
   );
 };

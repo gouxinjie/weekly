@@ -92,5 +92,11 @@ export const migrate = (): number => {
     db.pragma('user_version = 1');
   }
 
+  // v2：备忘新增分类字段（产品 / 开发 / 测试 / 文档 / 生活），空串表示未分类
+  if (current < 2) {
+    db.exec(`ALTER TABLE memo ADD COLUMN category TEXT NOT NULL DEFAULT '';`);
+    db.pragma('user_version = 2');
+  }
+
   return db.pragma('user_version', { simple: true }) as number;
 };

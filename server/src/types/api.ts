@@ -90,6 +90,8 @@ export interface MemoDto {
   year: number | null;
   /** 标记的 ISO 周次，未标记为 null */
   week: number | null;
+  /** 分类标识，空串表示未分类 */
+  category: string;
   /** 创建时间 */
   createdAt: string;
 }
@@ -102,6 +104,8 @@ export interface CreateMemoBody {
   year?: number | null;
   /** 可选标记的 ISO 周次 */
   week?: number | null;
+  /** 分类标识，缺省表示未分类 */
+  category?: string;
 }
 
 /** 更新备忘入参（全量提交，语义简单且天然防字段注入） */
@@ -116,6 +120,8 @@ export interface UpdateMemoBody {
   year: number | null;
   /** 标记的 ISO 周次，取消标记传 null */
   week: number | null;
+  /** 分类标识，空串表示未分类 */
+  category: string;
 }
 
 /** 健康检查出参 */

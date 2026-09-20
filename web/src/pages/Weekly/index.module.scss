@@ -1,135 +1,337 @@
 /**
  * 工作台（周报）样式
- * 布局要点：标题栏与空态提示固定在顶部，编辑 / 预览区占据剩余高度，工具条钉在底部。
+ * 布局要点：编辑态 = 头部 + 工具条 + 编辑器 + 底部状态栏；
+ * 展示态 = 居中的周报卡片（封面头 + 内容 + 元信息）+「查看全部」入口。
  */
 
-.header {
+/* ===== 顶栏（展示态） ===== */
+
+.yearSelect {
+  padding: 6px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+
+/* 顶栏搜索框 */
+.search {
+  width: 220px;
+  padding: 7px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background-color: var(--color-bg-subtle);
+  font-size: 12px;
+}
+
+.search::placeholder {
+  color: var(--color-text-faint);
+}
+
+.search:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg);
+  outline: none;
+}
+
+/* 通知铃铛：右上角常驻红点 */
+.bell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  color: var(--color-text-muted);
+}
+
+.bell:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.bell svg {
+  width: 18px;
+  height: 18px;
+}
+
+.bellDot {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-danger);
+}
+
+/* 顶栏头像 */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ===== 编辑态头部 ===== */
+
+.editHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   flex: 0 0 auto;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-6);
   border-bottom: 1px solid var(--color-border);
 }
 
-.titleArea {
+.editHeaderLeft {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
 }
 
-.title {
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.range {
-  color: var(--color-text-faint);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.headerRight {
+/* 返回展示态按钮 */
+.back {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  flex: 0 0 auto;
-}
-
-/* 保存态：已保存用绿色，保存失败用红色 */
-.saveState {
-  min-width: 48px;
-  color: var(--color-saved);
-  font-size: 12px;
-  text-align: right;
-}
-
-.saveStateError {
-  min-width: 48px;
-  color: var(--color-danger);
-  font-size: 12px;
-  text-align: right;
-}
-
-.charCount {
-  color: var(--color-text-faint);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.navButton {
-  padding: var(--space-1) var(--space-2);
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   background-color: var(--color-bg);
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1;
 }
 
-.navButton:hover:not(:disabled) {
+.back:hover {
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
-.navButton:disabled {
-  color: var(--color-text-faint);
-  cursor: not-allowed;
-}
-
-.modeSwitch {
-  display: flex;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+.editTitle {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.mode,
-.modeActive {
-  padding: var(--space-1) var(--space-3);
-  border: none;
+.editHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+
+.autoSave {
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+/* 保存状态徽标：已保存为绿底，失败为红底 */
+.saveChip,
+.saveChipError {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.saveChip {
+  background-color: var(--color-saved-soft);
+  color: var(--color-saved);
+}
+
+.saveChipError {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* 次级按钮：浅底描边 */
+.ghostButton {
+  padding: 6px var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
   background-color: var(--color-bg);
   color: var(--color-text-muted);
   font-size: 12px;
 }
 
-.mode:hover {
+.ghostButton:hover {
+  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
-/* 选中的模式：主色底 + 白字 */
-.modeActive {
-  background-color: var(--color-accent);
-  color: #ffffff;
+/* ===== 展示态：周报卡片 ===== */
+
+.displayScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  background-color: var(--color-bg-subtle);
 }
 
-.emptyBar {
+.displayBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6);
+}
+
+/* 周报卡片：白底圆角阴影 */
+.weekCard {
+  width: 100%;
+  max-width: 720px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+/* 封面头：渐变缩略图 + 标题 + 已写徽标 */
+.cardHead {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: linear-gradient(120deg, #e8f0ec 0%, #dfe9e4 55%, #d5e4dc 100%);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* 封面缩略图：渐变模拟风景 */
+.cover {
   flex: 0 0 auto;
-  padding: var(--space-2) var(--space-4);
-  background-color: var(--color-bg-subtle);
+  width: 64px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(60% 80% at 70% 100%, #5e8a82 0%, transparent 70%),
+    linear-gradient(180deg, #cfe0e3 0%, #a8c6c4 60%, #7fa79d 100%);
+}
+
+.cardHeadTexts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cardTitle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cardRange {
   color: var(--color-text-muted);
   font-size: 12px;
 }
 
-.emptyAction {
+/* 已写徽标：绿底白字胶囊 */
+.writtenBadge {
+  flex: 0 0 auto;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-saved);
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.cardBody {
+  padding: var(--space-4) var(--space-6);
+}
+
+/* 元信息行：更新时间 + 字数 */
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+/* 「查看全部」入口 */
+.viewAll {
+  margin-top: var(--space-4);
   padding: 0;
   border: none;
   background-color: transparent;
   color: var(--color-accent);
-  font-size: 12px;
+  font-size: 13px;
 }
 
-.emptyAction:hover {
+.viewAll:hover {
   text-decoration: underline;
 }
 
+/* ===== 编辑态公共区 ===== */
+
+/* 编辑态底部状态栏 */
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+/* 「Markdown 编辑」提示胶囊 */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 11px;
+}
+
+.statusChip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+}
+
+.statusCount {
+  color: var(--color-text-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .hint {
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   color: var(--color-text-faint);
   font-size: 13px;
 }
@@ -137,7 +339,7 @@
 .error,
 .saveError {
   flex: 0 0 auto;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-6);
   color: var(--color-danger);
   font-size: 12px;
 }

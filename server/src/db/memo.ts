@@ -42,6 +42,7 @@ export const listMemosByWeek = (userId: number, year: number, week: number): Mem
  * @param text - 待办文本
  * @param year - 可选标记的 ISO 年，未标记传 null
  * @param week - 可选标记的 ISO 周次，未标记传 null
+ * @param category - 分类标识，空串表示未分类，缺省为 ''
  * @returns 新建的备忘行
  */
 export const insertMemo = (
@@ -49,14 +50,15 @@ export const insertMemo = (
   text: string,
   year: number | null,
   week: number | null,
+  category = '',
 ): MemoRow => {
   const now = new Date().toISOString();
   const result = db
     .prepare(
-      `INSERT INTO memo (user_id, text, done, pinned, year, week, created_at, updated_at)
-       VALUES (?, ?, 0, 0, ?, ?, ?, ?)`,
+      `INSERT INTO memo (user_id, text, done, pinned, year, week, category, created_at, updated_at)
+       VALUES (?, ?, 0, 0, ?, ?, ?, ?, ?)`,
     )
-    .run(userId, text, year, week, now, now);
+    .run(userId, text, year, week, category, now, now);
 
   const created = findMemo(userId, Number(result.lastInsertRowid));
   if (!created) {
@@ -74,6 +76,7 @@ export const insertMemo = (
  * @param pinned - 是否置顶
  * @param year - 标记的 ISO 年，取消标记传 null
  * @param week - 标记的 ISO 周次，取消标记传 null
+ * @param category - 分类标识，空串表示未分类，缺省为 ''
  * @returns 是否更新成功（false 表示记录不存在或不属于该用户）
  * @remarks 红线 1：WHERE 必须同时带 id 与 user_id，用 changes 判断真实影响行数，
  * 让「改别人的记录」在 API 层表现为失败，而不是静默成功。
@@ -86,14 +89,25 @@ export const updateMemo = (
   pinned: boolean,
   year: number | null,
   week: number | null,
+  category = '',
 ): boolean => {
   const result = db
     .prepare(
       `UPDATE memo
-       SET text = ?, done = ?, pinned = ?, year = ?, week = ?, updated_at = ?
+       SET text = ?, done = ?, pinned = ?, year = ?, week = ?, category = ?, updated_at = ?
        WHERE id = ? AND user_id = ?`,
     )
-    .run(text, done ? 1 : 0, pinned ? 1 : 0, year, week, new Date().toISOString(), id, userId);
+    .run(
+      text,
+      done ? 1 : 0,
+      pinned ? 1 : 0,
+      year,
+      week,
+      category,
+      new Date().toISOString(),
+      id,
+      userId,
+    );
   return result.changes > 0;
 };
 

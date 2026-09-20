@@ -1,7 +1,8 @@
 /**
- * 周次树样式
- * 布局要点：工具区与跳转区固定在顶部，年 / 周列表在下方滚动；
- * 选中周节点用左侧 2px 主色高亮条表示，未写的周全灰、已写的周显示绿色角标。
+ * 周次时间轴样式
+ * 布局要点：标题固定在顶部，年 / 周列表在下方滚动；
+ * 周节点左侧由伪元素画出贯穿的竖线，每个节点一枚圆点落在竖线上，
+ * 选中周用浅底圆角卡片 + 主色圆点强调，已写周用绿色实心点。
  */
 
 .tree {
@@ -10,96 +11,33 @@
   height: 100%;
 }
 
-.toolbar {
-  display: flex;
-  gap: var(--space-2);
+.title {
   flex: 0 0 auto;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.toolButton {
-  flex: 1 1 auto;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
+  padding: var(--space-2) var(--space-4);
   color: var(--color-text-muted);
   font-size: 12px;
-}
-
-.toolButton:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.toolButton:disabled {
-  color: var(--color-text-faint);
-  cursor: not-allowed;
-}
-
-.jump {
-  display: flex;
-  gap: var(--space-2);
-  flex: 0 0 auto;
-  padding: var(--space-2) var(--space-3);
-}
-
-.jumpInput {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  font-size: 12px;
-}
-
-.jumpInput:focus {
-  border-color: var(--color-accent);
-  outline: none;
-}
-
-.jumpButton {
-  flex: 0 0 auto;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.jumpButton:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.jumpError {
-  flex: 0 0 auto;
-  padding: 0 var(--space-3) var(--space-2);
-  color: var(--color-danger);
-  font-size: 12px;
+  font-weight: 600;
 }
 
 .years {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: var(--space-3);
+  padding: 0 var(--space-2) var(--space-3);
 }
 
 .year {
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-2);
 }
 
 .yearHeader {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border: none;
+  border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text);
   font-weight: 600;
@@ -107,7 +45,7 @@
 }
 
 .yearHeader:hover {
-  background-color: var(--color-bg-active);
+  background-color: var(--color-bg-subtle);
 }
 
 .caret,
@@ -127,37 +65,91 @@
   font-size: 13px;
 }
 
+/* ===== 时间轴 ===== */
+
+/* 周列表：竖线画在容器左侧伪元素上，贯穿所有节点 */
 .weeks {
-  padding-bottom: var(--space-2);
+  position: relative;
+  margin-left: var(--space-3);
+  padding-left: var(--space-2);
+}
+
+/* 贯穿竖线：从首节点圆心到末节点圆心 */
+.weeks::before {
+  content: '';
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 3px;
+  border-left: 1px solid var(--color-border-strong);
+}
+
+.weekItem {
+  position: relative;
 }
 
 .week,
 .weekActive {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-6);
+  padding: 5px var(--space-2);
   border: none;
-  border-left: 2px solid transparent;
+  border-radius: var(--radius-sm);
   background-color: transparent;
   text-align: left;
 }
 
 .week:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+/* 选中周：浅底卡片 */
+.weekActive {
   background-color: var(--color-bg-active);
 }
 
-/* 选中周：左侧主色高亮条 + 浅蓝底 */
-.weekActive {
-  background-color: var(--color-bg-active);
-  border-left-color: var(--color-accent);
+/* 时间轴圆点：骑在竖线上（竖线 left 3px + 容器 padding 8px → 圆点定位 0px） */
+.dotActive,
+.dotSaved,
+.dotEmpty {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  border-radius: 50%;
+}
+
+/* 当前选中：主色实心 + 外圈 */
+.dotActive {
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  background-color: var(--color-accent);
+}
+
+/* 已写：绿色实心 */
+.dotSaved {
+  background-color: var(--color-saved);
+}
+
+/* 未写：灰色空心 */
+.dotEmpty {
+  border: 1.5px solid var(--color-text-faint);
+  background-color: var(--color-bg);
+}
+
+.weekTexts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .weekText,
 .weekTextEmpty {
-  flex: 0 0 auto;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .weekTextEmpty {
@@ -171,30 +163,8 @@
 }
 
 .weekRange {
-  flex: 1 1 auto;
-  min-width: 0;
   color: var(--color-text-faint);
   font-size: 11px;
-  text-align: right;
+  line-height: 1.4;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 状态角标：已写为绿点，未写为灰点 */
-.dotSaved,
-.dotEmpty {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.dotSaved {
-  background-color: var(--color-saved);
-}
-
-.dotEmpty {
-  background-color: var(--color-text-faint);
-  opacity: 0.5;
 }

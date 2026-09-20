@@ -1,9 +1,9 @@
 /**
  * @component 底部账号区
- * @description 左栏底部的手机号（脱敏）与设置、登出入口，两态位置一致不跳动
+ * @description 左栏底部的头像、脱敏手机号与登出入口，两态位置一致不跳动
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -38,23 +38,26 @@ const AccountFooter = () => {
 
   return (
     <div className={styles.footer}>
+      {/* 头像：主色圆底 + 用户剪影 */}
+      <span className={styles.avatar} aria-hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 1.9c-3.6 0-7 1.9-7 4.4 0 .9.7 1.5 1.6 1.5h10.8c.9 0 1.6-.6 1.6-1.5 0-2.5-3.4-4.4-7-4.4Z" />
+        </svg>
+      </span>
+
       <span className={styles.phone} title={user.phone}>
         {maskPhone(user.phone)}
       </span>
 
-      <div className={styles.actions}>
-        <button type="button" className={styles.action} onClick={() => navigate('/settings')}>
-          设置
-        </button>
-        <button
-          type="button"
-          className={styles.action}
-          onClick={() => void handleSignOut()}
-          disabled={pending}
-        >
-          登出
-        </button>
-      </div>
+      <button
+        type="button"
+        className={styles.logout}
+        onClick={() => void handleSignOut()}
+        disabled={pending}
+        title="登出"
+      >
+        登出
+      </button>
     </div>
   );
 };

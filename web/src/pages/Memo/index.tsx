@@ -1,9 +1,10 @@
 /**
  * @component 工作台（备忘）
- * @description 两栏骨架：左栏筛选器、中栏常驻新建输入框与三段分组清单；此态下右栏整栏移除
+ * @description 两栏骨架：左栏页签、中栏标题 + 筛选标签页 + 常驻新建输入框 + 日期分组清单；
+ * 此态下右栏整栏移除
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toErrorMessage } from '@/api/client';
@@ -11,34 +12,23 @@ import { createMemo, deleteMemo, fetchMemos, updateMemo } from '@/api/memo';
 import AppLayout from '@/components/AppLayout';
 import MemoFilter from '@/components/MemoFilter';
 import MemoList from '@/components/MemoList';
-import { getCurrentWeek } from '@/utils/week';
+import { MEMO_CATEGORIES } from '@/constants';
+import { isPastWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
 import type { Memo as MemoModel, MemoFilter as MemoFilterValue } from '@/types/models';
 import styles from './index.module.scss';
-
-/**
- * 按「置顶优先、创建先后」重排清单
- * @param list - 待排序的备忘列表
- * @returns 排序后的新数组
- */
-const sortMemos = (list: MemoModel[]): MemoModel[] =>
-  [...list].sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-    return a.id - b.id;
-  });
 
 /**
  * 工作台（备忘）
  * @returns 页面节点
  */
 const Memo = () => {
-  const current = useMemo(() => getCurrentWeek(), []);
-
   const [memos, setMemos] = useState<MemoModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<MemoFilterValue>('all');
   const [newText, setNewText] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [pending, setPending] = useState(false);
 
   const newInputRef = useRef<HTMLInputElement | null>(null);
@@ -63,35 +53,39 @@ const Memo = () => {
     };
   }, []);
 
-  /** 是否标记在当前周 */
-  const isCurrentWeekMemo = useCallback(
-    (memo: MemoModel): boolean => memo.year === current.year && memo.week === current.week,
-    [current],
+  /** 是否过期：标记了周次、未完成且周次已过 */
+  const isOverdue = useCallback(
+    (memo: MemoModel): boolean =>
+      !memo.done &&
+      memo.year !== null &&
+      memo.week !== null &&
+      isPastWeek(memo.year, memo.week),
+    [],
   );
 
   /** 各筛选结果与计数 */
   const counts = useMemo<Record<MemoFilterValue, number>>(
     () => ({
       all: memos.length,
-      'current-week': memos.filter(isCurrentWeekMemo).length,
       undone: memos.filter((memo) => !memo.done).length,
       done: memos.filter((memo) => memo.done).length,
+      overdue: memos.filter(isOverdue).length,
     }),
-    [memos, isCurrentWeekMemo],
+    [memos, isOverdue],
   );
 
   const filtered = useMemo(() => {
     switch (filter) {
-      case 'current-week':
-        return memos.filter(isCurrentWeekMemo);
       case 'undone':
         return memos.filter((memo) => !memo.done);
       case 'done':
         return memos.filter((memo) => memo.done);
+      case 'overdue':
+        return memos.filter(isOverdue);
       default:
         return memos;
     }
-  }, [memos, filter, isCurrentWeekMemo]);
+  }, [memos, filter, isOverdue]);
 
   /** 新建待办，Enter 触发且保持焦点 */
   const handleCreate = useCallback(async (): Promise<void> => {
@@ -101,8 +95,8 @@ const Memo = () => {
     setPending(true);
     setError('');
     try {
-      const created = await createMemo({ text });
-      setMemos((prev) => sortMemos([...prev, created]));
+      const created = await createMemo({ text, category: newCategory });
+      setMemos((prev) => [...prev, created]);
       setNewText('');
       newInputRef.current?.focus();
     } catch (err) {
@@ -110,7 +104,7 @@ const Memo = () => {
     } finally {
       setPending(false);
     }
-  }, [newText, pending]);
+  }, [newText, newCategory, pending]);
 
   /**
    * 局部更新某条备忘（乐观更新，失败回滚）
@@ -127,13 +121,12 @@ const Memo = () => {
         // year / week 允许显式传 null，因此不能用 ?? 判断
         year: patch.year !== undefined ? patch.year : memo.year,
         week: patch.week !== undefined ? patch.week : memo.week,
+        category: patch.category ?? memo.category,
       };
 
       const snapshot = memos;
       setError('');
-      setMemos((prev) =>
-        sortMemos(prev.map((item) => (item.id === memo.id ? { ...item, ...body } : item))),
-      );
+      setMemos((prev) => prev.map((item) => (item.id === memo.id ? { ...item, ...body } : item)));
 
       try {
         await updateMemo(memo.id, body);
@@ -170,12 +163,12 @@ const Memo = () => {
   const emptyHint = useMemo(() => {
     if (memos.length === 0) return '还没有待办，在上面输入一条试试';
     switch (filter) {
-      case 'current-week':
-        return '本周没有标记的待办';
       case 'undone':
         return '所有待办都已完成';
       case 'done':
         return '还没有已完成的待办';
+      case 'overdue':
+        return '没有已过期的待办';
       default:
         return '还没有待办';
     }
@@ -192,10 +185,25 @@ const Memo = () => {
   }, [memos.length, filter]);
 
   return (
-    <AppLayout
-      activeTab="memo"
-      sidebar={<MemoFilter value={filter} counts={counts} onChange={setFilter} />}
-    >
+    <AppLayout activeTab="memo">
+      {/* 标题行：备忘 + 新建按钮 */}
+      <header className={styles.header}>
+        <h1 className={styles.title}>备忘</h1>
+        <button
+          type="button"
+          className={styles.create}
+          onClick={() => newInputRef.current?.focus()}
+        >
+          ＋ 新建
+        </button>
+      </header>
+
+      {/* 筛选标签页 */}
+      <div className={styles.filterRow}>
+        <MemoFilter value={filter} counts={counts} onChange={setFilter} />
+      </div>
+
+      {/* 新建输入行：输入框 + 分类选择 + 添加 */}
       <div className={styles.composer}>
         <input
           ref={newInputRef}
@@ -211,6 +219,18 @@ const Memo = () => {
             }
           }}
         />
+        <select
+          className={styles.composerSelect}
+          value={newCategory}
+          aria-label="选择分类"
+          onChange={(event) => setNewCategory(event.target.value)}
+        >
+          {MEMO_CATEGORIES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className={styles.composerButton}

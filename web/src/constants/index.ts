@@ -19,6 +19,30 @@ export const MIN_DESKTOP_WIDTH = 1024;
 /** 折叠状态在 localStorage 中的键名 */
 export const COLLAPSED_YEARS_KEY = 'weekly:collapsed-years';
 
+/** 「记住账号」在 localStorage 中的键名 */
+export const REMEMBER_PHONE_KEY = 'weekly:remember-phone';
+
+/** 周报内容字数上限（编辑区底部计数用） */
+export const MAX_CONTENT_CHARS = 2000;
+
+/** 备忘分类定义：value 与服务端 MEMO_CATEGORIES 保持一致 */
+export interface MemoCategoryOption {
+  /** 分类标识，空串表示未分类 */
+  value: string;
+  /** 展示文案 */
+  label: string;
+}
+
+/** 备忘分类可选项，顺序固定 */
+export const MEMO_CATEGORIES: MemoCategoryOption[] = [
+  { value: '', label: '无分类' },
+  { value: 'product', label: '产品' },
+  { value: 'dev', label: '开发' },
+  { value: 'test', label: '测试' },
+  { value: 'doc', label: '文档' },
+  { value: 'life', label: '生活' },
+];
+
 /** 新周报首次进入时注入的模板 */
 export const WEEKLY_TEMPLATE = `### 本周进展
 

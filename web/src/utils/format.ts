@@ -22,23 +22,6 @@ export const formatWeekRangeShort = (weekStart: string, weekEnd: string): string
 };
 
 /**
- * 格式化周次完整日期区间（标题栏用）
- * @param year - ISO 年
- * @param weekStart - 该周周一，YYYY-MM-DD
- * @param weekEnd - 该周周日，YYYY-MM-DD
- * @returns 形如「2026/09/14 – 09/20」的字符串
- */
-export const formatWeekRangeFull = (
-  year: number,
-  weekStart: string,
-  weekEnd: string,
-): string => {
-  const start = dayjs(weekStart);
-  const end = dayjs(weekEnd);
-  return `${year}/${start.format('MM/DD')} – ${end.format('MM/DD')}`;
-};
-
-/**
  * 手机号脱敏
  * @param phone - 11 位手机号
  * @returns 形如「138****1111」的字符串

@@ -1,59 +1,55 @@
 /**
  * 备忘清单样式
- * 说明：三段分组纵向排列；过期未完成的条目用灰底提示，仅视觉、不改变分组。
+ * 说明：按日期分组的卡片式清单；条目为「勾选框 + 文本 + 分类彩色标签 + 日期 + ⋯ 菜单」；
+ * 过期未完成的条目用浅红底提示，置顶条目带角标。
  */
 
 .list {
-  padding: var(--space-3) var(--space-4) var(--space-6);
+  padding: var(--space-2) var(--space-6) var(--space-6);
 }
 
 .group {
   margin-bottom: var(--space-4);
 }
 
-.groupTitle,
-.groupToggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  width: 100%;
+/* 分组标题：今天 09-18（3） */
+.groupTitle {
   padding: var(--space-2) 0;
-  border: none;
-  background-color: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 13px;
   font-weight: 600;
-  text-align: left;
 }
 
-.groupToggle:hover {
-  color: var(--color-accent);
-}
-
-.caret,
-.caretOpen {
-  display: inline-block;
+.groupDate {
+  margin-left: var(--space-1);
   color: var(--color-text-faint);
-  font-size: 10px;
-  transition: transform 0.15s ease;
+  font-size: 11px;
+  font-weight: 400;
 }
 
-.caretOpen {
-  transform: rotate(90deg);
+.groupCount {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .item,
 .itemOverdue {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  margin-bottom: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .itemOverdue {
-  background-color: var(--color-bg-subtle);
-  border-radius: var(--radius-sm);
+  border-color: transparent;
+  background-color: var(--color-danger-soft);
 }
 
 .main {
@@ -64,8 +60,8 @@
 
 .checkbox {
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--color-accent);
   cursor: pointer;
 }
@@ -100,61 +96,199 @@
   outline: none;
 }
 
+/* 条目右侧：分类标签 + 周标签 + 日期 + 菜单 */
 .meta {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-left: calc(14px + var(--space-2));
+  flex: 0 0 auto;
 }
 
-.tag {
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
+/* 分类彩色胶囊（色值取自分类变量，按类别覆盖） */
+.category {
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
   background-color: var(--color-bg-active);
+  color: var(--color-text-muted);
+}
+
+.catProduct {
+  background-color: var(--color-cat-product-bg);
+  color: var(--color-cat-product);
+}
+
+.catDev {
+  background-color: var(--color-cat-dev-bg);
+  color: var(--color-cat-dev);
+}
+
+.catTest {
+  background-color: var(--color-cat-test-bg);
+  color: var(--color-cat-test);
+}
+
+.catDoc {
+  background-color: var(--color-cat-doc-bg);
+  color: var(--color-cat-doc);
+}
+
+.catLife {
+  background-color: var(--color-cat-life-bg);
+  color: var(--color-cat-life);
+}
+
+/* 周次标记标签 */
+.weekTag {
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-accent-soft);
   color: var(--color-accent);
   font-size: 11px;
   line-height: 18px;
 }
 
-.action,
-.actionActive,
-.actionDanger {
-  padding: 0;
-  border: none;
-  background-color: transparent;
+.date {
   color: var(--color-text-faint);
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
-.action:hover {
-  color: var(--color-accent);
+/* ⋯ 菜单：按钮 + 绝对定位弹层 */
+.menuWrap {
+  position: relative;
+  display: flex;
 }
 
-.actionActive {
-  color: var(--color-accent);
+.menuButton {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-faint);
+  font-size: 14px;
+  line-height: 1;
 }
 
-.actionDanger:hover {
+.menuButton:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.menu {
+  position: absolute;
+  top: 26px;
+  right: 0;
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 148px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuItem {
+  padding: 5px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.menuItem:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.menuItemDanger:hover {
+  background-color: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+/* 菜单内的分类快选区 */
+.menuCategories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.menuCat,
+.menuCatActive {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.menuCat:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.menuCatActive {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+/* 置顶角标 */
+.pinMark {
+  position: absolute;
+  top: -7px;
+  right: var(--space-3);
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 14px;
 }
 
 .tagPanel {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) 0 0 calc(14px + var(--space-2));
+  padding: var(--space-2) 0 0 calc(15px + var(--space-2));
 }
 
 .select {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg);
   font-size: 11px;
 }
 
+.tagAction {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.tagAction:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .error {
-  padding-left: calc(14px + var(--space-2));
+  padding-left: calc(15px + var(--space-2));
   color: var(--color-danger);
   font-size: 11px;
 }
@@ -170,7 +304,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-6);
 }
 
 .link {

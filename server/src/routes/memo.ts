@@ -15,6 +15,16 @@ const nullableInteger = (): Record<string, unknown> => ({
   anyOf: [{ type: 'integer' }, { type: 'null' }],
 });
 
+/** 备忘分类的合法取值：空串表示未分类 */
+export const MEMO_CATEGORIES = ['', 'product', 'dev', 'test', 'doc', 'life'] as const;
+
+/** 备忘分类 JSON Schema 片段 */
+const categorySchema = (): Record<string, unknown> => ({
+  type: 'string',
+  enum: [...MEMO_CATEGORIES],
+  default: '',
+});
+
 /**
  * 新建备忘请求体校验
  * @returns 请求体 JSON Schema
@@ -28,6 +38,7 @@ const createMemoSchema = (): FastifySchema => ({
       text: { type: 'string', minLength: 1, maxLength: 500 },
       year: nullableInteger(),
       week: nullableInteger(),
+      category: categorySchema(),
     },
   },
 });
@@ -39,7 +50,7 @@ const createMemoSchema = (): FastifySchema => ({
 const updateMemoSchema = (): FastifySchema => ({
   body: {
     type: 'object',
-    required: ['text', 'done', 'pinned', 'year', 'week'],
+    required: ['text', 'done', 'pinned', 'year', 'week', 'category'],
     additionalProperties: false,
     properties: {
       text: { type: 'string', minLength: 1, maxLength: 500 },
@@ -47,6 +58,7 @@ const updateMemoSchema = (): FastifySchema => ({
       pinned: { type: 'boolean' },
       year: nullableInteger(),
       week: nullableInteger(),
+      category: categorySchema(),
     },
   },
 });
@@ -118,6 +130,7 @@ const toMemoDto = (row: MemoRow): MemoDto => ({
   pinned: row.pinned === 1,
   year: row.year,
   week: row.week,
+  category: row.category,
   createdAt: row.created_at,
 });
 
@@ -176,7 +189,9 @@ export const memoRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           return reply.code(400).send(fail(ERROR_CODES.WEEK_OUT_OF_RANGE, '周次超出有效范围'));
         }
 
-        const created = insertMemo(request.userId, text, tag.year, tag.week);
+        // 分类缺省时按未分类处理
+        const category = request.body.category ?? '';
+        const created = insertMemo(request.userId, text, tag.year, tag.week, category);
         return reply.code(201).send(ok(toMemoDto(created), '已添加'));
       } catch (error) {
         request.log.error({ err: error }, '新建备忘失败');
@@ -211,6 +226,7 @@ export const memoRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           request.body.pinned,
           tag.year,
           tag.week,
+          request.body.category,
         );
         if (!updated) {
           return reply.code(404).send(fail(ERROR_CODES.MEMO_NOT_FOUND, '待办不存在'));

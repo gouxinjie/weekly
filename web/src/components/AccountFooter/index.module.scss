@@ -1,19 +1,38 @@
 /**
  * 底部账号区样式
- * 说明：固定在左栏底部，两态共用，位置不因切换标签页而跳动。
+ * 说明：固定在左栏底部，头像 + 手机号 + 登出，两态共用，位置不因切换标签页而跳动。
  */
 
 .footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
   flex: 0 0 auto;
-  padding: var(--space-3) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
+/* 圆形头像：主色浅底 + 剪影图标 */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
 .phone {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--color-text-muted);
   font-size: 12px;
   white-space: nowrap;
@@ -21,25 +40,22 @@
   text-overflow: ellipsis;
 }
 
-.actions {
-  display: flex;
-  gap: var(--space-2);
+.logout {
   flex: 0 0 auto;
-}
-
-.action {
-  padding: 0;
+  padding: var(--space-1) var(--space-2);
   border: none;
+  border-radius: var(--radius-sm);
   background-color: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-faint);
   font-size: 12px;
 }
 
-.action:hover {
-  color: var(--color-accent);
+.logout:hover:not(:disabled) {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
-.action:disabled {
+.logout:disabled {
   color: var(--color-text-faint);
   cursor: not-allowed;
 }

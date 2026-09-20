@@ -1,9 +1,9 @@
 /**
  * @component 应用根组件
- * @description 定义 4 条路由与登录态守卫；登录页与设置页不属于两种骨架
+ * @description 定义 4 条路由与登录态守卫；登录页为独立布局，其余页面共用应用骨架
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';

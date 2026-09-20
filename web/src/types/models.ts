@@ -49,6 +49,8 @@ export interface Memo {
   year: number | null;
   /** 标记的 ISO 周次，未标记为 null */
   week: number | null;
+  /** 分类标识，空串表示未分类 */
+  category: string;
   /** 创建时间 */
   createdAt: string;
 }
@@ -59,5 +61,5 @@ export type EditorMode = 'edit' | 'preview';
 /** 保存状态：用于标题栏「保存中 / 已保存」提示 */
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-/** 备忘筛选器四项（M-06） */
-export type MemoFilter = 'all' | 'current-week' | 'undone' | 'done';
+/** 备忘筛选项：全部 / 未完成 / 已完成 / 已过期 */
+export type MemoFilter = 'all' | 'undone' | 'done' | 'overdue';

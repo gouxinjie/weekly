@@ -1,9 +1,9 @@
 /**
- * @component 备忘筛选器
- * @description 左栏备忘态的筛选器：全部 / 本周 / 未完成 / 已完成，各项带计数
+ * @component 备忘筛选标签页
+ * @description 备忘页顶部的横向筛选标签：全部 / 未完成 / 已完成 / 已过期，各项带计数
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import type { MemoFilter as MemoFilterValue } from '@/types/models';
 import styles from './index.module.scss';
@@ -16,12 +16,12 @@ interface FilterOption {
   label: string;
 }
 
-/** 四个筛选项，顺序固定 */
+/** 四个筛选项，顺序与设计稿一致 */
 const OPTIONS: FilterOption[] = [
   { key: 'all', label: '全部' },
-  { key: 'current-week', label: '本周' },
   { key: 'undone', label: '未完成' },
   { key: 'done', label: '已完成' },
+  { key: 'overdue', label: '已过期' },
 ];
 
 /** MemoFilter 属性 */
@@ -35,28 +35,29 @@ interface MemoFilterProps {
 }
 
 /**
- * 备忘筛选器
+ * 备忘筛选标签页
  * @param props - 见 MemoFilterProps
- * @returns 筛选器节点
+ * @returns 筛选标签节点
  */
 const MemoFilter = ({ value, onChange, counts }: MemoFilterProps) => (
-  <ul className={styles.filters}>
+  <div className={styles.tabs} role="tablist" aria-label="备忘筛选">
     {OPTIONS.map((option) => {
       const selected = option.key === value;
       return (
-        <li key={option.key}>
-          <button
-            type="button"
-            className={selected ? styles.filterActive : styles.filter}
-            onClick={() => onChange(option.key)}
-          >
-            <span>{option.label}</span>
-            <span className={styles.count}>{counts[option.key]}</span>
-          </button>
-        </li>
+        <button
+          key={option.key}
+          type="button"
+          role="tab"
+          aria-selected={selected}
+          className={selected ? styles.tabActive : styles.tab}
+          onClick={() => onChange(option.key)}
+        >
+          {option.label}
+          <span className={styles.count}>（{counts[option.key]}）</span>
+        </button>
       );
     })}
-  </ul>
+  </div>
 );
 
 export default MemoFilter;

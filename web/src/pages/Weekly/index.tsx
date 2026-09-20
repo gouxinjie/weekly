@@ -1,9 +1,10 @@
 /**
  * @component 工作台（周报）
- * @description 三栏骨架：左栏两层树、中栏 Markdown 编辑与预览、右栏「本周参考」只读抽屉
+ * @description 三栏骨架：左栏时间轴、中栏周报（展示态为封面卡片 + 渲染内容，编辑态为工具条 + 编辑器）、
+ * 右栏抽屉（展示态为本周备忘，编辑态为模板 / 插入 / 导出面板）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-20
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -11,26 +12,40 @@ import type { Editor } from '@tiptap/core';
 import { toErrorMessage } from '@/api/client';
 import { fetchWeekly, fetchWrittenWeeks, saveWeekly } from '@/api/weekly';
 import AppLayout from '@/components/AppLayout';
+import EditorPanel from '@/components/EditorPanel';
 import EditorToolbar from '@/components/EditorToolbar';
 import MarkdownEditor from '@/components/MarkdownEditor';
 import type { MarkdownEditorHandle } from '@/components/MarkdownEditor';
 import MarkdownPreview from '@/components/MarkdownPreview';
 import Toast from '@/components/Toast';
 import Tree from '@/components/Tree';
-import type { TreeHandle } from '@/components/Tree';
 import WeeklyReference from '@/components/WeeklyReference';
-import { AUTOSAVE_DELAY, WEEKLY_TEMPLATE } from '@/constants';
-import { countChars, formatWeekLabel, formatWeekRangeFull } from '@/utils/format';
-import { getCurrentWeek, getWeekRange, isValidWeek, shiftWeek } from '@/utils/week';
+import { AUTOSAVE_DELAY, MAX_CONTENT_CHARS, START_YEAR, WEEKLY_TEMPLATE } from '@/constants';
+import { countChars, formatTimeShort, formatWeekLabel } from '@/utils/format';
+import { getCurrentWeek, getWeekRange, isValidWeek } from '@/utils/week';
 import type { EditorMode, SaveState } from '@/types/models';
 import styles from './index.module.scss';
 
 /** 各保存状态的展示文案 */
 const SAVE_TEXT: Record<SaveState, string> = {
   idle: '',
-  saving: '保存中…',
+  saving: '保存中',
   saved: '已保存',
   error: '保存失败',
+};
+
+/**
+ * 解析顶栏搜索框输入，形如「2026 年第 15 周」「2026-15」
+ * @param input - 用户输入
+ * @returns 解析出的周次；无法解析或越界时返回 null
+ */
+const parseSearchInput = (input: string): { year: number; week: number } | null => {
+  const matched = input.match(/(\d{4})\D*(\d{1,2})/);
+  if (matched === null) return null;
+
+  const year = Number(matched[1]);
+  const week = Number(matched[2]);
+  return isValidWeek(year, week) ? { year, week } : null;
 };
 
 /**
@@ -57,12 +72,13 @@ const Weekly = () => {
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [written, setWritten] = useState<Set<string>>(new Set());
   const [range, setRange] = useState(() => getWeekRange(year, week));
-  const [neverWritten, setNeverWritten] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState('');
+  const [lastSavedAt, setLastSavedAt] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [toast, setToast] = useState('');
   const [editor, setEditor] = useState<Editor | null>(null);
 
   const editorRef = useRef<MarkdownEditorHandle | null>(null);
-  const treeRef = useRef<TreeHandle | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
   /** 已落库的内容，用于判断是否还需要保存 */
@@ -93,7 +109,9 @@ const Weekly = () => {
         const text = data.updatedAt === '' ? WEEKLY_TEMPLATE : data.content;
         setContent(text);
         setRange({ start: data.weekStart, end: data.weekEnd });
-        setNeverWritten(data.updatedAt === '');
+        setUpdatedAt(data.updatedAt);
+        // 有内容的周直接进入展示态，空周进入编辑态
+        setMode(data.updatedAt === '' || data.content === '' ? 'edit' : 'preview');
         savedContentRef.current = data.content;
         contentOwnerRef.current = { year, week };
       })
@@ -109,7 +127,7 @@ const Weekly = () => {
     };
   }, [year, week, valid]);
 
-  // 加载已写周次，用于树的绿色角标
+  // 加载已写周次，用于时间轴的绿色圆点
   useEffect(() => {
     let active = true;
 
@@ -136,8 +154,10 @@ const Weekly = () => {
     try {
       await saveWeekly(year, week, content);
       savedContentRef.current = content;
+      const now = new Date().toISOString();
       setSaveState('saved');
-      setNeverWritten(false);
+      setUpdatedAt(now);
+      setLastSavedAt(now);
       setWritten((prev) => {
         const next = new Set(prev);
         next.add(`${year}-${week}`);
@@ -253,31 +273,38 @@ const Weekly = () => {
     }
   }, [content]);
 
-  /** 清空模板内容 */
-  const clearTemplate = useCallback((): void => {
-    setContent('');
+  /**
+   * 应用模板：确认后覆盖当前内容
+   * @param template - 模板内容，空串表示清空
+   * @returns 无
+   */
+  const applyTemplate = useCallback((template: string): void => {
+    const tip =
+      template === '' ? '确定清空当前内容吗？' : '应用模板将覆盖当前内容，确定继续吗？';
+    if (!window.confirm(tip)) return;
+    setContent(template);
   }, []);
 
-  // 全局快捷键：Ctrl+S 立即保存、Ctrl+B 折叠展开、Ctrl+K 打开跳转
+  /**
+   * 顶栏搜索回车：解析并跳转到对应周次
+   * @returns 无
+   */
+  const handleSearch = useCallback((): void => {
+    const parsed = parseSearchInput(searchInput);
+    if (parsed === null) {
+      setToast('未找到匹配的周次，试试「2026 年第 15 周」');
+      return;
+    }
+    setSearchInput('');
+    void goWeek(parsed.year, parsed.week);
+  }, [searchInput, goWeek]);
+
+  // 全局快捷键：Ctrl+S 立即保存
   useEffect(() => {
     const handler = (event: KeyboardEvent): void => {
-      if (!event.ctrlKey && !event.metaKey) return;
-
-      const key = event.key.toLowerCase();
-      if (key === 's') {
-        event.preventDefault();
-        void persist();
-        return;
-      }
-      if (key === 'b') {
-        event.preventDefault();
-        treeRef.current?.toggleAll();
-        return;
-      }
-      if (key === 'k') {
-        event.preventDefault();
-        treeRef.current?.focusJump();
-      }
+      if ((!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== 's') return;
+      event.preventDefault();
+      void persist();
     };
 
     window.addEventListener('keydown', handler);
@@ -291,9 +318,15 @@ const Weekly = () => {
     return <Navigate to={currentWeekPath} replace />;
   }
 
-  const prev = shiftWeek(year, week, -1);
-  const next = shiftWeek(year, week, 1);
   const charCount = countChars(content);
+  const isWritten = updatedAt !== '';
+  const isEditing = mode === 'edit';
+
+  // 顶栏年份可选项：从起点年份到当前年
+  const yearOptions: number[] = [];
+  for (let y = START_YEAR; y <= Math.max(currentWeek.year, year); y += 1) {
+    yearOptions.push(y);
+  }
 
   return (
     <AppLayout
@@ -303,98 +336,185 @@ const Weekly = () => {
           year={year}
           week={week}
           written={written}
-          treeRef={treeRef}
           onChange={(targetYear, targetWeek) => void goWeek(targetYear, targetWeek)}
         />
       }
-      drawer={<WeeklyReference year={year} week={week} onGoMemo={() => navigate('/memo')} />}
+      topbar={
+        isEditing ? undefined : (
+          <>
+            {/* 年份切换 */}
+            <select
+              className={styles.yearSelect}
+              value={year}
+              aria-label="切换年份"
+              onChange={(event) => {
+                const target = Number(event.target.value);
+                void goWeek(target, target === year ? week : 1);
+              }}
+            >
+              {yearOptions.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            <div className={styles.topbarRight}>
+              <input
+                className={styles.search}
+                value={searchInput}
+                placeholder="搜索周次内容…"
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') handleSearch();
+                }}
+              />
+
+              <button
+                type="button"
+                className={styles.bell}
+                aria-label="通知"
+                title="通知"
+                onClick={() => setToast('暂无新通知')}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.6 5.4 1.6 5.4H4.4S6 13.5 6 9.5Z" strokeLinejoin="round" />
+                  <path d="M10 18.4a2 2 0 0 0 4 0" strokeLinecap="round" />
+                </svg>
+                <span className={styles.bellDot} aria-hidden />
+              </button>
+
+              {/* 顶栏头像：与左栏账号区同款 */}
+              <span className={styles.avatar} aria-hidden>
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 1.9c-3.6 0-7 1.9-7 4.4 0 .9.7 1.5 1.6 1.5h10.8c.9 0 1.6-.6 1.6-1.5 0-2.5-3.4-4.4-7-4.4Z" />
+                </svg>
+              </span>
+            </div>
+          </>
+        )
+      }
+      drawer={
+        isEditing ? (
+          <EditorPanel
+            editor={editor}
+            onApplyTemplate={applyTemplate}
+            onExport={handleExport}
+          />
+        ) : (
+          <WeeklyReference year={year} week={week} onGoMemo={() => navigate('/memo')} />
+        )
+      }
       drawerCollapsed={drawerCollapsed}
       onToggleDrawer={() => setDrawerCollapsed(!drawerCollapsed)}
     >
-      <header className={styles.header}>
-        <div className={styles.titleArea}>
-          <h1 className={styles.title}>{formatWeekLabel(year, week)}</h1>
-          <span className={styles.range}>{formatWeekRangeFull(year, range.start, range.end)}</span>
-        </div>
-
-        <div className={styles.headerRight}>
-          <span
-            className={saveState === 'error' ? styles.saveStateError : styles.saveState}
-            aria-live="polite"
-          >
-            {SAVE_TEXT[saveState]}
-          </span>
-          <span className={styles.charCount}>{charCount} 字</span>
-
-          <button
-            type="button"
-            className={styles.navButton}
-            disabled={prev === null}
-            onClick={() => {
-              if (prev !== null) void goWeek(prev.year, prev.week);
-            }}
-          >
-            上一周
-          </button>
-          <button
-            type="button"
-            className={styles.navButton}
-            disabled={next === null}
-            onClick={() => {
-              if (next !== null) void goWeek(next.year, next.week);
-            }}
-          >
-            下一周
-          </button>
-
-          <div className={styles.modeSwitch}>
+      {/* 编辑态头部：返回 + 标题 + 自动保存 + 预览 */}
+      {isEditing ? (
+        <header className={styles.editHeader}>
+          <div className={styles.editHeaderLeft}>
             <button
               type="button"
-              className={mode === 'edit' ? styles.modeActive : styles.mode}
-              onClick={() => changeMode('edit')}
-            >
-              编辑
-            </button>
-            <button
-              type="button"
-              className={mode === 'preview' ? styles.modeActive : styles.mode}
+              className={styles.back}
               onClick={() => changeMode('preview')}
+              aria-label="返回展示"
+              title="返回展示"
             >
+              ‹
+            </button>
+            <h1 className={styles.editTitle}>{formatWeekLabel(year, week)} · 周报编辑</h1>
+          </div>
+
+          <div className={styles.editHeaderRight}>
+            <span className={styles.autoSave}>
+              {lastSavedAt === '' ? '自动保存' : `自动保存 ${formatTimeShort(lastSavedAt).slice(-5)}`}
+            </span>
+            {saveState !== 'idle' ? (
+              <span
+                className={
+                  saveState === 'error' ? styles.saveChipError : styles.saveChip
+                }
+                aria-live="polite"
+              >
+                {SAVE_TEXT[saveState]}
+              </span>
+            ) : null}
+            <button type="button" className={styles.ghostButton} onClick={() => changeMode('preview')}>
               预览
             </button>
           </div>
-        </div>
-      </header>
-
-      <EditorToolbar
-        editor={editor}
-        formatDisabled={mode !== 'edit' || loading}
-        onExport={handleExport}
-        onCopy={() => void handleCopy()}
-      />
-
-      {neverWritten ? (
-        <div className={styles.emptyBar}>
-          <span>第 {week} 周还没写</span>
-          <button type="button" className={styles.emptyAction} onClick={clearTemplate}>
-            清空模板
-          </button>
-        </div>
+        </header>
       ) : null}
 
-      {loading ? (
-        <p className={styles.hint}>加载中…</p>
-      ) : loadError !== '' ? (
-        <p className={styles.error}>{loadError}</p>
-      ) : mode === 'edit' ? (
-        <MarkdownEditor
-          value={content}
-          onChange={setContent}
-          editorRef={editorRef}
-          onEditorReady={setEditor}
-        />
+      {/* 展示态：封面卡片 + 渲染内容 + 元信息 */}
+      {!isEditing ? (
+        <div className={styles.displayScroll} ref={previewRef}>
+          <div className={styles.displayBody}>
+            <section className={styles.weekCard}>
+              <header className={styles.cardHead}>
+                {/* 封面缩略图：渐变模拟风景（不引入图片资源） */}
+                <span className={styles.cover} aria-hidden />
+                <div className={styles.cardHeadTexts}>
+                  <h1 className={styles.cardTitle}>第 {week} 周</h1>
+                  <span className={styles.cardRange}>
+                    {range.start} - {range.end}
+                  </span>
+                </div>
+                {isWritten ? <span className={styles.writtenBadge}>已写</span> : null}
+              </header>
+
+              <div className={styles.cardBody}>
+                {loading ? (
+                  <p className={styles.hint}>加载中…</p>
+                ) : loadError !== '' ? (
+                  <p className={styles.error}>{loadError}</p>
+                ) : (
+                  <MarkdownPreview source={content} />
+                )}
+              </div>
+
+              <footer className={styles.cardMeta}>
+                <span>
+                  {updatedAt === '' ? '尚未保存' : `更新于 ${formatTimeShort(updatedAt)}`}
+                </span>
+                <span>字数 {charCount}</span>
+              </footer>
+            </section>
+
+            <button type="button" className={styles.viewAll} onClick={() => changeMode('edit')}>
+              查看全部 ›
+            </button>
+          </div>
+        </div>
       ) : (
-        <MarkdownPreview source={content} scrollRef={previewRef} />
+        <>
+          <EditorToolbar
+            editor={editor}
+            formatDisabled={!isEditing || loading}
+            onExport={handleExport}
+            onCopy={() => void handleCopy()}
+          />
+
+          {loading ? (
+            <p className={styles.hint}>加载中…</p>
+          ) : loadError !== '' ? (
+            <p className={styles.error}>{loadError}</p>
+          ) : (
+            <MarkdownEditor
+              value={content}
+              onChange={setContent}
+              editorRef={editorRef}
+              onEditorReady={setEditor}
+            />
+          )}
+
+          {/* 编辑态底部状态栏：Markdown 编辑 + 字数计数 */}
+          <footer className={styles.statusBar}>
+            <span className={styles.statusChip}>Markdown 编辑</span>
+            <span className={styles.statusCount}>
+              {charCount} / {MAX_CONTENT_CHARS}
+            </span>
+          </footer>
+        </>
       )}
 
       {saveError !== '' ? <p className={styles.saveError}>{saveError}</p> : null}

@@ -1,51 +1,36 @@
 /**
  * 设置页样式
- * 说明：单列居中布局，内容宽度由 --settings-max-width 控制，不属于登录后的两种骨架。
+ * 说明：骨架中栏内的单列布局（宽 --settings-max-width），三张白色卡片 + 通栏红色退出按钮。
  */
 
 .page {
-  display: flex;
-  justify-content: center;
-  height: 100vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   background-color: var(--color-bg-subtle);
 }
 
 .panel {
+  display: flex;
+  flex-direction: column;
   width: var(--settings-max-width);
+  margin: 0 auto;
   padding: var(--space-6) var(--space-4);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
-}
-
-.back {
-  padding: 0;
-  border: none;
-  background-color: transparent;
-  color: var(--color-accent);
-  font-size: 13px;
-}
-
-.back:hover {
-  text-decoration: underline;
-}
-
 .title {
+  margin-bottom: var(--space-4);
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .section {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background-color: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .sectionTitle {
@@ -54,25 +39,87 @@
   font-weight: 600;
 }
 
-.row {
+/* 账号信息：头像 + 名称 + 手机号 */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.avatar svg {
+  width: 26px;
+  height: 26px;
+}
+
+.profileTexts {
+  display: flex;
+  flex-direction: column;
+}
+
+.profileName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profilePhone {
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+/* 账号安全的行式按钮：文字 + 右箭头 */
+.rowButton {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
-}
-
-.rowLabel {
-  color: var(--color-text-muted);
-}
-
-.rowValue {
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background-color: transparent;
   color: var(--color-text);
+  font-size: 13px;
+  text-align: left;
 }
 
+.rowButton:hover {
+  color: var(--color-accent);
+}
+
+/* 第一个行按钮不需要上边框（紧跟标题） */
+.sectionTitle + .rowButton {
+  border-top: none;
+}
+
+.chevron,
+.chevronOpen {
+  color: var(--color-text-faint);
+  font-size: 14px;
+  transition: transform 0.15s ease;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+/* 修改密码表单 */
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .field {
@@ -88,14 +135,15 @@
 
 .input {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-subtle);
   font-size: 13px;
 }
 
 .input:focus {
   border-color: var(--color-accent);
+  background-color: var(--color-bg);
   outline: none;
 }
 
@@ -124,7 +172,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: var(--color-accent-hover);
 }
 
 .primary:disabled {
@@ -132,45 +180,43 @@
   cursor: not-allowed;
 }
 
-.actions {
+/* 系统信息行 */
+.row {
   display: flex;
-  gap: var(--space-2);
-}
-
-.secondary,
-.danger {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  color: var(--color-text-muted);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) 0;
   font-size: 13px;
 }
 
-.secondary:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+.rowLabel {
+  color: var(--color-text-muted);
 }
 
-.danger:hover {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
+.rowValue {
+  color: var(--color-text);
 }
 
 .note {
-  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
   font-size: 12px;
   line-height: 1.7;
 }
 
-.code {
-  margin: var(--space-2) 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg-subtle);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  white-space: pre-wrap;
-  word-break: break-all;
+/* 通栏退出登录按钮：浅红底红字 */
+.logoutAll {
+  width: 100%;
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.logoutAll:hover {
+  background-color: var(--color-danger);
+  color: #ffffff;
 }

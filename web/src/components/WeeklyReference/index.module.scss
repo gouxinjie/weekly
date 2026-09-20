@@ -1,15 +1,38 @@
 /**
- * 本周参考样式
- * 说明：条目为纯只读展示，已完成的条目加删除线以示区分。
+ * 本周备忘样式
+ * 说明：右栏抽屉内容，包含标题行（新建按钮）、只读清单、进度条与引言卡。
  */
 
 .reference {
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
 }
 
 .title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+}
+
+/* 「＋ 新建」主色小按钮 */
+.create {
+  padding: 3px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.create:hover {
+  background-color: var(--color-accent-hover);
 }
 
 .subtitle {
@@ -49,15 +72,19 @@
   text-decoration: underline;
 }
 
+/* 只读清单：状态方块 + 文本 */
 .list {
-  margin-top: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  margin-top: var(--space-3);
 }
 
 .item,
 .itemDone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg);
@@ -65,9 +92,92 @@
   font-size: 12px;
   line-height: 1.5;
   word-break: break-word;
+  box-shadow: var(--shadow-card);
 }
 
 .itemDone {
   color: var(--color-text-faint);
   text-decoration: line-through;
+}
+
+/* 只读状态方块：完成为主色底白勾，未完成为空心方块 */
+.check,
+.checkDone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 4px;
+  background-color: var(--color-bg);
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.checkDone {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+/* 进度区 */
+.progress {
+  margin-top: var(--space-4);
+}
+
+.progressHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.progressPercent {
+  color: var(--color-text-faint);
+}
+
+.progressBar {
+  height: 6px;
+  margin-top: var(--space-1);
+  border-radius: 3px;
+  background-color: var(--color-border);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background-color: var(--color-accent);
+  transition: width 0.3s ease;
+}
+
+/* 引言卡：浅绿底 + 大引号 */
+.quote {
+  position: relative;
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-accent-soft);
+}
+
+.quoteMark {
+  position: absolute;
+  top: 2px;
+  left: var(--space-2);
+  color: var(--color-accent);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.quoteText {
+  color: var(--color-accent);
+  font-size: 12px;
+  line-height: 1.9;
 }
