@@ -1,9 +1,16 @@
 /**
  * 周次时间轴样式
  * 布局要点：标题固定在顶部，年 / 周列表在下方滚动；
- * 周节点左侧由伪元素画出贯穿的竖线，每个节点一枚圆点落在竖线上，
- * 选中周用浅底圆角卡片 + 主色圆点强调，已写周用绿色实心点。
+ * 周节点左侧由一条贯穿的竖线串起，每个节点一枚圆点落在线心上，
+ * 选中周用浅底圆角卡片 + 主色圆环强调，已写周用绿色实心点。
  */
+
+/* 圆点列宽：所有状态的圆点都占这个宽度，圆心因而恒定在一列上 */
+$dot-col: 12px;
+/* 周节点按钮的左内边距，等于 --space-2；竖线的横坐标由它与圆点列宽推导 */
+$track-gutter: 8px;
+/* 竖线所在列 = 按钮左内边距 + 圆点列半径，保证线正好穿过圆心 */
+$track-x: $track-gutter + ($dot-col / 2);
 
 .tree {
   display: flex;
@@ -11,19 +18,21 @@
   height: 100%;
 }
 
+/* 栏目标题：深色加粗，靠字号与字重压住下方列表，不再另加分隔线 */
 .title {
   flex: 0 0 auto;
-  padding: var(--space-2) var(--space-4);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .years {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-3);
 }
 
 .year {
@@ -39,8 +48,8 @@
   border: none;
   border-radius: var(--radius-sm);
   background-color: transparent;
-  color: var(--color-text);
-  font-weight: 600;
+  color: var(--color-accent);
+  font-weight: 700;
   text-align: left;
 }
 
@@ -75,7 +84,7 @@
 }
 
 .yearLabel {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* ===== 月份层级 ===== */
@@ -131,34 +140,36 @@
 
 /* ===== 时间轴 ===== */
 
-/* 周列表：竖线画在容器左侧伪元素上，贯穿所有节点 */
+/* 周列表：竖线画在容器伪元素上，贯穿所有节点 */
 .weeks {
   position: relative;
   margin-left: var(--space-3);
-  padding-left: var(--space-2);
+  padding-right: var(--space-2);
 }
 
-/* 贯穿竖线：从首节点圆心到末节点圆心 */
+/* 贯穿竖线：与圆点列共用同一横坐标，圆心必然落在线上 */
 .weeks::before {
   content: '';
   position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 3px;
-  border-left: 1px solid var(--color-border-strong);
+  top: 0;
+  bottom: 0;
+  left: $track-x;
+  width: 1px;
+  background-color: var(--color-border-strong);
 }
 
 .weekItem {
   position: relative;
 }
 
+/* 周节点：整行可点，左侧留出时间轴圆点列 */
 .week,
 .weekActive {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
   width: 100%;
-  padding: 5px var(--space-2);
+  padding: var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background-color: transparent;
@@ -169,53 +180,81 @@
   background-color: var(--color-bg-subtle);
 }
 
-/* 选中周：浅底卡片 */
+/* 选中周：浅底圆角卡片 */
 .weekActive {
   background-color: var(--color-bg-active);
 }
 
-/* 时间轴圆点：骑在竖线上（竖线 left 3px + 容器 padding 8px → 圆点定位 0px） */
+/* 圆点列：宽度固定，三种状态圆心对齐，竖线正好从圆心穿过 */
 .dotActive,
 .dotSaved,
 .dotEmpty {
   position: relative;
   z-index: 1;
+  display: flex;
   flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  margin-top: 7px;
+  align-items: center;
+  justify-content: center;
+  width: $dot-col;
+  height: $dot-col;
+  margin-top: var(--space-1);
+}
+
+/* 已写：绿色实心点 */
+.dotSaved::after {
+  content: '';
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-}
-
-/* 当前选中：主色实心 + 外圈 */
-.dotActive {
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-  background-color: var(--color-accent);
-}
-
-/* 已写：绿色实心 */
-.dotSaved {
   background-color: var(--color-saved);
 }
 
-/* 未写：灰色空心 */
-.dotEmpty {
-  border: 1.5px solid var(--color-text-faint);
+/* 未写：灰色实心点，比已写的绿点略小 */
+.dotEmpty::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-text-faint);
+}
+
+/* 选中：白底 + 主色圆环 */
+.dotActive::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--color-accent);
+  border-radius: 50%;
   background-color: var(--color-bg);
+}
+
+/* 选中：环心再点一枚实心点 */
+.dotActive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 3px;
+  height: 3px;
+  margin: auto;
+  border-radius: 50%;
+  background-color: var(--color-accent);
 }
 
 .weekTexts {
   display: flex;
   flex-direction: column;
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .weekText,
 .weekTextEmpty {
   font-size: 13px;
-  line-height: 1.5;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
+/* 未写的周：文字用最淡的灰（规范中的未写状态色） */
 .weekTextEmpty {
   color: var(--color-text-faint);
 }
@@ -223,12 +262,13 @@
 .weekActive .weekText,
 .weekActive .weekTextEmpty {
   color: var(--color-accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
+/* 日期区间：比周次低一级，灰字不抢视线 */
 .weekRange {
-  color: var(--color-text-faint);
-  font-size: 11px;
+  color: var(--color-text-muted);
+  font-size: 12px;
   line-height: 1.4;
   white-space: nowrap;
 }

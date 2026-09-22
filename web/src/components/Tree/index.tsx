@@ -31,7 +31,7 @@ interface TreeProps {
 interface WeekNode {
   /** ISO 周次 */
   week: number;
-  /** 形如「09/14 - 09/20」 */
+  /** 形如「09/14 – 09/20」 */
   range: string;
   /** 是否已写 */
   written: boolean;
@@ -201,7 +201,7 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
           const range = getWeekRange(item, weekNo);
           buckets[getWeekMonth(item, weekNo) - 1].push({
             week: weekNo,
-            range: formatWeekRangeShort(range.start, range.end).replace('–', ' - '),
+            range: formatWeekRangeShort(range.start, range.end).replace('–', ' – '),
             written: hasData,
           });
         }
