@@ -68,7 +68,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 12px;
 }
 
@@ -117,7 +117,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 13px;
 }
 

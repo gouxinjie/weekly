@@ -321,7 +321,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 14px;
   font-weight: 500;
   transition: background-color 0.15s ease;

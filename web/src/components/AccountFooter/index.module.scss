@@ -1,6 +1,6 @@
 /**
  * 底部账号区样式
- * 说明：固定在左栏底部，圆形头像 + 账号名 / 脱敏手机号两行 + 登出按钮，
+ * 说明：固定在左栏底部，圆形头像 + 账号名 / 脱敏手机号两行，
  * 两态共用，位置不因切换标签页而跳动。
  */
 
@@ -66,26 +66,4 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* 登出入口：整行小按钮，页签栏很窄放不下并排 */
-.logout {
-  width: 100%;
-  padding: 4px 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background-color: transparent;
-  color: var(--color-text-faint);
-  font-size: 11px;
-  text-align: center;
-}
-
-.logout:hover:not(:disabled) {
-  background-color: var(--color-danger-soft);
-  color: var(--color-danger);
-}
-
-.logout:disabled {
-  color: var(--color-text-faint);
-  cursor: not-allowed;
 }

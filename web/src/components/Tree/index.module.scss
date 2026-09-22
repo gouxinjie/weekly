@@ -2,15 +2,21 @@
  * 周次时间轴样式
  * 布局要点：标题固定在顶部，年 / 周列表在下方滚动；
  * 周节点左侧由一条贯穿的竖线串起，每个节点一枚圆点落在线心上，
- * 选中周用浅底圆角卡片 + 主色圆环强调，已写周用绿色实心点。
+ * 选中周用浅底圆角卡片 + 同心圆环强调（已写绿环、未写主色环），已写周用绿色实心点。
  */
 
+@use 'sass:math';
+
 /* 圆点列宽：所有状态的圆点都占这个宽度，圆心因而恒定在一列上 */
-$dot-col: 12px;
+$dot-col: 14px;
+/* 未选中圆点的直径；选中圆环的环心点与之同尺寸，两态的视觉重量才一致 */
+$dot-size: 8px;
+/* 选中圆环外径：比圆点列宽大 2px，居中后左右各外溢 1px，横向圆心仍落在列中线上 */
+$ring-size: $dot-col + 2px;
 /* 周节点按钮的左内边距，等于 --space-2；竖线的横坐标由它与圆点列宽推导 */
 $track-gutter: 8px;
-/* 竖线所在列 = 按钮左内边距 + 圆点列半径，保证线正好穿过圆心 */
-$track-x: $track-gutter + ($dot-col / 2);
+/* 圆心横坐标 = 按钮左内边距 + 圆点列半径；竖线用它定位后再左移半个线宽（见 .weeks::before） */
+$track-x: $track-gutter + math.div($dot-col, 2);
 
 .tree {
   display: flex;
@@ -109,7 +115,9 @@ $track-x: $track-gutter + ($dot-col / 2);
   border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  /* 月份是「年 > 月 > 周」里的第二级，字号与周节点持平（13px），
+     比年标题（14px）低一级，不再比它下面的周文字更小 */
+  font-size: 13px;
   font-weight: 600;
   text-align: left;
 }
@@ -147,7 +155,9 @@ $track-x: $track-gutter + ($dot-col / 2);
   padding-right: var(--space-2);
 }
 
-/* 贯穿竖线：与圆点列共用同一横坐标，圆心必然落在线上 */
+/* 贯穿竖线：与圆点列共用同一横坐标，圆心必然落在线上。
+   只写 left 会让 1px 的线占 [$track-x, $track-x + 1]，线心比圆心偏右 0.5px，
+   放大多倍能看出线没有从圆心穿过；translateX(-50%) 把线心精确对到圆心上 */
 .weeks::before {
   content: '';
   position: absolute;
@@ -156,6 +166,7 @@ $track-x: $track-gutter + ($dot-col / 2);
   left: $track-x;
   width: 1px;
   background-color: var(--color-border-strong);
+  transform: translateX(-50%);
 }
 
 .weekItem {
@@ -185,8 +196,9 @@ $track-x: $track-gutter + ($dot-col / 2);
   background-color: var(--color-bg-active);
 }
 
-/* 圆点列：宽度固定，三种状态圆心对齐，竖线正好从圆心穿过 */
+/* 圆点列：宽度固定，四种状态横向圆心对齐，竖线正好从圆心穿过 */
 .dotActive,
+.dotActiveWritten,
 .dotSaved,
 .dotEmpty {
   position: relative;
@@ -197,47 +209,71 @@ $track-x: $track-gutter + ($dot-col / 2);
   justify-content: center;
   width: $dot-col;
   height: $dot-col;
-  margin-top: var(--space-1);
+  /* 纵向锚点：圆心落在「第 N 周」标题行中线下方约 0.27 个行距处（设计稿实测位置）。
+     未选中圆点与选中圆环共用这一锚点，切换选中时标记不会上下跳动 */
+  margin-top: var(--space-2);
+}
+
+/* 未选中圆点：直径统一 8px，只用颜色区分已写 / 未写。
+   8px 在 100% / 125% / 150% / 200% 缩放下分别落到 8 / 10 / 12 / 16 个物理像素，都是整数；
+   原先的 6px、7px 在 125% 缩放下只有 7.5 / 8.75 个物理像素，
+   圆弧会被抗锯齿磨成「圆角方块」，看起来不够圆 */
+.dotSaved::after,
+.dotEmpty::after {
+  content: '';
+  width: $dot-size;
+  height: $dot-size;
+  border-radius: 50%;
 }
 
 /* 已写：绿色实心点 */
 .dotSaved::after {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
   background-color: var(--color-saved);
 }
 
-/* 未写：灰色实心点，比已写的绿点略小 */
+/* 未写：灰色实心点 */
 .dotEmpty::after {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
   background-color: var(--color-text-faint);
 }
 
-/* 选中：白底 + 主色圆环 */
-.dotActive::before {
+/* 选中：圆环 + 环心实心点，环与心同色（对齐设计稿的「同心圆环」观感）。
+   未写取主色，已写取绿色（.dotActiveWritten）——
+   选中是「位置」信号、绿色是「已写」信号，两者不能互相吞并。
+   描边取整数 2px：1.5px 在 100% 缩放下会留下半像素毛边，圆环会显得不圆。
+   外径 $ring-size、环心点 $dot-size、空隙 2px：内点必须够大（与未选中圆点同尺寸），
+   内点太小会在环内留下大片空白，看起来像靶心 */
+.dotActive::before,
+.dotActiveWritten::before {
   content: '';
-  width: 11px;
-  height: 11px;
+  /* 环比圆点列宽大 2px，必须禁止收缩，否则会被压回列宽，环与环心点不再同心 */
+  flex: 0 0 auto;
+  width: $ring-size;
+  height: $ring-size;
   border: 2px solid var(--color-accent);
   border-radius: 50%;
-  background-color: var(--color-bg);
+  /* 环内填选中卡片的底色：既挡住贯穿竖线不穿进环心，又不会浮出一枚与卡片不同色的白盘 */
+  background-color: var(--color-bg-active);
 }
 
-/* 选中：环心再点一枚实心点 */
-.dotActive::after {
+.dotActiveWritten::before {
+  border-color: var(--color-saved);
+}
+
+/* 环心实心点：与圆环同心，落在竖线上 */
+.dotActive::after,
+.dotActiveWritten::after {
   content: '';
   position: absolute;
   inset: 0;
-  width: 3px;
-  height: 3px;
+  width: $dot-size;
+  height: $dot-size;
   margin: auto;
   border-radius: 50%;
   background-color: var(--color-accent);
+}
+
+.dotActiveWritten::after {
+  background-color: var(--color-saved);
 }
 
 .weekTexts {

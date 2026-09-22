@@ -308,7 +308,8 @@ interface TreeProps {
 
 | 颜色 | 变量 | 用途 |
 |---|---|---|
-| 深墨绿 `#2e5245` | `--color-accent` | 主色：选中态、主按钮、链接、聚焦环、周节点选中高亮条 |
+| 深墨绿 `#2e5245` | `--color-accent` | 主色：选中态（选中页签实底、周节点选中圆环）、主按钮、链接、聚焦环 |
+| 反白 `#ffffff` | `--color-on-accent` | 主色实底上的前景：选中页签的文字与图标、主按钮文字（深色主题取 `#1b211e`） |
 | 绿 `#4a8b3c` | `--color-saved` | 状态色：已写角标、已保存提示、本周进度条 |
 | 红 `#b03a2e` | `--color-danger` | 危险色：删除、错误提示 |
 | 灰 `#9aa19d` | `--color-text-faint` | 未写状态：未写的周节点文字与角标 |
@@ -332,6 +333,7 @@ interface TreeProps {
   --color-accent:        #2e5245;
   --color-accent-hover:  #27463b;
   --color-accent-soft:   #e7efe9;
+  --color-on-accent:     #ffffff;
   --color-saved:         #4a8b3c;
   --color-danger:        #b03a2e;
 

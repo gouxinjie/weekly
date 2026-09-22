@@ -383,55 +383,53 @@ const Weekly = () => {
         />
       }
       topbar={
-        isEditing ? undefined : (
-          <>
-            {/* 年份切换 */}
-            <Select
-              value={String(year)}
-              options={yearOptions}
-              ariaLabel="切换年份"
-              size="md"
-              variant="ghost"
-              onChange={(next) => {
-                const target = Number(next);
-                void goWeek(target, target === year ? week : 1);
+        <>
+          {/* 年份切换 */}
+          <Select
+            value={String(year)}
+            options={yearOptions}
+            ariaLabel="切换年份"
+            size="md"
+            variant="ghost"
+            onChange={(next) => {
+              const target = Number(next);
+              void goWeek(target, target === year ? week : 1);
+            }}
+          />
+
+          <div className={styles.topbarRight}>
+            <input
+              className={styles.search}
+              value={searchInput}
+              placeholder="搜索周次内容…"
+              onChange={(event) => setSearchInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleSearch();
               }}
             />
 
-            <div className={styles.topbarRight}>
-              <input
-                className={styles.search}
-                value={searchInput}
-                placeholder="搜索周次内容…"
-                onChange={(event) => setSearchInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') handleSearch();
-                }}
-              />
+            <button
+              type="button"
+              className={styles.bell}
+              aria-label="通知"
+              title="通知"
+              onClick={() => setToast('暂无新通知')}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.6 5.4 1.6 5.4H4.4S6 13.5 6 9.5Z" strokeLinejoin="round" />
+                <path d="M10 18.4a2 2 0 0 0 4 0" strokeLinecap="round" />
+              </svg>
+              <span className={styles.bellDot} aria-hidden />
+            </button>
 
-              <button
-                type="button"
-                className={styles.bell}
-                aria-label="通知"
-                title="通知"
-                onClick={() => setToast('暂无新通知')}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M6 9.5a6 6 0 0 1 12 0c0 4 1.6 5.4 1.6 5.4H4.4S6 13.5 6 9.5Z" strokeLinejoin="round" />
-                  <path d="M10 18.4a2 2 0 0 0 4 0" strokeLinecap="round" />
-                </svg>
-                <span className={styles.bellDot} aria-hidden />
-              </button>
-
-              {/* 顶栏头像：与左栏账号区同款 */}
-              <span className={styles.avatar} aria-hidden>
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 1.9c-3.6 0-7 1.9-7 4.4 0 .9.7 1.5 1.6 1.5h10.8c.9 0 1.6-.6 1.6-1.5 0-2.5-3.4-4.4-7-4.4Z" />
-                </svg>
-              </span>
-            </div>
-          </>
-        )
+            {/* 顶栏头像：与左栏账号区同款 */}
+            <span className={styles.avatar} aria-hidden>
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 1.9c-3.6 0-7 1.9-7 4.4 0 .9.7 1.5 1.6 1.5h10.8c.9 0 1.6-.6 1.6-1.5 0-2.5-3.4-4.4-7-4.4Z" />
+              </svg>
+            </span>
+          </div>
+        </>
       }
       drawer={
         isEditing ? (

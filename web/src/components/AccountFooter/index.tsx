@@ -1,13 +1,11 @@
 /**
  * @component 底部账号区
- * @description 左栏底部的圆形头像、账号名与脱敏手机号，右侧为登出入口；
+ * @description 左栏底部的圆形头像、账号名与脱敏手机号；
  * 两态位置一致不跳动
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
  */
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { maskPhone } from '@/utils/format';
 import styles from './index.module.scss';
@@ -20,23 +18,7 @@ const ACCOUNT_NAME = 'weekly 用户';
  * @returns 账号区节点
  */
 const AccountFooter = () => {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  const [pending, setPending] = useState(false);
-
-  /**
-   * 登出并返回登录页
-   * @returns 无
-   */
-  const handleSignOut = async (): Promise<void> => {
-    setPending(true);
-    try {
-      await signOut();
-      navigate('/login', { replace: true });
-    } finally {
-      setPending(false);
-    }
-  };
+  const { user } = useAuth();
 
   if (user === null) return null;
 
@@ -57,16 +39,6 @@ const AccountFooter = () => {
           </span>
         </span>
       </div>
-
-      <button
-        type="button"
-        className={styles.logout}
-        onClick={() => void handleSignOut()}
-        disabled={pending}
-        title="登出"
-      >
-        登出
-      </button>
     </div>
   );
 };

@@ -63,7 +63,7 @@ interface AppLayoutProps {
   activeTab: AppTab;
   /** 可选时间轴列：渲染在页签栏右侧、顶栏下方，仅周报态传入 */
   timeline?: ReactNode;
-  /** 可选顶栏：渲染在时间轴列与中栏之上（周报展示态的年份 / 搜索 / 通知条） */
+  /** 可选顶栏：渲染在时间轴列与中栏之上（周报态的年份 / 搜索 / 通知条，编辑态与展示态都传） */
   topbar?: ReactNode;
   /** 中栏内容 */
   children: ReactNode;
@@ -130,6 +130,7 @@ const AppLayout = ({
                 type="button"
                 className={activeTab === tab.key ? styles.tabActive : styles.tab}
                 onClick={() => goTab(tab.key)}
+                aria-current={activeTab === tab.key ? 'page' : undefined}
               >
                 <span className={styles.tabIcon}>{tab.icon}</span>
                 {tab.label}

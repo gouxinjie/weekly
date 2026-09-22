@@ -1,12 +1,23 @@
 /**
  * 本周备忘样式
- * 说明：右栏抽屉内容，包含标题行（新建按钮）、只读清单、进度条与引言卡。
+ * 说明：右栏抽屉内容。标题行、周次副标题、只读清单与进度整体收在一张白卡片里，
+ * 卡片下方另置引言卡；抽屉底色是浅灰，靠白卡与投影拉开层次。
  */
 
+/* 抽屉内容外层：只负责内边距与两张卡之间的间距 */
 .reference {
   display: flex;
   flex-direction: column;
-  padding: var(--space-4) var(--space-3);
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+/* 白色卡片：这一列的视觉主体 */
+.card {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .header {
@@ -16,25 +27,30 @@
   gap: var(--space-2);
 }
 
+/* 栏目标题：与时间轴列的「时间轴」标题同级，两列标题视觉重量保持一致 */
 .title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-/* 「＋ 新建」主色小按钮 */
+/* 「＋ 新建」：浅底主色字胶囊。
+   不用实心主按钮——窄栏里一块实心主色太重，也会与页面主按钮「发布」抢主次 */
 .create {
+  flex: 0 0 auto;
   padding: 3px var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
-  background-color: var(--color-accent);
-  color: #ffffff;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
   font-size: 11px;
+  font-weight: 600;
 }
 
 .create:hover {
-  background-color: var(--color-accent-hover);
+  color: var(--color-accent-hover);
 }
 
+/* 周次副标题：说明这些备忘标记在哪一周 */
 .subtitle {
   margin-top: var(--space-1);
   color: var(--color-text-faint);
@@ -97,7 +113,9 @@
   text-decoration: line-through;
 }
 
-/* 只读状态方块：完成为主色底白勾，未完成为空心方块 */
+/* 只读状态方块：完成为主色底白勾，未完成为空心方块。
+   描边取整 1px —— 1.5px 在 100% 缩放下会留半像素毛边，方块四角会发虚；
+   margin-top 2px 让方块的视觉中心落在首行文字的中线上 */
 .check,
 .checkDone {
   display: flex;
@@ -106,11 +124,11 @@
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
-  margin-top: 1px;
-  border: 1.5px solid var(--color-border-strong);
+  margin-top: 2px;
+  border: 1px solid var(--color-border-strong);
   border-radius: 4px;
   background-color: var(--color-bg);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 10px;
   line-height: 1;
 }
@@ -120,12 +138,14 @@
   background-color: var(--color-accent);
 }
 
-/* 进度区：标题一行，进度条与百分比一行 */
+/* 进度区：与清单之间用一条细分隔线断开，统计信息不再和清单糊成一片 */
 .progress {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .progressLabel {
@@ -162,26 +182,27 @@
   transition: width 0.3s ease;
 }
 
-/* 引言卡：浅绿到浅蓝的渐变底 + 大引号 */
+/* 引言卡：浅绿到浅蓝的斜向渐变 + 右下角一层柔光，作为整列的情绪收尾 */
 .quote {
-  position: relative;
-  margin-top: var(--space-4);
-  padding: var(--space-4) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
   background:
-    radial-gradient(120% 90% at 100% 100%, rgb(160 205 190 / 45%) 0%, transparent 62%),
-    linear-gradient(160deg, #e8f0ec 0%, #e4edea 55%, #dfe9ec 100%);
+    radial-gradient(120% 90% at 100% 100%, var(--color-quote-glow) 0%, transparent 62%),
+    linear-gradient(160deg, var(--color-quote-from) 0%, var(--color-quote-to) 100%);
 }
 
+/* 引号：改为流内占位元素，不再绝对定位——
+   绝对定位时它与正文各行共用同一块空间，正文一多就会压到引号上。
+   行高压到 0.6：26px 的行盒里引号字形只占上方约 10px，余下的空白会把正文顶得太远 */
 .quoteMark {
-  position: absolute;
-  top: 2px;
-  left: var(--space-2);
+  flex: 0 0 auto;
   color: var(--color-accent);
   font-size: 26px;
   font-weight: 700;
-  line-height: 1;
-  opacity: 0.55;
+  line-height: 0.6;
 }
 
 .quoteText {

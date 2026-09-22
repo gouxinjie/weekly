@@ -4,7 +4,7 @@
  * 清单为只读展示（保持模块单向），「新建」按钮跳转备忘页
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import { useEffect, useState } from 'react';
 import { fetchMemosByWeek } from '@/api/memo';
@@ -60,63 +60,67 @@ const WeeklyReference = ({ year, week, onGoMemo }: WeeklyReferenceProps) => {
 
   return (
     <div className={styles.reference}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>本周备忘</h2>
-        <button type="button" className={styles.create} onClick={onGoMemo}>
-          ＋ 新建
-        </button>
-      </div>
-      <p className={styles.subtitle}>{formatWeekLabel(year, week)}</p>
-
-      {loading ? <p className={styles.hint}>加载中…</p> : null}
-      {!loading && error !== '' ? <p className={styles.error}>{error}</p> : null}
-
-      {!loading && error === '' && memos.length === 0 ? (
-        <div className={styles.empty}>
-          <p className={styles.hint}>本周暂无标记的备忘</p>
-          <button type="button" className={styles.link} onClick={onGoMemo}>
-            去备忘添加
+      {/* 白色卡片：标题行、周次副标题、清单 / 空态与进度都收在这一张卡里，
+          靠底色与投影跟抽屉的浅灰底拉开层次（对齐设计稿） */}
+      <section className={styles.card}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>本周备忘</h2>
+          <button type="button" className={styles.create} onClick={onGoMemo}>
+            ＋ 新建
           </button>
         </div>
-      ) : null}
+        <p className={styles.subtitle}>{formatWeekLabel(year, week)}</p>
 
-      {!loading && error === '' && memos.length > 0 ? (
-        <>
-          <ul className={styles.list}>
-            {memos.map((memo) => (
-              <li key={memo.id} className={memo.done ? styles.itemDone : styles.item}>
-                {/* 只读状态图标：完成画勾，未完成画空心方块 */}
-                <span
-                  className={memo.done ? styles.checkDone : styles.check}
-                  aria-label={memo.done ? '已完成' : '未完成'}
-                >
-                  {memo.done ? '✓' : ''}
-                </span>
-                {memo.text}
-              </li>
-            ))}
-          </ul>
+        {loading ? <p className={styles.hint}>加载中…</p> : null}
+        {!loading && error !== '' ? <p className={styles.error}>{error}</p> : null}
 
-          {/* 本周完成进度：标题在上，进度条 + 百分比在下 */}
-          <div className={styles.progress}>
-            <span className={styles.progressLabel}>
-              本周进度 {doneCount}/{memos.length}
-            </span>
-            <div className={styles.progressRow}>
-              <div
-                className={styles.progressBar}
-                role="progressbar"
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
-              </div>
-              <span className={styles.progressPercent}>{percent}%</span>
-            </div>
+        {!loading && error === '' && memos.length === 0 ? (
+          <div className={styles.empty}>
+            <p className={styles.hint}>本周暂无标记的备忘</p>
+            <button type="button" className={styles.link} onClick={onGoMemo}>
+              去备忘添加
+            </button>
           </div>
-        </>
-      ) : null}
+        ) : null}
+
+        {!loading && error === '' && memos.length > 0 ? (
+          <>
+            <ul className={styles.list}>
+              {memos.map((memo) => (
+                <li key={memo.id} className={memo.done ? styles.itemDone : styles.item}>
+                  {/* 只读状态图标：完成画勾，未完成画空心方块 */}
+                  <span
+                    className={memo.done ? styles.checkDone : styles.check}
+                    aria-label={memo.done ? '已完成' : '未完成'}
+                  >
+                    {memo.done ? '✓' : ''}
+                  </span>
+                  {memo.text}
+                </li>
+              ))}
+            </ul>
+
+            {/* 本周完成进度：上方细分隔线隔开清单，标题一行，进度条 + 百分比一行 */}
+            <div className={styles.progress}>
+              <span className={styles.progressLabel}>
+                本周进度 {doneCount}/{memos.length}
+              </span>
+              <div className={styles.progressRow}>
+                <div
+                  className={styles.progressBar}
+                  role="progressbar"
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+                </div>
+                <span className={styles.progressPercent}>{percent}%</span>
+              </div>
+            </div>
+          </>
+        ) : null}
+      </section>
 
       {/* 引言卡 */}
       <figure className={styles.quote}>

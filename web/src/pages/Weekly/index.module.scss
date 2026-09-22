@@ -1,10 +1,11 @@
 /**
  * 工作台（周报）样式
- * 布局要点：编辑态 = 返回行 + 标题行 + 带边框的编辑容器 + 底部状态栏；
- * 展示态 = 居中的周报卡片（全宽封面 + 标题行 + 内容 + 查看全部 + 元信息）。
+ * 布局要点：顶栏（年份切换 / 搜索 / 通知）在编辑态与展示态都常驻，
+ * 编辑态 = 顶栏 + 返回行 + 标题行 + 带边框的编辑容器 + 底部状态栏；
+ * 展示态 = 顶栏 + 居中的周报卡片（全宽封面 + 标题行 + 内容 + 查看全部 + 元信息）。
  */
 
-/* ===== 顶栏（展示态） ===== */
+/* ===== 顶栏（编辑态与展示态常驻） ===== */
 
 .topbarRight {
   display: flex;
@@ -18,7 +19,8 @@
   width: 240px;
   padding: 7px var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  /* 由全圆胶囊改为 10px 圆角；全站其它输入框为 6px，此处按需求单独取 10px */
+  border-radius: var(--radius-md);
   background-color: var(--color-bg-subtle);
   font-size: 12px;
 }
@@ -192,7 +194,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-on-accent);
   font-size: 12px;
 }
 

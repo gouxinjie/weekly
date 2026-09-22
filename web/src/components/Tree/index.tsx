@@ -1,7 +1,8 @@
 /**
  * @component 周次时间轴
  * @description 左栏「年 > 月 > 周」三层导航，以带圆点连线的垂直时间轴呈现；
- * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片
+ * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片，
+ * 选中态用「圆环 + 环心点」表示，颜色仍按已写（绿）/ 未写（主色）区分
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
@@ -363,11 +364,13 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
                                     className={selected ? styles.weekActive : styles.week}
                                     onClick={() => onChange(node.year, item.week)}
                                   >
-                                    {/* 时间轴圆点：当前选中带描边圈，已写为实心绿点，未写为灰点 */}
+                                    {/* 时间轴圆点：选中为圆环 + 环心点（已写绿、未写主色），未选中时已写为实心绿点、未写为灰点 */}
                                     <span
                                       className={
                                         selected
-                                          ? styles.dotActive
+                                          ? item.written
+                                            ? styles.dotActiveWritten
+                                            : styles.dotActive
                                           : item.written
                                             ? styles.dotSaved
                                             : styles.dotEmpty

@@ -84,7 +84,8 @@
   gap: 10px;
   padding: 9px 10px;
   border: none;
-  border-radius: var(--radius-md);
+  /* 页签是小体量控件，圆角取小号，避免过于圆润 */
+  border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-muted);
   font-size: 13px;
@@ -92,16 +93,21 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+/* 未选中悬停：页签栏底色本身就是 --color-bg-subtle，这里必须用更深的 active 底才有反馈 */
 .tab:hover {
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-bg-active);
   color: var(--color-text);
 }
 
-/* 选中页签：浅底 + 主色文字 */
+/* 选中页签：主色实底 + 反白文字。页签栏本身是浅灰底，深绿实底一眼可辨 */
 .tabActive {
-  background-color: var(--color-bg-active);
-  color: var(--color-text);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
   font-weight: 600;
+}
+
+.tabActive:hover {
+  background-color: var(--color-accent-hover);
 }
 
 .tabIcon {
@@ -112,8 +118,9 @@
   color: var(--color-text-faint);
 }
 
+/* 选中页签的图标跟随反白文字，不再单独指定主色 */
 .tabActive .tabIcon {
-  color: var(--color-accent);
+  color: inherit;
 }
 
 .tabIcon svg {
@@ -178,6 +185,7 @@
 
 /* 右栏：固定宽度，窗口变窄时第一个被压缩 */
 .drawer {
+  position: relative;
   display: flex;
   flex: 0 1 var(--drawer-width);
   width: var(--drawer-width);
@@ -186,13 +194,13 @@
   background-color: var(--color-bg-subtle);
 }
 
-/* 收起后的窄条，仅保留展开入口 */
+/* 收起后的窄条，仅保留展开入口；把手竖直居中，与展开态停在同一高度，切换时不跳动 */
 .drawerCollapsed {
   display: flex;
   flex: 0 0 24px;
   width: 24px;
+  align-items: center;
   justify-content: center;
-  padding-top: var(--space-3);
   border-left: 1px solid var(--color-border);
   background-color: var(--color-bg-subtle);
 }
@@ -211,6 +219,31 @@
 
 .drawerToggle:hover {
   background-color: var(--color-bg-active);
+  color: var(--color-accent);
+}
+
+/*
+ * 展开态的收起把手：骑在左边界上的浮动手柄。
+ * 它原本是抽屉里的普通 flex 子项，会独占 18px 一列，把 --drawer-width 的 220px 压到 202px；
+ * 改为绝对定位后半悬在边界外，不占内容宽度，内容重新吃满整栏。
+ */
+.drawer .drawerToggle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-muted);
+}
+
+.drawer .drawerToggle:hover {
+  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 

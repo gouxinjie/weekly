@@ -24,6 +24,8 @@
   --color-accent: #2e5245;
   --color-accent-hover: #27463b;
   --color-accent-soft: #e7efe9;
+  /* 主色实底上的前景色：用于选中页签等「深底反白」场景 */
+  --color-on-accent: #ffffff;
 
   /* 状态色：绿。用于已写角标、已保存提示、进度条 */
   --color-saved: #4a8b3c;
@@ -44,6 +46,11 @@
   --color-cat-doc-bg: #f0ecfa;
   --color-cat-life: #4a8b3c;
   --color-cat-life-bg: #eaf3e6;
+
+  /* 引言卡：右栏「本周备忘」底部，浅绿到浅蓝的斜向渐变 + 右下角柔光 */
+  --color-quote-from: #e8f0ec;
+  --color-quote-to: #dfe9ec;
+  --color-quote-glow: rgb(160 205 190 / 45%);
 
   /* 阴影：卡片与弹层；悬浮卡用于登录页 */
   --shadow-card: 0 1px 3px rgb(34 48 43 / 6%);
@@ -109,6 +116,11 @@
   --color-accent: #6fa590;
   --color-accent-hover: #83b6a2;
   --color-accent-soft: #2b3a33;
+  /* 深色下主色偏亮，实底上的前景改用深色才够对比 */
+  --color-on-accent: #1b211e;
   --color-saved: #6fae5c;
   --color-danger: #d2645a;
+  --color-quote-from: #253430;
+  --color-quote-to: #232e31;
+  --color-quote-glow: rgb(111 165 144 / 20%);
 }
