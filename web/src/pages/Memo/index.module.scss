@@ -66,16 +66,6 @@
   outline: none;
 }
 
-/* 新建行的分类选择 */
-.composerSelect {
-  flex: 0 0 auto;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  font-size: 12px;
-}
-
 .composerButton {
   flex: 0 0 auto;
   padding: var(--space-2) var(--space-4);

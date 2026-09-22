@@ -1,0 +1,137 @@
+/**
+ * 下拉选择样式
+ * 布局要点：触发按钮单行展示当前值 + 箭头；面板用 portal 渲染到 body，
+ * 以 fixed 定位贴合按钮，选项纵向排列并在超出高度时滚动。
+ */
+
+.root {
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* 占满父容器宽度：表单行、抽屉面板里使用 */
+.rootBlock {
+  display: flex;
+  width: 100%;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.trigger:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+/* 展开态：边框保持高亮 */
+.triggerOpen {
+  border-color: var(--color-accent);
+}
+
+/* ===== 尺寸 ===== */
+
+.sizeSm {
+  padding: 4px var(--space-2);
+  font-size: 12px;
+}
+
+.sizeMd {
+  padding: 6px var(--space-3);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 箭头：旋转的方块画成 V 形，展开时翻转指向 */
+.caret {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-top: -2px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.caretOpen {
+  margin-top: 2px;
+  transform: rotate(-135deg);
+}
+
+/* ===== 面板（portal 到 body，fixed 定位） ===== */
+
+.panel {
+  position: fixed;
+  z-index: var(--z-pop);
+  max-width: calc(100vw - var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-pop);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* 鼠标悬停与键盘高亮共用一个状态 */
+.optionActive {
+  background-color: var(--color-bg-active);
+}
+
+/* 当前选中项：主色加粗 */
+.optionSelected {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.optionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.check {
+  flex: 0 0 auto;
+  font-size: 12px;
+}

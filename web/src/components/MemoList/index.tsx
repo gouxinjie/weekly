@@ -8,6 +8,8 @@
  */
 import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
+import Select from '@/components/Select';
+import type { SelectOption } from '@/components/Select';
 import { MAX_WEEK, MEMO_CATEGORIES, START_YEAR } from '@/constants';
 import { getCurrentWeek, isPastWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
@@ -57,7 +59,7 @@ interface MemoItemProps {
   /** 删除回调 */
   onDelete: (memo: Memo) => void;
   /** 周次标记可选的年份列表 */
-  yearOptions: number[];
+  yearOptions: SelectOption[];
   /** 菜单是否展开（受控，保证同一时间只展开一个菜单） */
   menuOpen: boolean;
   /** 切换菜单展开状态 */
@@ -77,6 +79,12 @@ const CATEGORY_CLASS: Record<string, string> = {
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
   MEMO_CATEGORIES.map((item) => [item.value, item.label]),
 );
+
+/** 周次可选项：一年最多 53 周，与 props 和状态无关，放在模块级避免每次渲染重建 */
+const WEEK_OPTIONS: SelectOption[] = Array.from({ length: MAX_WEEK }, (_, index) => ({
+  value: String(index + 1),
+  label: `第 ${index + 1} 周`,
+}));
 
 /**
  * 生成分组的展示标签
@@ -253,28 +261,18 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
 
       {tagging ? (
         <div className={styles.tagPanel}>
-          <select
-            className={styles.select}
-            value={draftYear}
-            onChange={(event) => setDraftYear(Number(event.target.value))}
-          >
-            {yearOptions.map((item) => (
-              <option key={item} value={item}>
-                {item} 年
-              </option>
-            ))}
-          </select>
-          <select
-            className={styles.select}
-            value={draftWeek}
-            onChange={(event) => setDraftWeek(Number(event.target.value))}
-          >
-            {Array.from({ length: MAX_WEEK }, (_, index) => index + 1).map((item) => (
-              <option key={item} value={item}>
-                第 {item} 周
-              </option>
-            ))}
-          </select>
+          <Select
+            value={String(draftYear)}
+            options={yearOptions}
+            ariaLabel="选择年份"
+            onChange={(next) => setDraftYear(Number(next))}
+          />
+          <Select
+            value={String(draftWeek)}
+            options={WEEK_OPTIONS}
+            ariaLabel="选择周次"
+            onChange={(next) => setDraftWeek(Number(next))}
+          />
           <button
             type="button"
             className={styles.tagAction}
@@ -313,11 +311,11 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   /** 年份可选项：从起点年份到当前年份 */
-  const yearOptions = useMemo(() => {
+  const yearOptions = useMemo<SelectOption[]>(() => {
     const endYear = Math.max(getCurrentWeek().year, START_YEAR);
-    const options: number[] = [];
+    const options: SelectOption[] = [];
     for (let year = START_YEAR; year <= endYear; year += 1) {
-      options.push(year);
+      options.push({ value: String(year), label: `${year} 年` });
     }
     return options;
   }, []);

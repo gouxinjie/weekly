@@ -73,8 +73,9 @@
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: 'SF Mono', Consolas, 'Courier New', monospace;
 
-  /* 层级：抽屉与 Toast 需要盖在内容之上 */
+  /* 层级：抽屉与 Toast 需要盖在内容之上，浮层（下拉面板等）介于两者之间 */
   --z-drawer: 10;
+  --z-pop: 50;
   --z-toast: 100;
 }
 

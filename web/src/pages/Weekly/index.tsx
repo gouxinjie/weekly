@@ -18,6 +18,8 @@ import MarkdownEditor from '@/components/MarkdownEditor';
 import type { MarkdownEditorHandle } from '@/components/MarkdownEditor';
 import MarkdownPreview from '@/components/MarkdownPreview';
 import Toast from '@/components/Toast';
+import Select from '@/components/Select';
+import type { SelectOption } from '@/components/Select';
 import Tree from '@/components/Tree';
 import WeeklyReference from '@/components/WeeklyReference';
 import { AUTOSAVE_DELAY, MAX_CONTENT_CHARS, START_YEAR } from '@/constants';
@@ -68,6 +70,15 @@ const Weekly = () => {
 
   const currentWeek = useMemo(() => getCurrentWeek(), []);
   const currentWeekPath = `/weekly/${currentWeek.year}/${currentWeek.week}`;
+
+  /** 顶栏年份可选项：从起点年份到当前年 */
+  const yearOptions = useMemo<SelectOption[]>(() => {
+    const options: SelectOption[] = [];
+    for (let y = START_YEAR; y <= Math.max(currentWeek.year, year); y += 1) {
+      options.push({ value: String(y), label: String(y) });
+    }
+    return options;
+  }, [currentWeek.year, year]);
 
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
@@ -334,12 +345,6 @@ const Weekly = () => {
   const isWritten = updatedAt !== '';
   const isEditing = mode === 'edit';
 
-  // 顶栏年份可选项：从起点年份到当前年
-  const yearOptions: number[] = [];
-  for (let y = START_YEAR; y <= Math.max(currentWeek.year, year); y += 1) {
-    yearOptions.push(y);
-  }
-
   return (
     <AppLayout
       activeTab="weekly"
@@ -355,21 +360,16 @@ const Weekly = () => {
         isEditing ? undefined : (
           <>
             {/* 年份切换 */}
-            <select
-              className={styles.yearSelect}
-              value={year}
-              aria-label="切换年份"
-              onChange={(event) => {
-                const target = Number(event.target.value);
+            <Select
+              value={String(year)}
+              options={yearOptions}
+              ariaLabel="切换年份"
+              size="md"
+              onChange={(next) => {
+                const target = Number(next);
                 void goWeek(target, target === year ? week : 1);
               }}
-            >
-              {yearOptions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
+            />
 
             <div className={styles.topbarRight}>
               <input
@@ -477,6 +477,14 @@ const Weekly = () => {
                   </span>
                 </div>
                 {isWritten ? <span className={styles.writtenBadge}>已写</span> : null}
+                {/* 查看入口：进入编辑态看完整内容 */}
+                <button
+                  type="button"
+                  className={styles.viewAll}
+                  onClick={() => changeMode('edit')}
+                >
+                  查看 ›
+                </button>
               </header>
 
               <div className={styles.cardBody}>
@@ -496,10 +504,6 @@ const Weekly = () => {
                 <span>字数 {charCount}</span>
               </footer>
             </section>
-
-            <button type="button" className={styles.viewAll} onClick={() => changeMode('edit')}>
-              查看全部 ›
-            </button>
           </div>
         </div>
       ) : (

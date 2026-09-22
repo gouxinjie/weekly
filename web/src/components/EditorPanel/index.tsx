@@ -7,6 +7,8 @@
  */
 import { useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import Select from '@/components/Select';
+import type { SelectOption } from '@/components/Select';
 import { WEEKLY_TEMPLATE } from '@/constants';
 import styles from './index.module.scss';
 
@@ -17,6 +19,12 @@ interface InsertOption {
   /** 插入的 Markdown 标题文本 */
   heading: string;
 }
+
+/** 模板下拉的可选项 */
+const TEMPLATE_OPTIONS: SelectOption[] = [
+  { value: 'weekly', label: '周报模板' },
+  { value: 'blank', label: '空白' },
+];
 
 /** 快速插入的四个常用段落 */
 const INSERT_OPTIONS: InsertOption[] = [
@@ -58,14 +66,13 @@ const EditorPanel = ({ editor, onApplyTemplate, onExport }: EditorPanelProps) =>
       {/* 模板：选择模板并覆盖应用 */}
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>模板</h3>
-        <select
-          className={styles.select}
+        <Select
           value={templateKey}
-          onChange={(event) => setTemplateKey(event.target.value)}
-        >
-          <option value="weekly">周报模板</option>
-          <option value="blank">空白</option>
-        </select>
+          options={TEMPLATE_OPTIONS}
+          ariaLabel="选择模板"
+          block
+          onChange={setTemplateKey}
+        />
         <button
           type="button"
           className={styles.primaryButton}

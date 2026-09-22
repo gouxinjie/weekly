@@ -12,6 +12,7 @@ import { createMemo, deleteMemo, fetchMemos, updateMemo } from '@/api/memo';
 import AppLayout from '@/components/AppLayout';
 import MemoFilter from '@/components/MemoFilter';
 import MemoList from '@/components/MemoList';
+import Select from '@/components/Select';
 import { MEMO_CATEGORIES } from '@/constants';
 import { isPastWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
@@ -219,18 +220,12 @@ const Memo = () => {
             }
           }}
         />
-        <select
-          className={styles.composerSelect}
+        <Select
           value={newCategory}
-          aria-label="选择分类"
-          onChange={(event) => setNewCategory(event.target.value)}
-        >
-          {MEMO_CATEGORIES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={MEMO_CATEGORIES}
+          ariaLabel="选择分类"
+          onChange={setNewCategory}
+        />
         <button
           type="button"
           className={styles.composerButton}
