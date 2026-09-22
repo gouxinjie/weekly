@@ -61,6 +61,51 @@ export const getWeekRange = (year: number, week: number): WeekRange => {
 };
 
 /**
+ * 计算某个 ISO 年实际包含的周数
+ * @param year - ISO 年
+ * @returns 该年的周数（52 或 53）
+ * @remarks 用「该年第 1 周的周一」到下一年第 1 周的周一相差的整周数推导；
+ *          2026 年为 53 周，不能写死 52，否则会丢掉每年的最后一周。
+ */
+export const getWeekCount = (year: number): number => {
+  const firstMonday = dayjs(getWeekRange(year, 1).start);
+  const nextFirstMonday = dayjs(getWeekRange(year + 1, 1).start);
+  return Math.round(nextFirstMonday.diff(firstMonday, 'day') / 7);
+};
+
+/**
+ * 取某个周次归属的月份
+ * @param year - ISO 年
+ * @param week - ISO 周次
+ * @returns 归属月份（1-12）
+ * @remarks 按该周的周四归属：周四是 ISO 周的代表日，也是本周天数最多所在月份，
+ *          因此 2026 年第 1 周（周一为 2025-12-29）归入 1 月，不会出现「1 月没有第 1 周」。
+ */
+export const getWeekMonth = (year: number, week: number): number => {
+  const { start } = getWeekRange(year, week);
+  return dayjs(start).add(3, 'day').month() + 1;
+};
+
+/**
+ * 取某个周次在其归属月份内的序号
+ * @param year - ISO 年
+ * @param week - ISO 周次（1-53）
+ * @returns 该周是归属月份中的第几周（从 1 开始）
+ * @remarks 周四决定整周归属哪个月，因此以「该月第一个周四所在周的周一」为基准算偏移。
+ *          这样 2026 年第 1 周（周一为 2025-12-29、周四为 2026-01-01）返回 1，
+ *          不会因为周一落在上一年 12 月而算出 0 或负数。
+ */
+export const getWeekIndexInMonth = (year: number, week: number): number => {
+  const month = getWeekMonth(year, week);
+  const firstDay = dayjs(`${year}-${String(month).padStart(2, '0')}-01`);
+  // 该月第一个周四：由 1 号向后推到最近的周四
+  const firstThursday = firstDay.add((4 - firstDay.isoWeekday() + 7) % 7, 'day');
+  const firstMonday = firstThursday.subtract(3, 'day');
+  const monday = dayjs(getWeekRange(year, week).start);
+  return Math.round(monday.diff(firstMonday, 'day') / 7) + 1;
+};
+
+/**
  * 判断某个周次是否已过去（用于备忘过期高亮，仅视觉提示）
  * @param year - ISO 年
  * @param week - ISO 周次

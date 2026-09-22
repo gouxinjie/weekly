@@ -1,15 +1,19 @@
 /**
  * @component 周次时间轴
- * @description 左栏「年 > 周」两层导航，以带圆点连线的垂直时间轴呈现；
+ * @description 左栏「年 > 月 > 周」三层导航，以带圆点连线的垂直时间轴呈现；
  * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { COLLAPSED_YEARS_KEY, MAX_WEEK, START_YEAR } from '@/constants';
+import { EXPANDED_MONTHS_KEY, EXPANDED_YEARS_KEY, MAX_WEEK, START_YEAR } from '@/constants';
 import { formatWeekRangeShort } from '@/utils/format';
-import { getCurrentWeek, getWeekRange } from '@/utils/week';import styles from './index.module.scss';
+import { getCurrentWeek, getWeekCount, getWeekMonth, getWeekRange } from '@/utils/week';
+import styles from './index.module.scss';
+
+/** 一年固定 12 个月 */
+const MONTHS_PER_YEAR = 12;
 
 /** Tree 属性 */
 interface TreeProps {
@@ -33,12 +37,22 @@ interface WeekNode {
   written: boolean;
 }
 
+/** 单个月份节点 */
+interface MonthNode {
+  /** 月份（1-12） */
+  month: number;
+  /** 该月包含的周节点 */
+  weeks: WeekNode[];
+  /** 该月已写的周数，为 0 时整行淡显 */
+  writtenCount: number;
+}
+
 /** 单个年节点 */
 interface YearNode {
   /** ISO 年 */
   year: number;
-  /** 该年的全部周节点 */
-  weeks: WeekNode[];
+  /** 该年的全部月份节点，只包含有周次分组的月份 */
+  months: MonthNode[];
 }
 
 /**
@@ -56,12 +70,20 @@ const buildYears = (selectedYear: number): number[] => {
 };
 
 /**
- * 读取折叠状态
- * @returns 已折叠的年份数组；无记录或读取失败时返回 null
+ * 生成月份键
+ * @param year - ISO 年
+ * @param month - 月份（1-12）
+ * @returns 形如「2026-9」的键
  */
-const readCollapsedYears = (): number[] | null => {
+const monthKey = (year: number, month: number): string => `${year}-${month}`;
+
+/**
+ * 读取已展开的年份
+ * @returns 已展开的年份数组；无记录或读取失败时返回 null
+ */
+const readExpandedYears = (): number[] | null => {
   try {
-    const raw = window.localStorage.getItem(COLLAPSED_YEARS_KEY);
+    const raw = window.localStorage.getItem(EXPANDED_YEARS_KEY);
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
@@ -72,13 +94,42 @@ const readCollapsedYears = (): number[] | null => {
 };
 
 /**
- * 持久化折叠状态
- * @param years - 已折叠的年份数组
+ * 持久化已展开的年份
+ * @param years - 已展开的年份数组
  * @returns 无
  */
-const writeCollapsedYears = (years: number[]): void => {
+const writeExpandedYears = (years: number[]): void => {
   try {
-    window.localStorage.setItem(COLLAPSED_YEARS_KEY, JSON.stringify(years));
+    window.localStorage.setItem(EXPANDED_YEARS_KEY, JSON.stringify(years));
+  } catch {
+    // 隐私模式等场景下写入失败不影响使用，忽略即可
+  }
+};
+
+/**
+ * 读取已展开的月份
+ * @returns 已展开的月份键数组；无记录或读取失败时返回 null
+ */
+const readExpandedMonths = (): string[] | null => {
+  try {
+    const raw = window.localStorage.getItem(EXPANDED_MONTHS_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((item): item is string => typeof item === 'string');
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * 持久化已展开的月份
+ * @param months - 已展开的月份键数组
+ * @returns 无
+ */
+const writeExpandedMonths = (months: string[]): void => {
+  try {
+    window.localStorage.setItem(EXPANDED_MONTHS_KEY, JSON.stringify(months));
   } catch {
     // 隐私模式等场景下写入失败不影响使用，忽略即可
   }
@@ -88,42 +139,77 @@ const writeCollapsedYears = (years: number[]): void => {
  * 周次时间轴
  * @param props - 见 TreeProps
  * @returns 时间轴节点
+ * @remarks 折叠状态按「展开集合」记录而非「折叠集合」：默认全部折叠，
+ *          只有显式展开过的年 / 月才落进集合。这样运行期新增的年份（跨年、跳转未来）天然是折叠的，
+ *          不会因为「不在折叠名单里」而一次性铺开上百个周节点。
  */
 const Tree = ({ year, week, onChange, written }: TreeProps) => {
   const years = useMemo(() => buildYears(year), [year]);
 
-  const [collapsedYears, setCollapsedYears] = useState<number[]>(() => {
-    const stored = readCollapsedYears();
-    // 首次使用：展开当年，其余年份折叠
-    return stored ?? buildYears(year).filter((item) => item !== getCurrentWeek().year);
-  });
+  // 首次使用只展开选中的年份，其余年份折叠
+  const [expandedYears, setExpandedYears] = useState<number[]>(
+    () => readExpandedYears() ?? [year],
+  );
 
-  /** 树数据：一次性算好周次与日期，避免渲染期重复计算 */
+  // 首次使用只展开选中周所在的月份，避免一次铺开 53 个周节点
+  const [expandedMonths, setExpandedMonths] = useState<string[]>(
+    () => readExpandedMonths() ?? [monthKey(year, getWeekMonth(year, week))],
+  );
+
+  /** 树数据：一次性算好月份分组、周次与日期，避免渲染期重复计算 */
   const treeData = useMemo<YearNode[]>(
     () =>
-      years.map((item) => ({
-        year: item,
-        weeks: Array.from({ length: MAX_WEEK }, (_, index): WeekNode => {
-          const weekNo = index + 1;
+      years.map((item) => {
+        /** 按月份分桶，下标 0 对应 1 月 */
+        const buckets: WeekNode[][] = Array.from({ length: MONTHS_PER_YEAR }, () => []);
+        const total = getWeekCount(item);
+
+        for (let weekNo = 1; weekNo <= MAX_WEEK; weekNo += 1) {
+          const hasData = written.has(`${item}-${weekNo}`);
+          // 第 53 周并非每年都有：该年不存在这一周且历史上也没写过时跳过，
+          // 否则它会被错误地归进次年 1 月的分组（如 2027 年第 53 周实为 2028 年第 1 周）
+          if (weekNo > total && !hasData) continue;
+
           const range = getWeekRange(item, weekNo);
-          return {
+          buckets[getWeekMonth(item, weekNo) - 1].push({
             week: weekNo,
             range: formatWeekRangeShort(range.start, range.end).replace('–', ' - '),
-            written: written.has(`${item}-${weekNo}`),
-          };
-        }),
-      })),
+            written: hasData,
+          });
+        }
+
+        return {
+          year: item,
+          months: buckets
+            .map((weeks, index) => ({
+              month: index + 1,
+              weeks,
+              writtenCount: weeks.filter((node) => node.written).length,
+            }))
+            .filter((node) => node.weeks.length > 0),
+        };
+      }),
     [years, written],
   );
 
   /**
-   * 折叠状态变更并持久化
-   * @param next - 新的折叠年份数组
+   * 更新已展开的年份并持久化
+   * @param next - 新的已展开年份数组
    * @returns 无
    */
-  const updateCollapsed = useCallback((next: number[]): void => {
-    setCollapsedYears(next);
-    writeCollapsedYears(next);
+  const updateExpandedYears = useCallback((next: number[]): void => {
+    setExpandedYears(next);
+    writeExpandedYears(next);
+  }, []);
+
+  /**
+   * 更新已展开的月份并持久化
+   * @param next - 新的已展开月份键数组
+   * @returns 无
+   */
+  const updateExpandedMonths = useCallback((next: string[]): void => {
+    setExpandedMonths(next);
+    writeExpandedMonths(next);
   }, []);
 
   /**
@@ -133,20 +219,62 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
    */
   const toggleYear = useCallback(
     (targetYear: number): void => {
-      const next = collapsedYears.includes(targetYear)
-        ? collapsedYears.filter((item) => item !== targetYear)
-        : [...collapsedYears, targetYear];
-      updateCollapsed(next);
+      const next = expandedYears.includes(targetYear)
+        ? expandedYears.filter((item) => item !== targetYear)
+        : [...expandedYears, targetYear];
+      updateExpandedYears(next);
     },
-    [collapsedYears, updateCollapsed],
+    [expandedYears, updateExpandedYears],
   );
 
-  // 选中周变化时，把该节点滚动到可视区域
+  /**
+   * 切换单个月份节点的折叠状态
+   * @param targetKey - 目标月份键，形如「2026-9」
+   * @returns 无
+   */
+  const toggleMonth = useCallback(
+    (targetKey: string): void => {
+      const next = expandedMonths.includes(targetKey)
+        ? expandedMonths.filter((item) => item !== targetKey)
+        : [...expandedMonths, targetKey];
+      updateExpandedMonths(next);
+    },
+    [expandedMonths, updateExpandedMonths],
+  );
+
+  /** 上一次渲染时的选中周，用于区分「外部导航」与「用户手动折叠」 */
+  const lastSelectedRef = useRef(`${year}-${week}`);
+
+  // 上一周 / 下一周、搜索跳转等外部导航后，展开目标周所在的年与月，
+  // 否则选中项会藏在折叠节点里；用户手动折叠当前节点不受影响
+  useEffect(() => {
+    const current = `${year}-${week}`;
+    if (lastSelectedRef.current === current) return;
+    lastSelectedRef.current = current;
+
+    if (!expandedYears.includes(year)) {
+      updateExpandedYears([...expandedYears, year]);
+    }
+
+    const key = monthKey(year, getWeekMonth(year, week));
+    if (!expandedMonths.includes(key)) {
+      updateExpandedMonths([...expandedMonths, key]);
+    }
+  }, [
+    year,
+    week,
+    expandedYears,
+    expandedMonths,
+    updateExpandedYears,
+    updateExpandedMonths,
+  ]);
+
+  // 选中周变化（含展开后才出现在 DOM 中）时，把该节点滚动到可视区域
   const selectedRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     selectedRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [year, week]);
+  }, [year, week, treeData]);
 
   return (
     <div className={styles.tree}>
@@ -154,7 +282,7 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
 
       <div className={styles.years}>
         {treeData.map((node) => {
-          const collapsed = collapsedYears.includes(node.year);
+          const expanded = expandedYears.includes(node.year);
           return (
             <section key={node.year} className={styles.year}>
               <button
@@ -162,49 +290,85 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
                 className={styles.yearHeader}
                 onClick={() => toggleYear(node.year)}
               >
-                <span className={collapsed ? styles.caret : styles.caretOpen}>▸</span>
+                <span className={expanded ? styles.caretOpen : styles.caret}>▸</span>
                 <span className={styles.yearLabel}>{node.year}</span>
               </button>
 
-              {collapsed ? null : (
-                <ul className={styles.weeks}>
-                  {node.weeks.map((item) => {
-                    const selected = node.year === year && item.week === week;
+              {expanded ? (
+                <div className={styles.months}>
+                  {node.months.map((monthNode) => {
+                    const key = monthKey(node.year, monthNode.month);
+                    const monthExpanded = expandedMonths.includes(key);
                     return (
-                      <li key={`${node.year}-${item.week}`} className={styles.weekItem}>
+                      <section key={key} className={styles.month}>
                         <button
                           type="button"
-                          ref={selected ? selectedRef : undefined}
-                          className={selected ? styles.weekActive : styles.week}
-                          onClick={() => onChange(node.year, item.week)}
+                          className={
+                            monthNode.writtenCount > 0
+                              ? styles.monthHeader
+                              : styles.monthHeaderEmpty
+                          }
+                          onClick={() => toggleMonth(key)}
                         >
-                          {/* 时间轴圆点：当前选中带描边圈，已写为实心绿点，未写为灰点 */}
-                          <span
-                            className={
-                              selected
-                                ? styles.dotActive
-                                : item.written
-                                  ? styles.dotSaved
-                                  : styles.dotEmpty
-                            }
-                            aria-label={item.written ? '已写' : '未写'}
-                          />
-                          <span className={styles.weekTexts}>
-                            <span
-                              className={
-                                item.written || selected ? styles.weekText : styles.weekTextEmpty
-                              }
-                            >
-                              第 {item.week} 周
-                            </span>
-                            <span className={styles.weekRange}>{item.range}</span>
+                          <span className={monthExpanded ? styles.caretOpen : styles.caret}>
+                            ▸
                           </span>
+                          <span className={styles.monthLabel}>{monthNode.month} 月</span>
+                          {/* 该月有已写周时补一个绿点，折叠状态下也能看出哪个月写过 */}
+                          {monthNode.writtenCount > 0 ? (
+                            <span
+                              className={styles.monthDot}
+                              aria-label={`已写 ${monthNode.writtenCount} 周`}
+                            />
+                          ) : null}
                         </button>
-                      </li>
+
+                        {monthExpanded ? (
+                          <ul className={styles.weeks}>
+                            {monthNode.weeks.map((item) => {
+                              const selected = node.year === year && item.week === week;
+                              return (
+                                <li key={`${node.year}-${item.week}`} className={styles.weekItem}>
+                                  <button
+                                    type="button"
+                                    ref={selected ? selectedRef : undefined}
+                                    className={selected ? styles.weekActive : styles.week}
+                                    onClick={() => onChange(node.year, item.week)}
+                                  >
+                                    {/* 时间轴圆点：当前选中带描边圈，已写为实心绿点，未写为灰点 */}
+                                    <span
+                                      className={
+                                        selected
+                                          ? styles.dotActive
+                                          : item.written
+                                            ? styles.dotSaved
+                                            : styles.dotEmpty
+                                      }
+                                      aria-label={item.written ? '已写' : '未写'}
+                                    />
+                                    <span className={styles.weekTexts}>
+                                      <span
+                                        className={
+                                          item.written || selected
+                                            ? styles.weekText
+                                            : styles.weekTextEmpty
+                                        }
+                                      >
+                                        第 {item.week} 周
+                                      </span>
+                                      <span className={styles.weekRange}>{item.range}</span>
+                                    </span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : null}
+                      </section>
                     );
                   })}
-                </ul>
-              )}
+                </div>
+              ) : null}
             </section>
           );
         })}

@@ -65,6 +65,57 @@
   font-size: 13px;
 }
 
+/* ===== 月份层级 ===== */
+
+/* 月份列表：整体缩进一级，与年标题拉开层级 */
+.months {
+  margin-left: var(--space-2);
+}
+
+.month {
+  margin-bottom: 1px;
+}
+
+.monthHeader,
+.monthHeaderEmpty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 3px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* 该月一周未写：整行用最淡的灰，让有内容的月份浮出来 */
+.monthHeaderEmpty {
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+.monthHeader:hover,
+.monthHeaderEmpty:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.monthLabel {
+  flex: 0 0 auto;
+}
+
+/* 该月已有周报时的绿色提示点，折叠状态下也能一眼看出写过 */
+.monthDot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--color-saved);
+}
+
 /* ===== 时间轴 ===== */
 
 /* 周列表：竖线画在容器左侧伪元素上，贯穿所有节点 */

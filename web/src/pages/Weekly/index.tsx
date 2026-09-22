@@ -20,8 +20,14 @@ import MarkdownPreview from '@/components/MarkdownPreview';
 import Toast from '@/components/Toast';
 import Tree from '@/components/Tree';
 import WeeklyReference from '@/components/WeeklyReference';
-import { AUTOSAVE_DELAY, MAX_CONTENT_CHARS, START_YEAR, WEEKLY_TEMPLATE } from '@/constants';
-import { countChars, formatTimeShort, formatWeekLabel } from '@/utils/format';
+import { AUTOSAVE_DELAY, MAX_CONTENT_CHARS, START_YEAR } from '@/constants';
+import {
+  countChars,
+  formatTimeShort,
+  formatWeekLabel,
+  formatWeekMonthLabel,
+  formatWeekOrdinalLabel,
+} from '@/utils/format';
 import { getCurrentWeek, getWeekRange, isValidWeek } from '@/utils/week';
 import type { EditorMode, SaveState } from '@/types/models';
 import styles from './index.module.scss';
@@ -105,9 +111,9 @@ const Weekly = () => {
       .then((data) => {
         if (!active) return;
 
-        // 只有从未写过（updatedAt 为空）才注入模板；用户清空过就不再重复注入
-        const text = data.updatedAt === '' ? WEEKLY_TEMPLATE : data.content;
-        setContent(text);
+        // 未写过的周保持空编辑区：不自动注入模板，否则「点一下」就会触发自动保存，
+        // 把模板写进库里变成「已写」。模板改由右栏「应用模板」按需注入。
+        setContent(data.content);
         setRange({ start: data.weekStart, end: data.weekEnd });
         setUpdatedAt(data.updatedAt);
         // 有内容的周直接进入展示态，空周进入编辑态
@@ -159,8 +165,14 @@ const Weekly = () => {
       setUpdatedAt(now);
       setLastSavedAt(now);
       setWritten((prev) => {
+        const key = `${year}-${week}`;
         const next = new Set(prev);
-        next.add(`${year}-${week}`);
+        // 与服务端判定保持一致：内容为空不算「已写」，清空后绿点要跟着消失
+        if (content.trim() === '') {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
         return next;
       });
     } catch (error) {
@@ -454,7 +466,12 @@ const Weekly = () => {
                 {/* 封面缩略图：渐变模拟风景（不引入图片资源） */}
                 <span className={styles.cover} aria-hidden />
                 <div className={styles.cardHeadTexts}>
-                  <h1 className={styles.cardTitle}>第 {week} 周</h1>
+                  <h1 className={styles.cardTitle}>
+                    {formatWeekMonthLabel(year, week)}
+                    {' '}
+                    {/* 全年周序号作为次级信息，用更小的字号呈现 */}
+                    <span className={styles.cardTitleWeek}>{formatWeekOrdinalLabel(week)}</span>
+                  </h1>
                   <span className={styles.cardRange}>
                     {range.start} - {range.end}
                   </span>

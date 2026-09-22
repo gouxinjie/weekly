@@ -16,8 +16,11 @@ export const AUTOSAVE_DELAY = 800;
 /** 受保护页面的最小视口宽度（低于此宽度提示使用桌面端） */
 export const MIN_DESKTOP_WIDTH = 1024;
 
-/** 折叠状态在 localStorage 中的键名 */
-export const COLLAPSED_YEARS_KEY = 'weekly:collapsed-years';
+/** 已展开年份在 localStorage 中的键名（未记录的年份一律折叠） */
+export const EXPANDED_YEARS_KEY = 'weekly:expanded-years';
+
+/** 已展开月份在 localStorage 中的键名，元素形如「2026-9」（未记录的月份一律折叠） */
+export const EXPANDED_MONTHS_KEY = 'weekly:expanded-months';
 
 /** 「记住账号」在 localStorage 中的键名 */
 export const REMEMBER_PHONE_KEY = 'weekly:remember-phone';
