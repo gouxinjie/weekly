@@ -97,20 +97,22 @@ const WeeklyReference = ({ year, week, onGoMemo }: WeeklyReferenceProps) => {
             ))}
           </ul>
 
-          {/* 本周完成进度 */}
+          {/* 本周完成进度：标题在上，进度条 + 百分比在下 */}
           <div className={styles.progress}>
-            <div className={styles.progressHead}>
-              <span>本周进度 {doneCount}/{memos.length}</span>
+            <span className={styles.progressLabel}>
+              本周进度 {doneCount}/{memos.length}
+            </span>
+            <div className={styles.progressRow}>
+              <div
+                className={styles.progressBar}
+                role="progressbar"
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <span className={styles.progressFill} style={{ width: `${percent}%` }} />
+              </div>
               <span className={styles.progressPercent}>{percent}%</span>
-            </div>
-            <div
-              className={styles.progressBar}
-              role="progressbar"
-              aria-valuenow={percent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <span className={styles.progressFill} style={{ width: `${percent}%` }} />
             </div>
           </div>
         </>

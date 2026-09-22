@@ -12,44 +12,43 @@
   margin-bottom: var(--space-4);
 }
 
-/* 分组标题：今天 09-18（3） */
+/* 分组标题：今天 · 09/22（3） */
 .groupTitle {
-  padding: var(--space-2) 0;
-  color: var(--color-text);
-  font-size: 13px;
+  padding: var(--space-2) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
   font-weight: 600;
-}
-
-.groupDate {
-  margin-left: var(--space-1);
-  color: var(--color-text-faint);
-  font-size: 11px;
-  font-weight: 400;
 }
 
 .groupCount {
   color: var(--color-text-faint);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
 }
 
+/* 条目：整行铺开，用下分隔线区分，不做卡片包裹 */
 .item,
 .itemOverdue {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-bottom: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  background-color: transparent;
 }
 
+/* 过期未完成：灰底提示（不改分组、不推提醒） */
 .itemOverdue {
-  border-color: transparent;
-  background-color: var(--color-danger-soft);
+  border-bottom-color: transparent;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-active);
+}
+
+/* 每组最后一条不画分隔线，避免与下一组标题之间出现“双线” */
+.item:last-child,
+.itemOverdue:last-child {
+  border-bottom: none;
 }
 
 .main {
@@ -147,12 +146,6 @@
   color: var(--color-accent);
   font-size: 11px;
   line-height: 18px;
-}
-
-.date {
-  color: var(--color-text-faint);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ⋯ 菜单：按钮 + 绝对定位弹层 */

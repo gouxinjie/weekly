@@ -78,19 +78,46 @@ select {
   outline-offset: 1px;
 }
 
-/* 滚动条：保持细窄，避免抢视觉 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/**
+ * 滚动条
+ * 说明：优先用标准属性（Chrome 121+ / Edge / Firefox，且对 overlay 滚动条同样生效）——
+ * 细档宽度 + 浅灰拇指 + 透明轨道，不抢内容视线。
+ * 只有不支持标准属性的旧 WebKit 才退回 ::-webkit-scrollbar 伪元素；
+ * 两者不能并存：一旦声明了标准属性，浏览器会忽略伪元素样式。
+ */
+@supports (scrollbar-color: auto) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background-color: var(--color-border);
-  border-radius: var(--radius-sm);
-}
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
 
-::-webkit-scrollbar-track {
-  background-color: transparent;
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    /* 10px 轨道 - 3px×2 透明边框 = 4px 视觉拇指 */
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-color: var(--color-border-strong);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-text-faint);
+  }
+
+  /* 横竖滚动条交会处：不要出现一块白方块 */
+  ::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
 }
 
 /**

@@ -1,6 +1,7 @@
 /**
  * 编辑辅助面板样式
- * 说明：右栏抽屉内容，三个区块纵向排列：模板 / 快速插入 / 导出。
+ * 说明：右栏抽屉内容，三个区块纵向排列：模板 / 快速插入 / 导出；
+ * 快速插入与导出均为「图标 + 文字」的整行按钮，无描边。
  */
 
 .panel {
@@ -17,14 +18,14 @@
 }
 
 .sectionTitle {
-  color: var(--color-text-muted);
-  font-size: 12px;
+  color: var(--color-text);
+  font-size: 13px;
   font-weight: 600;
 }
 
 /* 主操作按钮：主色实心 */
 .primaryButton {
-  padding: 6px 0;
+  padding: 7px 0;
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
@@ -36,47 +37,44 @@
   background-color: var(--color-accent-hover);
 }
 
-/* 快速插入列表：浅底行式按钮 */
-.insertList {
+.list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
 }
 
-.insertButton {
+/* 行式按钮：图标 + 文字，整行可点 */
+.rowButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   width: 100%;
-  padding: 6px var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: 7px var(--space-2);
+  border: none;
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
+  background-color: transparent;
   color: var(--color-text-muted);
   font-size: 12px;
   text-align: left;
 }
 
-.insertButton:hover:not(:disabled) {
-  border-color: var(--color-accent);
+.rowButton:hover:not(:disabled) {
+  background-color: var(--color-bg-active);
   color: var(--color-accent);
 }
 
-.insertButton:disabled {
+.rowButton:disabled {
   color: var(--color-text-faint);
   cursor: not-allowed;
 }
 
-/* 次操作按钮：浅底行式 */
-.plainButton {
-  width: 100%;
-  padding: 6px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  text-align: left;
+.rowIcon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--color-text-faint);
 }
 
-.plainButton:hover {
-  border-color: var(--color-accent);
+.rowButton:hover:not(:disabled) .rowIcon {
   color: var(--color-accent);
 }

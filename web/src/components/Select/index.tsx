@@ -32,6 +32,8 @@ export interface SelectProps {
   ariaLabel: string;
   /** 尺寸：sm 用于表单与抽屉，md 用于顶栏，默认 sm */
   size?: 'sm' | 'md';
+  /** 外观：default 为描边下拉，ghost 为无描边（顶栏年份切换），默认 default */
+  variant?: 'default' | 'ghost';
   /** 是否占满父容器宽度，默认 false */
   block?: boolean;
   /** 是否禁用，默认 false */
@@ -108,6 +110,7 @@ const Select = ({
   onChange,
   ariaLabel,
   size = 'sm',
+  variant = 'default',
   block = false,
   disabled = false,
   className,
@@ -273,6 +276,7 @@ const Select = ({
         className={cx(
           styles.trigger,
           size === 'md' ? styles.sizeMd : styles.sizeSm,
+          variant === 'ghost' && styles.triggerGhost,
           open && styles.triggerOpen,
         )}
         role="combobox"

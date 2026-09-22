@@ -1,17 +1,36 @@
 /**
  * @component 编辑工具条
- * @description 编辑区上方的格式工具栏；只提供 Markdown 能无损表达的格式（不做字号、颜色、对齐）
+ * @description 编辑区上方的格式工具栏；只提供 Markdown 能无损表达的格式（不做字号、颜色、对齐）。
+ * 图标统一用线性 SVG，避免 emoji 在不同系统下字形与颜色不一致
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-22
  */
+import type { ReactNode } from 'react';
 import type { Editor } from '@tiptap/core';
 import styles from './index.module.scss';
 
+/** 图标属性：统一 24×24 视图的线性图标 */
+interface IconProps {
+  /** 图标路径（一个或多个 path / rect / circle） */
+  children: ReactNode;
+}
+
+/**
+ * 线性图标容器
+ * @param props - 见 IconProps
+ * @returns 图标节点
+ */
+const Icon = ({ children }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    {children}
+  </svg>
+);
+
 /** ToolButton 属性 */
 interface ToolButtonProps {
-  /** 按钮文案 */
-  label: string;
+  /** 按钮内容：文字或图标 */
+  label: ReactNode;
   /** 悬停提示 */
   title: string;
   /** 是否处于激活态（高亮显示当前光标所在格式） */
@@ -40,6 +59,7 @@ const ToolButton = ({
     onClick={onClick}
     disabled={disabled}
     title={title}
+    aria-label={title}
   >
     {label}
   </button>
@@ -105,8 +125,28 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
   return (
     <div className={styles.toolbar}>
       <div className={styles.group}>
-        <ToolButton label="↶" title="撤销" onClick={() => editor?.chain().focus().undo().run()} disabled={disabled} />
-        <ToolButton label="↷" title="重做" onClick={() => editor?.chain().focus().redo().run()} disabled={disabled} />
+        <ToolButton
+          label={
+            <Icon>
+              <path d="M9 14 4 9l5-5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 9h9a7 7 0 0 1 0 14h-1" strokeLinecap="round" />
+            </Icon>
+          }
+          title="撤销"
+          onClick={() => editor?.chain().focus().undo().run()}
+          disabled={disabled}
+        />
+        <ToolButton
+          label={
+            <Icon>
+              <path d="m15 14 5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 9h-9a7 7 0 0 0 0 14h1" strokeLinecap="round" />
+            </Icon>
+          }
+          title="重做"
+          onClick={() => editor?.chain().focus().redo().run()}
+          disabled={disabled}
+        />
       </div>
 
       <div className={styles.group}>
@@ -134,14 +174,39 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
       </div>
 
       <div className={styles.group}>
-        <ToolButton label="B" title="加粗" active={isActive('bold')} onClick={() => editor?.chain().focus().toggleBold().run()} disabled={disabled} />
-        <ToolButton label="I" title="斜体" active={isActive('italic')} onClick={() => editor?.chain().focus().toggleItalic().run()} disabled={disabled} />
-        <ToolButton label="S" title="删除线" active={isActive('strike')} onClick={() => editor?.chain().focus().toggleStrike().run()} disabled={disabled} />
+        <ToolButton
+          label="B"
+          title="加粗"
+          active={isActive('bold')}
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          disabled={disabled}
+        />
+        <ToolButton
+          label="I"
+          title="斜体"
+          active={isActive('italic')}
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          disabled={disabled}
+        />
+        <ToolButton
+          label="S"
+          title="删除线"
+          active={isActive('strike')}
+          onClick={() => editor?.chain().focus().toggleStrike().run()}
+          disabled={disabled}
+        />
       </div>
 
       <div className={styles.group}>
         <ToolButton
-          label="•"
+          label={
+            <Icon>
+              <path d="M9 6h11M9 12h11M9 18h11" strokeLinecap="round" />
+              <circle cx="4.6" cy="6" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="4.6" cy="12" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="4.6" cy="18" r="1.4" fill="currentColor" stroke="none" />
+            </Icon>
+          }
           title="无序列表"
           active={isActive('bulletList')}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
@@ -155,7 +220,12 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
           disabled={disabled}
         />
         <ToolButton
-          label="☑"
+          label={
+            <Icon>
+              <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+              <path d="m8 12.2 2.4 2.4 5-5.2" strokeLinecap="round" strokeLinejoin="round" />
+            </Icon>
+          }
           title="待办列表"
           active={isActive('taskList')}
           onClick={() => editor?.chain().focus().toggleTaskList().run()}
@@ -165,27 +235,46 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
 
       <div className={styles.group}>
         <ToolButton
-          label="›"
+          label={
+            <Icon>
+              <path d="M4 5.5h4.5a2.5 2.5 0 0 1 0 5H4v-5Z" />
+              <path d="M4 10.5h5.5a2.5 2.5 0 0 1 0 5H4v-5Z" />
+              <path d="M13 10.5h7M13 15.5h7" strokeLinecap="round" />
+            </Icon>
+          }
           title="引用"
           active={isActive('blockquote')}
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
           disabled={disabled}
         />
         <ToolButton
-          label={'</>'}
+          label={
+            <Icon>
+              <path d="m9 8-4 4 4 4M15 8l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+            </Icon>
+          }
           title="代码块"
           active={isActive('codeBlock')}
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
           disabled={disabled}
         />
         <ToolButton
-          label="—"
+          label={
+            <Icon>
+              <path d="M3.5 12h17" strokeLinecap="round" />
+            </Icon>
+          }
           title="分割线"
           onClick={() => editor?.chain().focus().setHorizontalRule().run()}
           disabled={disabled}
         />
         <ToolButton
-          label="▦"
+          label={
+            <Icon>
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+              <path d="M3.5 9.5h17M9.2 9.5v10M14.8 9.5v10" />
+            </Icon>
+          }
           title="插入表格"
           onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
           disabled={disabled}
@@ -194,7 +283,18 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
 
       <div className={styles.group}>
         <ToolButton
-          label="🔗"
+          label={
+            <Icon>
+              <path
+                d="M10.6 13.4a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.4 1.4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M13.4 10.6a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.4-1.4"
+                strokeLinecap="round"
+              />
+            </Icon>
+          }
           title="插入 / 取消链接"
           active={isActive('link')}
           onClick={toggleLink}

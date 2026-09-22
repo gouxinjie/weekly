@@ -1,20 +1,29 @@
 /**
  * 底部账号区样式
- * 说明：固定在左栏底部，头像 + 手机号 + 登出，两态共用，位置不因切换标签页而跳动。
+ * 说明：固定在左栏底部，圆形头像 + 账号名 / 脱敏手机号两行 + 登出按钮，
+ * 两态共用，位置不因切换标签页而跳动。
  */
 
 .footer {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-2);
   flex: 0 0 auto;
   /* 备忘 / 设置态左栏没有内容区撑高，用 auto 外边距把账号区顶到最底部 */
   margin-top: auto;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3);
   border-top: 1px solid var(--color-border);
 }
 
-/* 圆形头像：主色浅底 + 剪影图标 */
+/* 头像 + 账号名 / 手机号 */
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* 圆形头像：浅色底 + 剪影图标 */
 .avatar {
   display: flex;
   align-items: center;
@@ -23,7 +32,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background-color: var(--color-accent-soft);
+  background-color: var(--color-bg-active);
   color: var(--color-accent);
 }
 
@@ -32,24 +41,43 @@
   height: 18px;
 }
 
-.phone {
+/* 账号名 + 手机号 */
+.texts {
+  display: flex;
   flex: 1 1 auto;
+  flex-direction: column;
   min-width: 0;
-  color: var(--color-text-muted);
+}
+
+.name {
+  color: var(--color-text);
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.phone {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 登出入口：整行小按钮，页签栏很窄放不下并排 */
 .logout {
-  flex: 0 0 auto;
-  padding: var(--space-1) var(--space-2);
+  width: 100%;
+  padding: 4px 0;
   border: none;
   border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-faint);
-  font-size: 12px;
+  font-size: 11px;
+  text-align: center;
 }
 
 .logout:hover:not(:disabled) {

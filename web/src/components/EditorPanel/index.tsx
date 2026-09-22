@@ -3,7 +3,7 @@
  * @description 右栏抽屉（周报编辑态）：模板应用、快速插入常用段落、导出为 Markdown / 打印为 PDF
  * @author gouxinjie
  * @created 2026-09-20
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import { useState } from 'react';
 import type { Editor } from '@tiptap/core';
@@ -33,6 +33,22 @@ const INSERT_OPTIONS: InsertOption[] = [
   { label: '下周计划', heading: '下周计划' },
   { label: '工作收获', heading: '工作收获' },
 ];
+
+/** 行首的加号图标：快速插入用 */
+const PlusIcon = () => (
+  <svg className={styles.rowIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+    <circle cx="12" cy="12" r="8.4" />
+    <path d="M12 8.4v7.2M8.4 12h7.2" strokeLinecap="round" />
+  </svg>
+);
+
+/** 行首的文档图标：导出用 */
+const DocIcon = () => (
+  <svg className={styles.rowIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+    <path d="M13.5 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9l-5.5-5.5Z" strokeLinejoin="round" />
+    <path d="M13.5 3.5V9H19" strokeLinejoin="round" />
+  </svg>
+);
 
 /** EditorPanel 属性 */
 interface EditorPanelProps {
@@ -87,15 +103,16 @@ const EditorPanel = ({ editor, onApplyTemplate, onExport }: EditorPanelProps) =>
       {/* 快速插入：光标处插入常用段落标题 */}
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>快速插入</h3>
-        <ul className={styles.insertList}>
+        <ul className={styles.list}>
           {INSERT_OPTIONS.map((option) => (
             <li key={option.label}>
               <button
                 type="button"
-                className={styles.insertButton}
+                className={styles.rowButton}
                 onClick={() => insertHeading(option.heading)}
                 disabled={editor === null}
               >
+                <PlusIcon />
                 {option.label}
               </button>
             </li>
@@ -106,17 +123,25 @@ const EditorPanel = ({ editor, onApplyTemplate, onExport }: EditorPanelProps) =>
       {/* 导出 */}
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>导出</h3>
-        <button type="button" className={styles.plainButton} onClick={onExport}>
-          导出为 Markdown
-        </button>
-        <button
-          type="button"
-          className={styles.plainButton}
-          onClick={() => window.print()}
-          title="调起浏览器打印，可选择「另存为 PDF」"
-        >
-          导出为 PDF
-        </button>
+        <ul className={styles.list}>
+          <li>
+            <button type="button" className={styles.rowButton} onClick={onExport}>
+              <DocIcon />
+              导出为 Markdown
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className={styles.rowButton}
+              onClick={() => window.print()}
+              title="调起浏览器打印，可选择「另存为 PDF」"
+            >
+              <DocIcon />
+              导出为 PDF
+            </button>
+          </li>
+        </ul>
       </section>
     </div>
   );

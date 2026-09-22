@@ -1,131 +1,169 @@
 /**
  * 登录 / 注册页样式
- * 布局要点：左右双栏 —— 左侧品牌视觉区用层叠渐变模拟晨湖山色（不引入图片资源），
- * 右侧为固定宽度的登录卡片；小屏时隐藏品牌区只留卡片。
+ * 布局要点：整屏是一张风景照片（object-fit: cover），照片上叠三层内容——
+ * 左上「品牌 + 主标题 + 副标题 + 三个特性」、右上品牌口号、右侧垂直居中的悬浮白色卡片。
+ * 左侧文字压在浅色天空上，用浅色渐变罩层与文字阴影保证可读性；
+ * 小屏（< 860px）隐藏左侧品牌区，卡片居中占满。
  */
 
 .page {
-  display: flex;
+  position: relative;
   height: 100vh;
   overflow: hidden;
 }
 
-/* ===== 左侧品牌视觉区 ===== */
-
-/* 用多层渐变叠加出「晚霞天空 + 远山 + 湖面」的氛围底色 */
-.hero {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6);
-  background:
-    radial-gradient(120% 60% at 70% 100%, rgb(46 82 69 / 55%) 0%, transparent 60%),
-    radial-gradient(60% 40% at 24% 38%, rgb(255 214 170 / 55%) 0%, transparent 70%),
-    linear-gradient(180deg, #dfe8ea 0%, #cfdfe2 34%, #bcd2d4 52%, #9dbfc0 66%, #7ba39f 82%, #5e8a82 100%);
-  color: #ffffff;
+/* 全屏风景背景 */
+.background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.heroTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: 0 0 auto;
+/* 左侧罩一层极浅的白，压低天空细节，保证深色文字的可读性 */
+.page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgb(255 255 255 / 52%) 0%,
+    rgb(255 255 255 / 26%) 38%,
+    rgb(255 255 255 / 0%) 68%
+  );
+  pointer-events: none;
+}
+
+/* 右上角品牌口号 */
+.slogan {
+  position: absolute;
+  top: var(--space-8);
+  right: calc(var(--space-8) + var(--space-3));
+  z-index: 2;
+  color: #4c5b55;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-shadow: 0 1px 8px rgb(255 255 255 / 60%);
+}
+
+/* ===== 左侧品牌视觉区 ===== */
+
+.hero {
+  position: absolute;
+  top: var(--login-hero-inset-y);
+  left: var(--login-hero-inset-x);
+  z-index: 2;
+  max-width: 460px;
 }
 
 .brand {
-  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #16241e;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-shadow: 0 1px 8px rgb(34 48 43 / 25%);
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 10px rgb(255 255 255 / 55%);
 }
 
 /* 品牌名后的叶片符号 */
 .brandLeaf {
-  margin-left: 2px;
-  color: #bfe3c8;
-}
-
-.heroSlogan {
-  font-size: 13px;
-  letter-spacing: 0.14em;
-  opacity: 0.85;
-}
-
-.heroBody {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  max-width: 520px;
+  width: 20px;
+  height: 20px;
+  color: var(--color-accent);
 }
 
 .heroTitle {
-  font-size: 40px;
+  margin-top: 28px;
+  color: #16241e;
+  font-size: 44px;
   font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 16px rgb(34 48 43 / 30%);
+  line-height: 1.34;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 14px rgb(255 255 255 / 60%);
 }
 
 .heroText {
-  margin-bottom: var(--space-4);
+  margin-top: 18px;
+  color: #46554f;
   font-size: 14px;
-  line-height: 1.9;
-  opacity: 0.9;
+  line-height: 2;
+  text-shadow: 0 1px 10px rgb(255 255 255 / 55%);
 }
 
 /* 特性点：图标 + 标题 + 说明，横向三枚 */
 .features {
   display: flex;
-  gap: var(--space-6);
+  gap: 38px;
+  margin-top: 46px;
 }
 
 .feature {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
 }
 
 .featureIcon {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  background-color: rgb(255 255 255 / 18%);
-  font-size: 16px;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  color: #2b3a34;
 }
 
-.featureTitle,
-.featureDesc {
+.featureIcon svg {
   display: block;
-  font-size: 12px;
-  line-height: 1.5;
+  width: 100%;
+  height: 100%;
+}
+
+.featureTexts {
+  display: flex;
+  flex-direction: column;
 }
 
 .featureTitle {
+  color: #16241e;
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .featureDesc {
-  opacity: 0.8;
+  color: #55635d;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
-/* ===== 右侧登录卡片 ===== */
+/* ===== 右侧悬浮登录卡片 ===== */
 
+/*
+ * 卡片容器：用 flex-start + 卡片自身 margin-block: auto 实现垂直居中。
+ * 不能直接用 align-items: center——卡片高于容器时，溢出部分会被推到滚动区上方而无法触达；
+ * auto 外边距在空间不足时会退化为 0，配合 overflow-y 可以正常滚动。
+ */
 .panel {
+  position: absolute;
+  top: 0;
+  right: var(--login-card-inset-x);
+  bottom: 0;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 460px;
-  padding: var(--space-6);
-  background-color: var(--color-bg);
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: var(--space-6) 0;
 }
 
 .card {
   width: var(--login-card-width);
+  margin-block: auto;
+  padding: var(--space-8) var(--space-8) var(--space-6);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-float);
 }
 
 /* 跨页面跳转后带回的提示（如「已登出所有设备」） */
@@ -141,19 +179,20 @@
 
 .tabs {
   display: flex;
-  gap: var(--space-6);
   margin-bottom: var(--space-6);
   border-bottom: 1px solid var(--color-border);
 }
 
 .tab,
 .tabActive {
-  padding: var(--space-2) var(--space-1);
+  flex: 1 1 0;
+  padding: 10px 0;
   border: none;
   border-bottom: 2px solid transparent;
   background-color: transparent;
   color: var(--color-text-muted);
   font-size: 15px;
+  text-align: center;
 }
 
 .tab:hover {
@@ -162,7 +201,7 @@
 
 .tabActive {
   border-bottom-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -197,8 +236,8 @@
 
 .input {
   width: 100%;
-  padding: 11px var(--space-3) 11px 38px;
-  border: 1px solid var(--color-border-strong);
+  padding: 12px var(--space-3) 12px 38px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-subtle);
   font-size: 14px;
@@ -275,16 +314,16 @@
   font-size: 12px;
 }
 
-/* 主按钮：深墨绿圆角 */
+/* 主按钮：主色圆角 */
 .submit {
-  margin-top: var(--space-2);
-  padding: 11px;
+  margin-top: var(--space-1);
+  padding: 12px;
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
   color: #ffffff;
   font-size: 14px;
-  letter-spacing: 0.2em;
+  font-weight: 500;
   transition: background-color 0.15s ease;
 }
 
@@ -321,8 +360,8 @@
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 10px;
-  border: 1px solid var(--color-border-strong);
+  padding: 11px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-subtle);
   color: var(--color-text);
@@ -347,13 +386,22 @@
   text-align: center;
 }
 
-/* 窄屏：隐藏品牌视觉区，只保留登录卡片 */
+/* 窄屏：隐藏品牌视觉区，卡片回到屏幕中央 */
 @media (max-width: 860px) {
-  .hero {
+  .hero,
+  .slogan {
     display: none;
   }
 
   .panel {
-    flex: 1 1 auto;
+    right: 0;
+    left: 0;
+    justify-content: center;
+    padding: var(--space-6);
+  }
+
+  .card {
+    width: 100%;
+    max-width: var(--login-card-width);
   }
 }

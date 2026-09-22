@@ -4,7 +4,7 @@
 
 **注释必须使用中文。**
 
-需求文档：`docs/weekly-PRD.md`（唯一事实来源，与本文冲突时以 PRD 为准）
+需求文档：`weekly-PRD.md`（唯一事实来源，与本文冲突时以 PRD 为准）
 
 ---
 
@@ -302,16 +302,18 @@ interface TreeProps {
 
 ### 5.1 主色调
 
-**主色调：蓝色 `#2f6fb0`**（`--color-accent`）。
+**主色调：深墨绿 `#2e5245`**（`--color-accent`），取自 `ui.png` 设计稿。
 
 颜色有明确分工，**不可混用**：
 
 | 颜色 | 变量 | 用途 |
 |---|---|---|
-| 蓝 `#2f6fb0` | `--color-accent` | 主色：选中态、主按钮、链接、聚焦环、周节点选中高亮条 |
-| 绿 `#4a8b3c` | `--color-saved` | 状态色：已写角标、已保存提示 |
+| 深墨绿 `#2e5245` | `--color-accent` | 主色：选中态、主按钮、链接、聚焦环、周节点选中高亮条 |
+| 绿 `#4a8b3c` | `--color-saved` | 状态色：已写角标、已保存提示、本周进度条 |
 | 红 `#b03a2e` | `--color-danger` | 危险色：删除、错误提示 |
-| 灰 `#9a9a9a` | `--color-text-faint` | 未写状态：未写的周节点文字与角标 |
+| 灰 `#9aa19d` | `--color-text-faint` | 未写状态：未写的周节点文字与角标 |
+
+> 2026-09-22 更正：本节此前写的蓝色主色 `#2f6fb0` 与设计稿、与 `variables.scss` 实际值都不一致，现按代码实际值同步。
 
 ### 5.2 设计变量
 
@@ -319,28 +321,40 @@ interface TreeProps {
 
 ```scss
 :root {
-  --color-bg:            #ffffff;
-  --color-bg-subtle:     #f7f7f5;
-  --color-bg-active:     #eef4fb;
-  --color-text:          #1a1a1a;
-  --color-text-muted:    #6b6b6b;
-  --color-text-faint:    #9a9a9a;
-  --color-border:        #e5e5e2;
-  --color-accent:        #2f6fb0;
+  --color-bg:            #fefefd;
+  --color-bg-subtle:     #f6f7f6;
+  --color-bg-active:     #edf1ee;
+  --color-text:          #22302b;
+  --color-text-muted:    #6b7370;
+  --color-text-faint:    #9aa19d;
+  --color-border:        #e6e9e6;
+  --color-border-strong: #d8ddd9;
+  --color-accent:        #2e5245;
+  --color-accent-hover:  #27463b;
+  --color-accent-soft:   #e7efe9;
   --color-saved:         #4a8b3c;
   --color-danger:        #b03a2e;
 
-  --sidebar-width:       260px;
-  --drawer-width:        200px;
+  /* 骨架尺寸，见 §6 */
+  --rail-width:          176px;  /* 页签栏：logo + 页签 + 底部账号区 */
+  --timeline-width:      220px;  /* 时间轴列：仅周报态存在 */
+  --drawer-width:        220px;
   --center-min-width:    480px;
-  --login-card-width:    360px;
-  --settings-max-width:  480px;
+  --topbar-height:       56px;
+  --settings-max-width:  520px;
+
+  /* 登录页 */
+  --login-card-width:    420px;
+  --login-card-inset-x:  92px;
+  --login-hero-inset-x:  84px;
+  --login-hero-inset-y:  104px;
 
   --space-1: 4px;  --space-2: 8px;   --space-3: 12px;
-  --space-4: 16px; --space-6: 24px;
+  --space-4: 16px; --space-6: 24px;  --space-8: 32px;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  --radius-xs: 5px; --radius-sm: 6px;
+  --radius-md: 10px; --radius-lg: 14px;
+
   --font-sans: system-ui, -apple-system, "Segoe UI", "PingFang SC",
                "Microsoft YaHei", sans-serif;
   --font-mono: "SF Mono", Consolas, "Courier New", monospace;
@@ -352,7 +366,8 @@ interface TreeProps {
 - 所有颜色、尺寸、间距**取自变量**，不写魔法值
 - 组件样式一律用 `.module.scss`，**不得污染全局**
 - 样式文件必须有中文注释：文件说明、关键布局说明
-- 三个尺寸变量直接对应骨架规格，改宽度只改变量定义一处
+- 骨架宽度只改 `variables.scss` 一处，组件里不得写死列宽
+- 字体字号目前全项目统一直接写字面值，不纳入变量体系（如需调整请先统一约定）
 
 ---
 
@@ -362,17 +377,19 @@ interface TreeProps {
 
 | 区域 | 周报态 | 备忘态 |
 |---|---|---|
-| 左栏 | 260px：页签 + 三层树 + 底部账号区 | 260px：页签 + 筛选器 + 底部账号区 |
-| 中栏 | 自适应（最小 480px）：标题栏 + 编辑区 + 工具条 | 自适应全宽：新建输入框 + 分组清单 |
-| 右栏 | 「本周参考」200px，可收起 | **整栏移除**（不是收起） |
+| 页签栏 | 176px：logo + 页签 + 底部账号区 | 同左（宽度一致，位置不跳动） |
+| 时间轴列 | 220px：`时间轴` 标题 + 年 / 月 / 周三层树 | **整列移除** |
+| 中栏 | 自适应（最小 480px）：顶栏 + 标题栏 + 编辑区 + 工具条 | 自适应全宽：搜索 + 新建输入框 + 分组清单 |
+| 右栏 | 「本周备忘」220px，可收起 | **整栏移除**（不是收起） |
 
 **关键规则**（容易做错）：
 
-1. 左栏宽度两态一致（260px），切换时**不跳动**，只有内容换
-2. 右栏是周报态专属；备忘态下它不存在，中栏因此吃满剩余宽度
-3. 窗口变窄时**优先压缩右栏**，其次才出现横向滚动
-4. 页签在左栏顶部，**整个应用没有顶部导航栏**
-5. 登录页、设置页**不属于两种骨架**：分别是全屏居中卡片、单列居中布局
+1. 页签栏宽度两态一致（176px），切换标签页时页签与账号区**不跳动**
+2. 时间轴列是周报态专属，渲染在中栏左侧、与中栏共享顶栏；备忘态下它不存在，中栏因此吃满剩余宽度
+3. 顶栏横跨「时间轴列 + 中栏 + 右栏」，年份切换落在时间轴列正上方，与 `时间轴` 标题左对齐
+4. 窗口变窄时**优先压缩右栏**，其次才出现横向滚动
+5. 页签在页签栏顶部，**整个应用没有顶部导航栏**
+6. 登录页、设置页**不属于骨架体系**：分别是全屏悬浮卡片、单列居中布局
 
 ---
 
@@ -976,7 +993,7 @@ const w = dayjs(date).isoWeek();      // ISO 周次 1-53
 
 ## 18. 文档约定
 
-`docs/weekly-PRD.md` 是唯一事实来源。修改它时：
+`weekly-PRD.md` 是唯一事实来源。修改它时：
 
 - **只写当前状态**，不留版本号（不出现「v0.x」）、不写变更记录
 - **只写选了什么**，不写「为什么没选别的」（不写选型论证、替代方案对比）
@@ -1262,7 +1279,7 @@ curl http://weekly.gouxinjie.com/api/health  # 应返回 JSON
 
 ## 遇到不确定时
 
-需求文档在 `docs/weekly-PRD.md`，**与本文冲突时以 PRD 为准**。
+需求文档在 `weekly-PRD.md`，**与本文冲突时以 PRD 为准**。
 
 若 PRD 未覆盖某个决策：
 

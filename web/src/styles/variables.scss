@@ -6,8 +6,8 @@
  */
 
 :root {
-  /* 背景 */
-  --color-bg: #ffffff;
+  /* 背景：页面底色为暖白 #fefefd（对齐设计稿），卡片沿用同一变量 */
+  --color-bg: #fefefd;
   --color-bg-subtle: #f6f7f6;
   --color-bg-active: #edf1ee;
 
@@ -45,17 +45,28 @@
   --color-cat-life: #4a8b3c;
   --color-cat-life-bg: #eaf3e6;
 
-  /* 阴影：卡片与弹层 */
+  /* 阴影：卡片与弹层；悬浮卡用于登录页 */
   --shadow-card: 0 1px 3px rgb(34 48 43 / 6%);
   --shadow-pop: 0 6px 24px rgb(34 48 43 / 14%);
+  --shadow-float: 0 20px 60px rgb(30 46 40 / 22%);
 
   /* 骨架尺寸：与 PRD §五 界面结构一一对应 */
-  --sidebar-width: 260px;
+  /* 页签栏：logo + 页签 + 底部账号区，两态宽度一致、位置不跳动 */
+  --rail-width: 176px;
+  /* 时间轴列：仅周报态存在，承载「第 N 周 + 日期区间」两行文字 */
+  --timeline-width: 220px;
   --drawer-width: 220px;
   --center-min-width: 480px;
-  --login-card-width: 380px;
   --settings-max-width: 520px;
   --topbar-height: 56px;
+
+  /* 登录页：悬浮卡片尺寸与品牌区定位 */
+  --login-card-width: 420px;
+  /* 卡片距屏幕右侧的距离 */
+  --login-card-inset-x: 92px;
+  /* 品牌区距屏幕左上角的距离 */
+  --login-hero-inset-x: 84px;
+  --login-hero-inset-y: 104px;
 
   /* 间距 */
   --space-1: 4px;
@@ -63,8 +74,10 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
+  --space-8: 32px;
 
   /* 圆角 */
+  --radius-xs: 5px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;

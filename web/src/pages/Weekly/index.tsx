@@ -29,6 +29,7 @@ import {
   formatWeekLabel,
   formatWeekMonthLabel,
   formatWeekOrdinalLabel,
+  formatWeekRangeShort,
 } from '@/utils/format';
 import { getCurrentWeek, getWeekRange, isValidWeek } from '@/utils/week';
 import type { EditorMode, SaveState } from '@/types/models';
@@ -286,6 +287,16 @@ const Weekly = () => {
     setToast('已导出 Markdown 文件');
   }, [year, week, range, content]);
 
+  /**
+   * 发布：把当前内容立即落库后回到展示态
+   * @returns 无
+   * @remarks 保存失败时留在编辑态，避免用户误以为已经发布
+   */
+  const handlePublish = useCallback(async (): Promise<void> => {
+    await persist();
+    if (content === savedContentRef.current) changeMode('preview');
+  }, [persist, content, changeMode]);
+
   /** 复制当前周报到剪贴板 */
   const handleCopy = useCallback(async (): Promise<void> => {
     try {
@@ -345,10 +356,25 @@ const Weekly = () => {
   const isWritten = updatedAt !== '';
   const isEditing = mode === 'edit';
 
+  /** 保存态徽标的文案（idle 且已写过时按「已保存」展示） */
+  const saveChipText =
+    saveState === 'idle' ? (isWritten ? '已保存' : '未保存') : SAVE_TEXT[saveState];
+
+  /** 保存态徽标的样式：失败为红底，未保存为灰底，其余为绿底 */
+  const saveChipClass =
+    saveState === 'error'
+      ? styles.saveChipError
+      : saveState === 'idle' && !isWritten
+        ? styles.saveChipIdle
+        : styles.saveChip;
+
+  /** 卡片标题旁的日期区间，形如「09/14 - 09/20」 */
+  const rangeLabel = formatWeekRangeShort(range.start, range.end).replace('–', ' - ');
+
   return (
     <AppLayout
       activeTab="weekly"
-      sidebar={
+      timeline={
         <Tree
           year={year}
           week={week}
@@ -365,6 +391,7 @@ const Weekly = () => {
               options={yearOptions}
               ariaLabel="切换年份"
               size="md"
+              variant="ghost"
               onChange={(next) => {
                 const target = Number(next);
                 void goWeek(target, target === year ? week : 1);
@@ -420,39 +447,48 @@ const Weekly = () => {
       drawerCollapsed={drawerCollapsed}
       onToggleDrawer={() => setDrawerCollapsed(!drawerCollapsed)}
     >
-      {/* 编辑态头部：返回 + 标题 + 自动保存 + 预览 */}
+      {/* 编辑态头部：第一行返回，第二行标题 + 保存态 + 预览 / 发布 */}
       {isEditing ? (
         <header className={styles.editHeader}>
-          <div className={styles.editHeaderLeft}>
-            <button
-              type="button"
-              className={styles.back}
-              onClick={() => changeMode('preview')}
-              aria-label="返回展示"
-              title="返回展示"
-            >
-              ‹
-            </button>
-            <h1 className={styles.editTitle}>{formatWeekLabel(year, week)} · 周报编辑</h1>
-          </div>
+          <button
+            type="button"
+            className={styles.back}
+            onClick={() => changeMode('preview')}
+          >
+            <svg className={styles.backIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+              <path d="m14 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            返回
+          </button>
 
-          <div className={styles.editHeaderRight}>
-            <span className={styles.autoSave}>
-              {lastSavedAt === '' ? '自动保存' : `自动保存 ${formatTimeShort(lastSavedAt).slice(-5)}`}
-            </span>
-            {saveState !== 'idle' ? (
-              <span
-                className={
-                  saveState === 'error' ? styles.saveChipError : styles.saveChip
-                }
-                aria-live="polite"
-              >
-                {SAVE_TEXT[saveState]}
+          <div className={styles.editHeaderMain}>
+            <h1 className={styles.editTitle}>{formatWeekLabel(year, week)} · 周报编辑</h1>
+
+            <div className={styles.editHeaderRight}>
+              <span className={styles.autoSave}>
+                {lastSavedAt === ''
+                  ? '自动保存'
+                  : `自动保存 ${formatTimeShort(lastSavedAt).slice(-5)}`}
               </span>
-            ) : null}
-            <button type="button" className={styles.ghostButton} onClick={() => changeMode('preview')}>
-              预览
-            </button>
+              <span className={saveChipClass} aria-live="polite">
+                {saveChipText}
+              </span>
+              <button
+                type="button"
+                className={styles.ghostButton}
+                onClick={() => changeMode('preview')}
+              >
+                预览
+              </button>
+              <button
+                type="button"
+                className={styles.publishButton}
+                onClick={() => void handlePublish()}
+                disabled={saveState === 'saving'}
+              >
+                发布
+              </button>
+            </div>
           </div>
         </header>
       ) : null}
@@ -462,29 +498,15 @@ const Weekly = () => {
         <div className={styles.displayScroll} ref={previewRef}>
           <div className={styles.displayBody}>
             <section className={styles.weekCard}>
+              {/* 全宽封面：复用登录页的风景图，保证两处视觉一致 */}
+              <div className={styles.cover} aria-hidden />
+
               <header className={styles.cardHead}>
-                {/* 封面缩略图：渐变模拟风景（不引入图片资源） */}
-                <span className={styles.cover} aria-hidden />
-                <div className={styles.cardHeadTexts}>
-                  <h1 className={styles.cardTitle}>
-                    {formatWeekMonthLabel(year, week)}
-                    {' '}
-                    {/* 全年周序号作为次级信息，用更小的字号呈现 */}
-                    <span className={styles.cardTitleWeek}>{formatWeekOrdinalLabel(week)}</span>
-                  </h1>
-                  <span className={styles.cardRange}>
-                    {range.start} - {range.end}
-                  </span>
-                </div>
+                <h1 className={styles.cardTitle}>{formatWeekOrdinalLabel(week)}</h1>
+                <span className={styles.cardRange}>{rangeLabel}</span>
+                <span className={styles.cardMonthWeek}>{formatWeekMonthLabel(year, week)}</span>
+                <span className={styles.cardSpacer} />
                 {isWritten ? <span className={styles.writtenBadge}>已写</span> : null}
-                {/* 查看入口：进入编辑态看完整内容 */}
-                <button
-                  type="button"
-                  className={styles.viewAll}
-                  onClick={() => changeMode('edit')}
-                >
-                  查看 ›
-                </button>
               </header>
 
               <div className={styles.cardBody}>
@@ -497,8 +519,21 @@ const Weekly = () => {
                 )}
               </div>
 
+              {/* 查看入口：进入编辑态看完整内容 */}
+              <button
+                type="button"
+                className={styles.viewAll}
+                onClick={() => changeMode('edit')}
+              >
+                查看全部 ›
+              </button>
+
               <footer className={styles.cardMeta}>
-                <span>
+                <span className={styles.metaTime}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
+                    <circle cx="12" cy="12" r="8.2" />
+                    <path d="M12 7.6V12l3 1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                   {updatedAt === '' ? '尚未保存' : `更新于 ${formatTimeShort(updatedAt)}`}
                 </span>
                 <span>字数 {charCount}</span>
@@ -508,29 +543,38 @@ const Weekly = () => {
         </div>
       ) : (
         <>
-          <EditorToolbar
-            editor={editor}
-            formatDisabled={!isEditing || loading}
-            onExport={handleExport}
-            onCopy={() => void handleCopy()}
-          />
-
-          {loading ? (
-            <p className={styles.hint}>加载中…</p>
-          ) : loadError !== '' ? (
-            <p className={styles.error}>{loadError}</p>
-          ) : (
-            <MarkdownEditor
-              value={content}
-              onChange={setContent}
-              editorRef={editorRef}
-              onEditorReady={setEditor}
+          {/* 编辑区容器：工具条与编辑器共用一个带边框的圆角块 */}
+          <div className={styles.editorBox}>
+            <EditorToolbar
+              editor={editor}
+              formatDisabled={!isEditing || loading}
+              onExport={handleExport}
+              onCopy={() => void handleCopy()}
             />
-          )}
+
+            {loading ? (
+              <p className={styles.hint}>加载中…</p>
+            ) : loadError !== '' ? (
+              <p className={styles.error}>{loadError}</p>
+            ) : (
+              <MarkdownEditor
+                value={content}
+                onChange={setContent}
+                editorRef={editorRef}
+                onEditorReady={setEditor}
+              />
+            )}
+          </div>
 
           {/* 编辑态底部状态栏：Markdown 编辑 + 字数计数 */}
           <footer className={styles.statusBar}>
-            <span className={styles.statusChip}>Markdown 编辑</span>
+            <span className={styles.statusChip}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <rect x="2.6" y="7.4" width="18.8" height="9.2" rx="4.6" />
+                <circle cx="8.4" cy="12" r="2.4" fill="currentColor" stroke="none" />
+              </svg>
+              Markdown 编辑
+            </span>
             <span className={styles.statusCount}>
               {charCount} / {MAX_CONTENT_CHARS}
             </span>

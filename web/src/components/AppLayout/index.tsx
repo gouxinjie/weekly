@@ -29,9 +29,9 @@ const TABS: TabItem[] = [
     key: 'weekly',
     label: '周报',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="4" y="4" width="16" height="16" rx="3" />
-        <path d="M8 9h8M8 13h5" strokeLinecap="round" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="3.5" y="5" width="17" height="15" rx="3" />
+        <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -39,9 +39,9 @@ const TABS: TabItem[] = [
     key: 'memo',
     label: '备忘',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <rect x="4" y="4" width="16" height="16" rx="3" />
-        <path d="m8.5 12 2.4 2.4 4.6-4.8" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+        <path d="m8.2 12.2 2.5 2.5 5-5.2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -49,9 +49,9 @@ const TABS: TabItem[] = [
     key: 'settings',
     label: '设置',
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-        <circle cx="12" cy="12" r="3.2" />
-        <path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7" strokeLinecap="round" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.1 14.4a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5V3a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.5 1Z" />
       </svg>
     ),
   },
@@ -61,9 +61,9 @@ const TABS: TabItem[] = [
 interface AppLayoutProps {
   /** 当前激活的标签页，决定左栏页签高亮项 */
   activeTab: AppTab;
-  /** 左栏页签下方的内容：周报态是时间轴树，备忘 / 设置态为空 */
-  sidebar?: ReactNode;
-  /** 可选顶栏：渲染在中栏与右栏之上（周报展示态的年份 / 搜索 / 通知条） */
+  /** 可选时间轴列：渲染在页签栏右侧、顶栏下方，仅周报态传入 */
+  timeline?: ReactNode;
+  /** 可选顶栏：渲染在时间轴列与中栏之上（周报展示态的年份 / 搜索 / 通知条） */
   topbar?: ReactNode;
   /** 中栏内容 */
   children: ReactNode;
@@ -82,7 +82,7 @@ interface AppLayoutProps {
  */
 const AppLayout = ({
   activeTab,
-  sidebar,
+  timeline,
   topbar,
   children,
   drawer,
@@ -116,7 +116,11 @@ const AppLayout = ({
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <div className={styles.brand}>
-            weekly<span className={styles.brandLeaf}>❧</span>
+            weekly
+            {/* 叶片标记：与登录页同一图形 */}
+            <svg className={styles.brandLeaf} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M20 4c-9 0-14 3.6-14 10.2 0 1.2.3 2.3.8 3.2l-3.1 2.9 1.4 1.5 3.1-2.9c1 .6 2.1.9 3.3.9C18.2 19.8 20 14 20 4Zm-2.2 2.3c-.3 5.5-1.6 9-4.6 10.5-1.2.6-2 1-2.9 1.1l7.5-11.6Z" />
+            </svg>
           </div>
 
           <nav className={styles.tabs}>
@@ -133,8 +137,6 @@ const AppLayout = ({
             ))}
           </nav>
 
-          {sidebar !== undefined ? <div className={styles.sidebarBody}>{sidebar}</div> : null}
-
           <AccountFooter />
         </aside>
 
@@ -142,6 +144,11 @@ const AppLayout = ({
           {topbar !== undefined ? <header className={styles.topbar}>{topbar}</header> : null}
 
           <div className={styles.contentRow}>
+            {/* 时间轴列：仅周报态存在，顶栏的年份切换正好压在它上方 */}
+            {timeline !== undefined ? (
+              <aside className={styles.timeline}>{timeline}</aside>
+            ) : null}
+
             <main className={styles.center}>{children}</main>
 
             {hasDrawer ? (

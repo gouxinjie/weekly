@@ -188,11 +188,11 @@ const Settings = () => {
               <span className={styles.rowValue}>{APP_VERSION}</span>
             </p>
             <p className={styles.row}>
-              <span className={styles.rowLabel}>服务地址</span>
+              <span className={styles.rowLabel}>部署地址</span>
               <span className={styles.rowValue}>{window.location.host}</span>
             </p>
             <p className={styles.row}>
-              <span className={styles.rowLabel}>数据存储</span>
+              <span className={styles.rowLabel}>数据库存储</span>
               <span className={styles.rowValue}>SQLite（data/weekly.db）</span>
             </p>
             <p className={styles.note}>忘记密码请联系 {CONTACT_PHONE}，人工核对后重置。</p>

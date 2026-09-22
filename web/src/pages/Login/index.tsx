@@ -1,13 +1,15 @@
 /**
  * @component 登录 / 注册页
- * @description 左侧品牌视觉区（渐变风景 + 标语）+ 右侧登录卡片；两页签切换，支持记住账号
+ * @description 全屏风景背景上的独立布局：左侧品牌视觉区（品牌名 + 标语 + 三个特性），
+ * 右上角品牌口号，右侧悬浮白色登录卡片；登录 / 注册两页签切换，支持记住账号
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import loginBg from '@/assets/login-bg.jpg';
 import { CONTACT_PHONE, REMEMBER_PHONE_KEY } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './index.module.scss';
@@ -21,12 +23,56 @@ const PHONE_PATTERN = /^1[3-9]\d{9}$/;
 /** 密码强度：必须同时含数字与字母，长度不少于 8 位 */
 const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
 
-/** 左侧品牌区的三个特性点 */
-const FEATURES = [
-  { icon: '🗓', title: '周报', desc: '时间轴周记录' },
-  { icon: '✅', title: '备忘', desc: '待办与分类' },
-  { icon: '👥', title: '多用户', desc: '数据彼此隔离' },
-] as const;
+/** 品牌叶片：与左栏 logo 同款图形 */
+const LeafIcon = () => (
+  <svg className={styles.brandLeaf} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d="M20 4c-9 0-14 3.6-14 10.2 0 1.2.3 2.3.8 3.2l-3.1 2.9 1.4 1.5 3.1-2.9c1 .6 2.1.9 3.3.9C18.2 19.8 20 14 20 4Zm-2.2 2.3c-.3 5.5-1.6 9-4.6 10.5-1.2.6-2 1-2.9 1.1l7.5-11.6Z" />
+  </svg>
+);
+
+/** 左侧品牌区的三个特性点：线性图标 + 标题 + 说明 */
+interface FeatureItem {
+  /** 特性标题 */
+  title: string;
+  /** 特性说明 */
+  desc: string;
+  /** 24×24 视图的线性图标 */
+  icon: ReactNode;
+}
+
+const FEATURES: FeatureItem[] = [
+  {
+    title: '周报',
+    desc: '时间轴记录',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="3.5" y="5" width="17" height="15" rx="3" />
+        <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    title: '备忘',
+    desc: '待办清单',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+        <path d="m8.2 12.2 2.5 2.5 5-5.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    title: '多用户',
+    desc: '数据隔离',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <circle cx="10" cy="8.5" r="3.2" />
+        <path d="M3.8 19.2c0-3 2.8-5 6.2-5s6.2 2 6.2 5" strokeLinecap="round" />
+        <path d="M16.4 6.1a3 3 0 0 1 0 5.6M18.2 19.2c0-2.2-.7-3.8-1.9-4.8" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
 
 /**
  * 读取重定向来源
@@ -171,48 +217,48 @@ const Login = () => {
 
   return (
     <div className={styles.page}>
+      {/* 全屏风景背景：纯装饰，alt 置空即可 */}
+      <img className={styles.background} src={loginBg} alt="" />
+
+      {/* 右上角品牌口号 */}
+      <span className={styles.slogan}>记录 · 思考 · 成长</span>
+
       {/* 左侧品牌视觉区 */}
-      <div className={styles.hero}>
-        <header className={styles.heroTop}>
-          <span className={styles.brand}>
-            weekly<span className={styles.brandLeaf}>❧</span>
-          </span>
-          <span className={styles.heroSlogan}>记录 · 思考 · 成长</span>
-        </header>
+      <section className={styles.hero}>
+        <span className={styles.brand}>
+          weekly
+          <LeafIcon />
+        </span>
 
-        <div className={styles.heroBody}>
-          <h1 className={styles.heroTitle}>
-            一周一记，
-            <br />
-            遇见更好的自己
-          </h1>
-          <p className={styles.heroText}>
-            用最简单的方式，记录工作与生活，
-            <br />
-            让每一周都留下清晰的成长轨迹。
-          </p>
+        <h1 className={styles.heroTitle}>
+          一周一记，
+          <br />
+          遇见更好的自己
+        </h1>
+        <p className={styles.heroText}>
+          用最简单的方式，记录工作与生活，
+          <br />
+          让每一周都留下清晰的成长轨迹。
+        </p>
 
-          <ul className={styles.features}>
-            {FEATURES.map((item) => (
-              <li key={item.title} className={styles.feature}>
-                <span className={styles.featureIcon} aria-hidden>
-                  {item.icon}
-                </span>
-                <span>
-                  <span className={styles.featureTitle}>{item.title}</span>
-                  <span className={styles.featureDesc}>{item.desc}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+        <ul className={styles.features}>
+          {FEATURES.map((item) => (
+            <li key={item.title} className={styles.feature}>
+              <span className={styles.featureIcon} aria-hidden>
+                {item.icon}
+              </span>
+              <span className={styles.featureTexts}>
+                <span className={styles.featureTitle}>{item.title}</span>
+                <span className={styles.featureDesc}>{item.desc}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      {/* 右侧登录卡片 */}
+      {/* 右侧悬浮登录卡片 */}
       <div className={styles.panel}>
         <div className={styles.card}>
-          {notice !== '' ? <p className={styles.notice}>{notice}</p> : null}
-
           <div className={styles.tabs}>
             <button
               type="button"
@@ -229,6 +275,8 @@ const Login = () => {
               注册
             </button>
           </div>
+
+          {notice !== '' ? <p className={styles.notice}>{notice}</p> : null}
 
           <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
             <label className={styles.field}>
@@ -313,7 +361,10 @@ const Login = () => {
                   />
                   记住账号
                 </label>
-                <span className={styles.forgot} title={`请联系 ${CONTACT_PHONE} 人工重置`}>
+                <span
+                  className={styles.forgot}
+                  title={`请联系 ${CONTACT_PHONE} 人工重置`}
+                >
                   忘记密码？
                 </span>
               </div>

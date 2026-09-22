@@ -89,14 +89,26 @@ const WEEK_OPTIONS: SelectOption[] = Array.from({ length: MAX_WEEK }, (_, index)
 /**
  * 生成分组的展示标签
  * @param key - 分组键 YYYY-MM-DD
- * @returns 今天 / 昨天 / MM-DD
+ * @returns 相对日期标签：今天 / 昨天 / 明天；非近期日期返回空串
  */
-const groupLabel = (key: string): string => {
+const relativeDayLabel = (key: string): string => {
   const date = dayjs(key);
   const today = dayjs().startOf('day');
   if (date.isSame(today)) return '今天';
   if (date.isSame(today.subtract(1, 'day'))) return '昨天';
-  return date.format('MM-DD');
+  if (date.isSame(today.add(1, 'day'))) return '明天';
+  return '';
+};
+
+/**
+ * 生成分组的完整标题
+ * @param key - 分组键 YYYY-MM-DD
+ * @returns 形如「今天 · 09/22」或「09/20」的字符串
+ */
+const groupTitle = (key: string): string => {
+  const date = dayjs(key);
+  const relative = relativeDayLabel(key);
+  return relative === '' ? date.format('MM/DD') : `${relative} · ${date.format('MM/DD')}`;
 };
 
 /**
@@ -191,14 +203,12 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             </span>
           ) : null}
 
-          {/* 周次标记标签 */}
+          {/* 周次标记标签：带上年份末两位，跨年标记才不会混淆 */}
           {tagged ? (
-            <span className={styles.weekTag}>
-              {memo.week} 周 · {String(memo.year).slice(-2)}
+            <span className={styles.weekTag} title={`标记到 ${memo.year} 年第 ${memo.week} 周`}>
+              第 {memo.week} 周 · {String(memo.year).slice(-2)}
             </span>
           ) : null}
-
-          <span className={styles.date}>{dayjs(memo.createdAt).format('MM-DD')}</span>
 
           {/* 「⋯」菜单 */}
           <div className={styles.menuWrap}>
@@ -340,7 +350,11 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
       }
     }
 
-    return [...map.entries()].map(([key, list]) => ({ key, label: groupLabel(key), memos: list }));
+    return [...map.entries()].map(([key, list]) => ({
+      key,
+      label: groupTitle(key),
+      memos: list,
+    }));
   }, [memos]);
 
   if (loading) {
@@ -365,7 +379,7 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
       {groups.map((group) => (
         <section key={group.key} className={styles.group}>
           <h3 className={styles.groupTitle}>
-            {group.label} <span className={styles.groupDate}>{group.key.slice(5)}</span>
+            {group.label}
             <span className={styles.groupCount}>（{group.memos.length}）</span>
           </h3>
           <ul>

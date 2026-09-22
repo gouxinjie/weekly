@@ -22,11 +22,11 @@ export const formatWeekMonthLabel = (year: number, week: number): string =>
   `${getWeekMonth(year, week)} 月第 ${getWeekIndexInMonth(year, week)} 周`;
 
 /**
- * 格式化周次的全年序号部分，以次级小字附在主标题后
+ * 格式化周次的全年序号，作为周报卡片的标题
  * @param week - ISO 周次（1-53）
- * @returns 形如「（第 39 周）」的字符串
+ * @returns 形如「第 39 周」的字符串
  */
-export const formatWeekOrdinalLabel = (week: number): string => `（第 ${week} 周）`;
+export const formatWeekOrdinalLabel = (week: number): string => `第 ${week} 周`;
 
 /**
  * 格式化周次日期区间（树节点用）

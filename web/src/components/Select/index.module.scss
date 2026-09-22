@@ -65,6 +65,25 @@
   font-weight: 600;
 }
 
+/* ===== 外观变体 ===== */
+
+/*
+ * 无描边外观：顶栏的年份切换，只留文字与箭头。
+ * 必须写在尺寸之后——两者同优先级，靠源码顺序决定胜负，
+ * 写在前面会被 .sizeMd 的字号字重覆盖。
+ */
+.triggerGhost {
+  border-color: transparent;
+  background-color: transparent;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.triggerGhost:hover:not(:disabled) {
+  border-color: transparent;
+  color: var(--color-accent);
+}
+
 .value {
   overflow: hidden;
   text-overflow: ellipsis;

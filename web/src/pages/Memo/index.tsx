@@ -14,7 +14,7 @@ import MemoFilter from '@/components/MemoFilter';
 import MemoList from '@/components/MemoList';
 import Select from '@/components/Select';
 import { MEMO_CATEGORIES } from '@/constants';
-import { isPastWeek } from '@/utils/week';
+import { getCurrentWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
 import type { Memo as MemoModel, MemoFilter as MemoFilterValue } from '@/types/models';
 import styles from './index.module.scss';
@@ -28,6 +28,7 @@ const Memo = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<MemoFilterValue>('all');
+  const [keyword, setKeyword] = useState('');
   const [newText, setNewText] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [pending, setPending] = useState(false);
@@ -54,39 +55,46 @@ const Memo = () => {
     };
   }, []);
 
-  /** 是否过期：标记了周次、未完成且周次已过 */
-  const isOverdue = useCallback(
+  /** 当前 ISO 周：筛选与计数共用，避免每次比较都重新构造 dayjs 对象 */
+  const currentWeek = useMemo(() => getCurrentWeek(), []);
+
+  /** 是否属于本周：标记的 year + week 与当前 ISO 周一致 */
+  const isCurrentWeek = useCallback(
     (memo: MemoModel): boolean =>
-      !memo.done &&
-      memo.year !== null &&
-      memo.week !== null &&
-      isPastWeek(memo.year, memo.week),
-    [],
+      memo.year === currentWeek.year && memo.week === currentWeek.week,
+    [currentWeek],
   );
 
   /** 各筛选结果与计数 */
   const counts = useMemo<Record<MemoFilterValue, number>>(
     () => ({
       all: memos.length,
+      week: memos.filter(isCurrentWeek).length,
       undone: memos.filter((memo) => !memo.done).length,
       done: memos.filter((memo) => memo.done).length,
-      overdue: memos.filter(isOverdue).length,
     }),
-    [memos, isOverdue],
+    [memos, isCurrentWeek],
   );
 
+  /** 先按状态筛选，再按关键词过滤（关键词仅在前端本地过滤，不额外请求接口） */
   const filtered = useMemo(() => {
-    switch (filter) {
-      case 'undone':
-        return memos.filter((memo) => !memo.done);
-      case 'done':
-        return memos.filter((memo) => memo.done);
-      case 'overdue':
-        return memos.filter(isOverdue);
-      default:
-        return memos;
-    }
-  }, [memos, filter, isOverdue]);
+    const byStatus = ((): MemoModel[] => {
+      switch (filter) {
+        case 'week':
+          return memos.filter(isCurrentWeek);
+        case 'undone':
+          return memos.filter((memo) => !memo.done);
+        case 'done':
+          return memos.filter((memo) => memo.done);
+        default:
+          return memos;
+      }
+    })();
+
+    const text = keyword.trim().toLowerCase();
+    if (text === '') return byStatus;
+    return byStatus.filter((memo) => memo.text.toLowerCase().includes(text));
+  }, [memos, filter, isCurrentWeek, keyword]);
 
   /** 新建待办，Enter 触发且保持焦点 */
   const handleCreate = useCallback(async (): Promise<void> => {
@@ -160,43 +168,72 @@ const Memo = () => {
     [memos],
   );
 
-  /** 空态文案与动作：区分「整体为空」与「某筛选结果为空」 */
+  /** 空态文案与动作：区分「整体为空」「搜索无结果」与「某筛选结果为空」 */
   const emptyHint = useMemo(() => {
     if (memos.length === 0) return '还没有待办，在上面输入一条试试';
+    if (keyword.trim() !== '') return '没有匹配的待办';
     switch (filter) {
+      case 'week':
+        return '本周没有标记的待办';
       case 'undone':
         return '所有待办都已完成';
       case 'done':
         return '还没有已完成的待办';
-      case 'overdue':
-        return '没有已过期的待办';
       default:
         return '还没有待办';
     }
-  }, [memos.length, filter]);
+  }, [memos.length, filter, keyword]);
 
   const emptyAction = useMemo(() => {
     if (memos.length === 0) {
       return { label: '去输入', onClick: () => newInputRef.current?.focus() };
     }
+    if (keyword.trim() !== '') {
+      return { label: '清空搜索', onClick: () => setKeyword('') };
+    }
     if (filter !== 'all') {
       return { label: '查看全部', onClick: () => setFilter('all') };
     }
     return undefined;
-  }, [memos.length, filter]);
+  }, [memos.length, filter, keyword]);
 
   return (
     <AppLayout activeTab="memo">
-      {/* 标题行：备忘 + 新建按钮 */}
+      {/* 标题行：备忘 + 搜索框 + 新建按钮 */}
       <header className={styles.header}>
         <h1 className={styles.title}>备忘</h1>
-        <button
-          type="button"
-          className={styles.create}
-          onClick={() => newInputRef.current?.focus()}
-        >
-          ＋ 新建
-        </button>
+
+        <div className={styles.headerRight}>
+          {/* 搜索框：仅在已加载的备忘里做前端过滤，不额外请求接口 */}
+          <label className={styles.searchField}>
+            <svg
+              className={styles.searchIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="6.4" />
+              <path d="m15.8 15.8 3.7 3.7" strokeLinecap="round" />
+            </svg>
+            <input
+              className={styles.searchInput}
+              value={keyword}
+              placeholder="搜索备忘内容…"
+              aria-label="搜索备忘内容"
+              onChange={(event) => setKeyword(event.target.value)}
+            />
+          </label>
+
+          <button
+            type="button"
+            className={styles.create}
+            onClick={() => newInputRef.current?.focus()}
+          >
+            ＋ 新建
+          </button>
+        </div>
       </header>
 
       {/* 筛选标签页 */}

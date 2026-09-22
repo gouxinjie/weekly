@@ -1,7 +1,7 @@
 /**
  * 工作台（周报）样式
- * 布局要点：编辑态 = 头部 + 工具条 + 编辑器 + 底部状态栏；
- * 展示态 = 居中的周报卡片（封面头 + 内容 + 元信息）+「查看全部」入口。
+ * 布局要点：编辑态 = 返回行 + 标题行 + 带边框的编辑容器 + 底部状态栏；
+ * 展示态 = 居中的周报卡片（全宽封面 + 标题行 + 内容 + 查看全部 + 元信息）。
  */
 
 /* ===== 顶栏（展示态） ===== */
@@ -15,9 +15,9 @@
 
 /* 顶栏搜索框 */
 .search {
-  width: 220px;
+  width: 240px;
   padding: 7px var(--space-3);
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   background-color: var(--color-bg-subtle);
   font-size: 12px;
@@ -73,61 +73,63 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: var(--color-accent-soft);
+  background-color: var(--color-bg-active);
   color: var(--color-accent);
 }
 
 .avatar svg {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
 }
 
 /* ===== 编辑态头部 ===== */
 
+/* 两行：第一行返回入口，第二行标题 + 右侧操作 */
 .editHeader {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
   flex: 0 0 auto;
-  padding: var(--space-3) var(--space-6);
+  /* 左内边距与展示态顶栏一致（对齐时间轴列标题），避免切换模式时横向跳动 */
+  padding: var(--space-3) var(--space-6) var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 
-.editHeaderLeft {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* 返回展示态按钮 */
+/* 返回展示态：箭头 + 文字 */
 .back {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+  gap: 2px;
+  align-self: flex-start;
   padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background-color: var(--color-bg);
+  border: none;
+  background-color: transparent;
   color: var(--color-text-muted);
-  font-size: 14px;
-  line-height: 1;
+  font-size: 12px;
 }
 
 .back:hover {
-  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 
+.backIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.editHeaderMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .editTitle {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -145,10 +147,11 @@
   font-size: 12px;
 }
 
-/* 保存状态徽标：已保存为绿底，失败为红底 */
+/* 保存状态徽标：已保存为绿底、未保存为灰底、失败为红底 */
 .saveChip,
+.saveChipIdle,
 .saveChipError {
-  padding: 2px var(--space-2);
+  padding: 3px var(--space-3);
   border-radius: 999px;
   font-size: 11px;
 }
@@ -158,12 +161,17 @@
   color: var(--color-saved);
 }
 
+.saveChipIdle {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-faint);
+}
+
 .saveChipError {
   background-color: var(--color-danger-soft);
   color: var(--color-danger);
 }
 
-/* 次级按钮：浅底描边 */
+/* 次级按钮：描边 */
 .ghostButton {
   padding: 6px var(--space-4);
   border: 1px solid var(--color-border-strong);
@@ -176,6 +184,25 @@
 .ghostButton:hover {
   border-color: var(--color-accent);
   color: var(--color-accent);
+}
+
+/* 主按钮：保存并回到展示态 */
+.publishButton {
+  padding: 6px var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.publishButton:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.publishButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ===== 展示态：周报卡片 ===== */
@@ -191,107 +218,138 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-6);
+  padding: var(--space-4);
 }
 
-/* 周报卡片：白底圆角阴影 */
+/* 周报卡片：白底圆角阴影，撑满中栏可用宽度（不再限制最大宽度） */
 .weekCard {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 720px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xs);
   background-color: var(--color-bg);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
-/* 封面头：渐变缩略图 + 标题 + 已写徽标 */
+/* 全宽封面：复用登录页风景图（@ 别名在 SCSS 的 url() 里同样生效），底部压一层浅色渐变 */
+.cover {
+  position: relative;
+  flex: 0 0 auto;
+  height: 132px;
+  background-color: #dfe9e6;
+  background-image: url('@/assets/login-bg.jpg');
+  background-position: center 42%;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0%) 55%, rgb(255 255 255 / 85%) 100%);
+}
+
+/* 标题行：周次 + 日期区间 + 月份序号 + 已写徽标 */
 .cardHead {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  background: linear-gradient(120deg, #e8f0ec 0%, #dfe9e4 55%, #d5e4dc 100%);
-  border-bottom: 1px solid var(--color-border);
-}
-
-/* 封面缩略图：渐变模拟风景 */
-.cover {
   flex: 0 0 auto;
-  width: 64px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  background:
-    radial-gradient(60% 80% at 70% 100%, #5e8a82 0%, transparent 70%),
-    linear-gradient(180deg, #cfe0e3 0%, #a8c6c4 60%, #7fa79d 100%);
-}
-
-.cardHeadTexts {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
+  padding: var(--space-4) var(--space-6) 0;
 }
 
 .cardTitle {
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 700;
-}
-
-/* 全年周序号：附在主标题后的小字，弱化层级 */
-.cardTitleWeek {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 500;
 }
 
 .cardRange {
   color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+/* 月份内序号：作为次级信息弱化展示 */
+.cardMonthWeek {
+  color: var(--color-text-faint);
   font-size: 12px;
 }
 
-/* 已写徽标：绿底白字胶囊 */
+/* 占位：把「已写」徽标推到最右侧 */
+.cardSpacer {
+  flex: 1 1 auto;
+}
+
+/* 已写徽标：浅绿底绿字胶囊 */
 .writtenBadge {
+  align-self: center;
   flex: 0 0 auto;
-  padding: 2px var(--space-2);
+  padding: 3px var(--space-3);
   border-radius: 999px;
-  background-color: var(--color-saved);
-  color: #ffffff;
+  background-color: var(--color-saved-soft);
+  color: var(--color-saved);
   font-size: 11px;
 }
 
 .cardBody {
-  padding: var(--space-4) var(--space-6);
+  flex: 1 1 auto;
+  padding: var(--space-2) var(--space-6) 0;
 }
 
-/* 元信息行：更新时间 + 字数 */
+/* 卡片底部的「查看全部」文字链 */
+.viewAll {
+  align-self: flex-start;
+  margin: var(--space-2) var(--space-6) var(--space-3);
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.viewAll:hover {
+  color: var(--color-accent);
+}
+
+/* 元信息行：更新时间（带时钟图标）+ 字数 */
 .cardMeta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-4);
+  flex: 0 0 auto;
   padding: var(--space-3) var(--space-6);
   border-top: 1px solid var(--color-border);
   color: var(--color-text-faint);
   font-size: 12px;
 }
 
-/* 卡片头部的「查看」入口：进入编辑态看完整内容 */
-.viewAll {
-  flex: 0 0 auto;
-  padding: 4px var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  color: var(--color-accent);
-  font-size: 12px;
+.metaTime {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
-.viewAll:hover {
-  background-color: var(--color-accent);
-  color: #ffffff;
+.metaTime svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ===== 编辑态公共区 ===== */
+
+/* 编辑容器：工具条与编辑器共用一个带边框的圆角块 */
+.editorBox {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: var(--space-4) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
 
 /* 编辑态底部状态栏 */
 .statusBar {
@@ -299,28 +357,21 @@
   align-items: center;
   justify-content: space-between;
   flex: 0 0 auto;
-  padding: var(--space-2) var(--space-6);
-  border-top: 1px solid var(--color-border);
+  padding: 0 var(--space-6) var(--space-3);
 }
 
-/* 「Markdown 编辑」提示胶囊 */
+/* 「Markdown 编辑」提示：图标 + 主色文字 */
 .statusChip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border-radius: 999px;
-  background-color: var(--color-accent-soft);
   color: var(--color-accent);
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.statusChip::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-accent);
+.statusChip svg {
+  width: 15px;
+  height: 15px;
 }
 
 .statusCount {

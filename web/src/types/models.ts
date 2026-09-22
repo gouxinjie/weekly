@@ -61,5 +61,5 @@ export type EditorMode = 'edit' | 'preview';
 /** 保存状态：用于标题栏「保存中 / 已保存」提示 */
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-/** 备忘筛选项：全部 / 未完成 / 已完成 / 已过期 */
-export type MemoFilter = 'all' | 'undone' | 'done' | 'overdue';
+/** 备忘筛选项：全部 / 本周 / 未完成 / 已完成 */
+export type MemoFilter = 'all' | 'week' | 'undone' | 'done';

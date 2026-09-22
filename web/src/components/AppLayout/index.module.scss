@@ -1,8 +1,9 @@
 /**
  * 应用骨架样式
  * 布局要点：
- * 1. 左栏两态宽度恒为 --sidebar-width，切换时只有内容变化、宽度不跳动
- * 2. 右侧区域 = 可选顶栏 + 内容行（中栏 + 右栏抽屉），顶栏横跨中栏与右栏
+ * 1. 页签栏（--rail-width）两态宽度一致，切换标签页时文字位置不跳动
+ * 2. 右侧区域 = 可选顶栏 + 内容行（可选时间轴列 + 中栏 + 右栏抽屉），
+ *    顶栏横跨时间轴列与中栏，年份切换正好落在时间轴列上方
  * 3. 窗口变窄时先压缩右栏，再出现横向滚动（中栏由 --center-min-width 兜底）
  */
 
@@ -37,29 +38,33 @@
   overflow-x: auto;
 }
 
-/* ===== 左栏：logo + 页签 + 内容 + 账号区 ===== */
+/* ===== 左栏：页签栏（logo + 页签 + 账号区）===== */
 
+/* 页签栏宽度两态一致，位置不跳动；周报态的时间轴是它右侧的独立一列 */
 .sidebar {
   display: flex;
   flex-direction: column;
-  flex: 0 0 var(--sidebar-width);
-  width: var(--sidebar-width);
-  border-right: 1px solid var(--color-border);
-  background-color: var(--color-bg);
+  flex: 0 0 var(--rail-width);
+  width: var(--rail-width);
+  background-color: var(--color-bg-subtle);
 }
 
 /* 品牌 logo */
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   flex: 0 0 auto;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  font-size: 18px;
+  padding: var(--space-4) var(--space-4) var(--space-4);
+  font-size: 19px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
-/* 品牌名后的叶片符号 */
+/* 品牌名后的叶片标记 */
 .brandLeaf {
-  margin-left: 2px;
+  width: 15px;
+  height: 15px;
   color: var(--color-accent);
 }
 
@@ -69,17 +74,17 @@
   flex-direction: column;
   gap: 2px;
   flex: 0 0 auto;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
 }
 
 .tab,
 .tabActive {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 8px var(--space-2);
+  gap: 10px;
+  padding: 9px 10px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background-color: transparent;
   color: var(--color-text-muted);
   font-size: 13px;
@@ -117,10 +122,17 @@
   height: 100%;
 }
 
-.sidebarBody {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+/* ===== 时间轴列（周报态专属） ===== */
+
+/* 页签栏与中栏之间的一列，左侧一条分隔线与页签栏区分开 */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--timeline-width);
+  width: var(--timeline-width);
+  min-width: 0;
+  border-left: 1px solid var(--color-border);
+  background-color: var(--color-bg);
 }
 
 /* ===== 右侧区域：可选顶栏 + 内容行 ===== */
@@ -133,7 +145,7 @@
   min-height: 0;
 }
 
-/* 顶栏：横跨中栏与右栏 */
+/* 顶栏：横跨时间轴列、中栏与右栏；左内边距与时间轴标题对齐 */
 .topbar {
   display: flex;
   align-items: center;
@@ -141,7 +153,7 @@
   gap: var(--space-4);
   flex: 0 0 var(--topbar-height);
   height: var(--topbar-height);
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-6) 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-bg);
 }

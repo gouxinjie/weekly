@@ -72,7 +72,7 @@
   text-decoration: underline;
 }
 
-/* 只读清单：状态方块 + 文本 */
+/* 只读清单：状态方块 + 文本，整行铺开不额外包卡片 */
 .list {
   display: flex;
   flex-direction: column;
@@ -85,14 +85,11 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
+  padding: var(--space-1) 0;
   color: var(--color-text);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
-  box-shadow: var(--shadow-card);
 }
 
 .itemDone {
@@ -123,26 +120,35 @@
   background-color: var(--color-accent);
 }
 
-/* 进度区 */
+/* 进度区：标题一行，进度条与百分比一行 */
 .progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
-.progressHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.progressLabel {
   color: var(--color-text-muted);
   font-size: 11px;
 }
 
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .progressPercent {
+  flex: 0 0 auto;
   color: var(--color-text-faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .progressBar {
+  flex: 1 1 auto;
   height: 6px;
-  margin-top: var(--space-1);
   border-radius: 3px;
   background-color: var(--color-border);
   overflow: hidden;
@@ -156,13 +162,15 @@
   transition: width 0.3s ease;
 }
 
-/* 引言卡：浅绿底 + 大引号 */
+/* 引言卡：浅绿到浅蓝的渐变底 + 大引号 */
 .quote {
   position: relative;
   margin-top: var(--space-4);
   padding: var(--space-4) var(--space-3) var(--space-3);
   border-radius: var(--radius-md);
-  background-color: var(--color-accent-soft);
+  background:
+    radial-gradient(120% 90% at 100% 100%, rgb(160 205 190 / 45%) 0%, transparent 62%),
+    linear-gradient(160deg, #e8f0ec 0%, #e4edea 55%, #dfe9ec 100%);
 }
 
 .quoteMark {
