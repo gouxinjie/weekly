@@ -55,6 +55,34 @@ interface YearNode {
   months: MonthNode[];
 }
 
+/** 折叠箭头属性 */
+interface CaretIconProps {
+  /** 箭头类名：展开态传入带旋转的类，收起态传入基础类 */
+  className: string;
+}
+
+/**
+ * 折叠箭头图标
+ * @param props - 见 CaretIconProps
+ * @returns 箭头图标节点
+ * @remarks 用 SVG 折线而不是「▸」字符：字符的字形、基线与粗细随字体变化，
+ *          旋转 90° 后还会偏离视觉中心，跨平台表现不一致。
+ */
+const CaretIcon = ({ className }: CaretIconProps) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="m9 6 6 6-6 6" />
+  </svg>
+);
+
 /**
  * 生成需要展示的年份列表
  * @param selectedYear - 当前选中的年份
@@ -290,7 +318,7 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
                 className={styles.yearHeader}
                 onClick={() => toggleYear(node.year)}
               >
-                <span className={expanded ? styles.caretOpen : styles.caret}>▸</span>
+                <CaretIcon className={expanded ? styles.caretOpen : styles.caret} />
                 <span className={styles.yearLabel}>{node.year}</span>
               </button>
 
@@ -310,9 +338,9 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
                           }
                           onClick={() => toggleMonth(key)}
                         >
-                          <span className={monthExpanded ? styles.caretOpen : styles.caret}>
-                            ▸
-                          </span>
+                          <CaretIcon
+                            className={monthExpanded ? styles.caretOpen : styles.caret}
+                          />
                           <span className={styles.monthLabel}>{monthNode.month} 月</span>
                           {/* 该月有已写周时补一个绿点，折叠状态下也能看出哪个月写过 */}
                           {monthNode.writtenCount > 0 ? (

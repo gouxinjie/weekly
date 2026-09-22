@@ -48,17 +48,30 @@
   background-color: var(--color-bg-subtle);
 }
 
+/* 折叠箭头：SVG 折线，收起指向右、展开旋转 90° 指向下 */
 .caret,
 .caretOpen {
-  display: inline-block;
-  width: 10px;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
   color: var(--color-text-faint);
-  font-size: 10px;
-  transition: transform 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
 }
 
 .caretOpen {
   transform: rotate(90deg);
+}
+
+/* 悬停整行时箭头跟着加深，提示这一行可点击 */
+.yearHeader:hover .caret,
+.yearHeader:hover .caretOpen,
+.monthHeader:hover .caret,
+.monthHeader:hover .caretOpen,
+.monthHeaderEmpty:hover .caret,
+.monthHeaderEmpty:hover .caretOpen {
+  color: var(--color-text-muted);
 }
 
 .yearLabel {
