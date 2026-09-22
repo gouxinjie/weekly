@@ -310,7 +310,7 @@ interface TreeProps {
 |---|---|---|
 | 深墨绿 `#2e5245` | `--color-accent` | 主色：选中态（选中页签实底、周节点选中圆环）、主按钮、链接、聚焦环 |
 | 反白 `#ffffff` | `--color-on-accent` | 主色实底上的前景：选中页签的文字与图标、主按钮文字（深色主题取 `#1b211e`） |
-| 绿 `#4a8b3c` | `--color-saved` | 状态色：已写角标、已保存提示、本周进度条 |
+| 绿 `#4a8b3c` | `--color-saved` | 状态色：已写角标、已保存提示、本周进度条；小号文字改用 `--color-saved-strong`（`#3f7a33`，对比度更高），如时间轴月份已写计数 |
 | 红 `#b03a2e` | `--color-danger` | 危险色：删除、错误提示 |
 | 灰 `#9aa19d` | `--color-text-faint` | 未写状态：未写的周节点文字与角标 |
 
@@ -335,7 +335,10 @@ interface TreeProps {
   --color-accent-soft:   #e7efe9;
   --color-on-accent:     #ffffff;
   --color-saved:         #4a8b3c;
+  --color-saved-strong:  #3f7a33;  /* 11-12px 小号状态绿 */
   --color-danger:        #b03a2e;
+  --color-danger-hover:  #9b3227;
+  --color-on-danger:     #ffffff;  /* 危险色实底上的前景 */
 
   /* 骨架尺寸，见 §6 */
   --rail-width:          176px;  /* 页签栏：logo + 页签 + 底部账号区 */
@@ -343,7 +346,7 @@ interface TreeProps {
   --drawer-width:        220px;
   --center-min-width:    480px;
   --topbar-height:       56px;
-  --settings-max-width:  520px;
+  --settings-max-width:  600px;
 
   /* 登录页 */
   --login-card-width:    420px;

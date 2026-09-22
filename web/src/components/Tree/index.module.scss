@@ -9,8 +9,10 @@
 
 /* 圆点列宽：所有状态的圆点都占这个宽度，圆心因而恒定在一列上 */
 $dot-col: 14px;
-/* 未选中圆点的直径；选中圆环的环心点与之同尺寸，两态的视觉重量才一致 */
-$dot-size: 8px;
+/* 未选中圆点的直径；选中圆环的环心点与之同尺寸，两态的视觉重量才一致。
+   只能取偶数：列宽 14px 下圆心坐标是整数，奇数直径（如 7px）居中后
+   边界落在 x.5 半像素上，抗锯齿会把圆磨糊、看起来环与心没对准 */
+$dot-size: 6px;
 /* 选中圆环外径：比圆点列宽大 2px，居中后左右各外溢 1px，横向圆心仍落在列中线上 */
 $ring-size: $dot-col + 2px;
 /* 周节点按钮的左内边距，等于 --space-2；竖线的横坐标由它与圆点列宽推导 */
@@ -137,13 +139,19 @@ $track-x: $track-gutter + math.div($dot-col, 2);
   flex: 0 0 auto;
 }
 
-/* 该月已有周报时的绿色提示点，折叠状态下也能一眼看出写过 */
-.monthDot {
+/* 该月已写周数：行尾右对齐的「已写 / 全月」计数。
+   与前面的绿点、迷你进度条相比，这里不用任何图形，只把数字排出来：
+   等宽数字宽度一致，推到行尾后各月自然对齐成一列，扫读时像一张月度统计表；
+   绿色取 --color-saved-strong：11px 小字用 --color-saved 在浅底上只有约 4.1:1，
+   达不到 WCAG AA 的 4.5:1 */
+.monthCount {
   flex: 0 0 auto;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: var(--color-saved);
+  /* 吃掉中间空隙把计数推到行尾，各月数字才能纵向对齐 */
+  margin-left: auto;
+  color: var(--color-saved-strong);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 /* ===== 时间轴 ===== */
@@ -214,10 +222,9 @@ $track-x: $track-gutter + math.div($dot-col, 2);
   margin-top: var(--space-2);
 }
 
-/* 未选中圆点：直径统一 8px，只用颜色区分已写 / 未写。
-   8px 在 100% / 125% / 150% / 200% 缩放下分别落到 8 / 10 / 12 / 16 个物理像素，都是整数；
-   原先的 6px、7px 在 125% 缩放下只有 7.5 / 8.75 个物理像素，
-   圆弧会被抗锯齿磨成「圆角方块」，看起来不够圆 */
+/* 未选中圆点：直径统一 6px，只用颜色区分已写 / 未写。
+   此前是 8px，与设计稿比对偏大一圈；改 7px 会在 14px 列宽里落到半像素边界
+   而发虚、显得环心没对齐，故直接取偶数 6px，边界落回整数像素 */
 .dotSaved::after,
 .dotEmpty::after {
   content: '';
@@ -240,7 +247,8 @@ $track-x: $track-gutter + math.div($dot-col, 2);
    未写取主色，已写取绿色（.dotActiveWritten）——
    选中是「位置」信号、绿色是「已写」信号，两者不能互相吞并。
    描边取整数 2px：1.5px 在 100% 缩放下会留下半像素毛边，圆环会显得不圆。
-   外径 $ring-size、环心点 $dot-size、空隙 2px：内点必须够大（与未选中圆点同尺寸），
+   外径 $ring-size（含 2px 描边后环内容区直径 12px）、环心点 $dot-size，单边空隙 3px：
+   内点必须够大（与未选中圆点同尺寸），
    内点太小会在环内留下大片空白，看起来像靶心 */
 .dotActive::before,
 .dotActiveWritten::before {

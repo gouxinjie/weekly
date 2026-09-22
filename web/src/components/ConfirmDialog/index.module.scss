@@ -1,0 +1,155 @@
+/**
+ * 二次确认弹窗样式
+ * 布局要点：半透明遮罩铺满视口并居中弹窗卡片；卡片为「图标 + 标题 + 说明 + 双按钮」的纵向结构，
+ * 按钮右对齐、取消在前确认在后，危险操作的确认按钮取危险色。
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgb(34 48 43 / 42%);
+  animation: overlayIn 0.15s ease;
+}
+
+/* 弹窗卡片：内容居中，宽度固定避免文案长短导致跳动 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-float);
+  text-align: center;
+  animation: panelIn 0.18s ease;
+}
+
+/* 顶部圆形图标：默认取主色，危险操作取危险色 */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--space-3);
+  border-radius: 50%;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.iconDanger {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.description {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* 按钮组：等宽两列，取消在左、确认在右 */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-6);
+}
+
+.cancel,
+.confirm {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cancel {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.cancel:hover:not(:disabled) {
+  border-color: var(--color-text-faint);
+  background-color: var(--color-bg-subtle);
+}
+
+.confirm {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.confirm:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.confirmDanger {
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+}
+
+.confirmDanger:hover:not(:disabled) {
+  background-color: var(--color-danger-hover);
+}
+
+.cancel:disabled,
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 遮罩淡入 + 卡片轻微上浮，弱动画不影响可访问性 */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}

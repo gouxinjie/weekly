@@ -2,7 +2,8 @@
  * @component 周次时间轴
  * @description 左栏「年 > 月 > 周」三层导航，以带圆点连线的垂直时间轴呈现；
  * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片，
- * 选中态用「圆环 + 环心点」表示，颜色仍按已写（绿）/ 未写（主色）区分
+ * 选中态用「圆环 + 环心点」表示，颜色仍按已写（绿）/ 未写（主色）区分；
+ * 月份行尾右对齐显示「已写 / 全月」周数，折叠状态下也能看出写了多少
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
@@ -343,12 +344,14 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
                             className={monthExpanded ? styles.caretOpen : styles.caret}
                           />
                           <span className={styles.monthLabel}>{monthNode.month} 月</span>
-                          {/* 该月有已写周时补一个绿点，折叠状态下也能看出哪个月写过 */}
+                          {/* 该月有已写周时，行尾右对齐显示「已写 / 全月」周数，折叠状态下也能看出写了多少 */}
                           {monthNode.writtenCount > 0 ? (
                             <span
-                              className={styles.monthDot}
-                              aria-label={`已写 ${monthNode.writtenCount} 周`}
-                            />
+                              className={styles.monthCount}
+                              aria-label={`已写 ${monthNode.writtenCount} 周，全月共 ${monthNode.weeks.length} 周`}
+                            >
+                              {monthNode.writtenCount}/{monthNode.weeks.length}
+                            </span>
                           ) : null}
                         </button>
 

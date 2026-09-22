@@ -1,6 +1,9 @@
 /**
  * 设置页样式
- * 说明：骨架中栏内的单列布局（宽 --settings-max-width），三块浅色卡片 + 通栏红色退出按钮。
+ * 说明：骨架中栏内的单列居中布局（宽 --settings-max-width）。
+ * 结构为「页头 + 三张浅色信息卡 + 通栏退出按钮」：
+ * 卡片标题带主色短竖条做锚点，卡内敏感操作为「图标 + 文案 + 说明 + 箭头」的行式按钮，
+ * 悬停整行浅底高亮；修改密码表单展开后是一块白底内嵌面板，与灰色卡片拉开层级。
  */
 
 .page {
@@ -14,35 +17,67 @@
   display: flex;
   flex-direction: column;
   width: var(--settings-max-width);
+  max-width: 100%;
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-4);
+}
+
+/* ===== 页头 ===== */
+
+.header {
+  margin-bottom: var(--space-6);
 }
 
 .title {
-  margin-bottom: var(--space-4);
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-/* 区块：浅色底、圆角、无描边（对齐设计稿） */
-.section {
+.subtitle {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+/* ===== 卡片 ===== */
+
+.card {
   margin-bottom: var(--space-4);
   padding: var(--space-4);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   background-color: var(--color-bg-subtle);
 }
 
-.sectionTitle {
-  margin-bottom: var(--space-3);
-  font-size: 14px;
+/* 卡片标题：左侧短竖条为主色锚点，标题文字降一级用弱化色 */
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-/* 账号信息：头像 + 名称 + 手机号 */
+.cardTitle::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 3px;
+  height: 12px;
+  border-radius: 999px;
+  background-color: var(--color-accent);
+}
+
+/* ===== 账号信息 ===== */
+
 .profile {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  margin-top: var(--space-1);
 }
 
 .avatar {
@@ -50,11 +85,13 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background-color: var(--color-accent-soft);
   color: var(--color-accent);
+  /* 浅色圆环隔开卡片底色，头像不至于贴边 */
+  box-shadow: 0 0 0 3px var(--color-bg);
 }
 
 .avatar svg {
@@ -65,60 +102,134 @@
 .profileTexts {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  gap: 2px;
 }
 
 .profileName {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
 }
 
+/* 手机号脱敏后按字符对齐更易读，用等宽字体 */
 .profilePhone {
   color: var(--color-text-faint);
+  font-family: var(--font-mono);
   font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
-/* 账号安全的行式按钮：文字 + 右箭头 */
-.rowButton {
+/* 已登录角标：右对齐，取「已保存」绿以呼应全局状态色 */
+.profileState {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-saved-soft);
+  color: var(--color-saved);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* ===== 账号安全：行式操作按钮 ===== */
+
+.actionRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: var(--space-2) 0;
+  gap: var(--space-3);
+  /* 按钮默认按内容收缩，必须显式撑满：负外边距外扩 8px，宽度补回这 16px */
+  width: calc(100% + var(--space-2) * 2);
+  margin: 0 calc(-1 * var(--space-2));
+  padding: var(--space-3) var(--space-2);
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background-color: transparent;
-  color: var(--color-text);
-  font-size: 13px;
   text-align: left;
+  transition: background-color 0.15s ease;
 }
 
-.rowButton:hover {
+.actionRow:hover {
+  background-color: var(--color-bg-active);
+}
+
+/* 行首图标：默认弱化色，悬停时随主色点亮 */
+.actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+
+.actionRow:hover .actionIcon {
   color: var(--color-accent);
 }
 
-/* 第一个行按钮不需要上边框（紧跟标题） */
-.sectionTitle + .rowButton {
-  border-top: none;
+.actionIcon svg {
+  width: 17px;
+  height: 17px;
 }
 
+/* 文案区吃掉剩余宽度，右箭头始终贴右 */
+.actionTexts {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.actionLabel {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.actionDesc {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* 右箭头：SVG 折线，展开时旋转 90 度指向下。
+   尺寸由 width/height 决定，不再依赖字符的字号与基线 */
 .chevron,
 .chevronOpen {
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 12px;
+  height: 12px;
   color: var(--color-text-faint);
-  font-size: 14px;
-  transition: transform 0.15s ease;
+  transition:
+    transform 0.18s ease,
+    color 0.15s ease;
 }
 
 .chevronOpen {
   transform: rotate(90deg);
 }
 
-/* 修改密码表单 */
+.actionRow:hover .chevron,
+.actionRow:hover .chevronOpen {
+  color: var(--color-accent);
+}
+
+/* ===== 修改密码表单：白底内嵌面板 ===== */
+
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-border);
+  margin-top: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
 }
 
 .field {
@@ -133,17 +244,33 @@
 }
 
 .input {
+  width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-subtle);
+  color: var(--color-text);
   font-size: 13px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 
+.input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.input:hover {
+  border-color: var(--color-text-faint);
+}
+
+/* 聚焦环用主色浅底光晕替代默认 outline，与下拉选择控件保持一致 */
 .input:focus {
   border-color: var(--color-accent);
   background-color: var(--color-bg);
   outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
 .hint {
@@ -151,71 +278,103 @@
   font-size: 12px;
 }
 
-.error {
-  color: var(--color-danger);
+/* 表单反馈条：错误与成功各取状态色浅底，比纯文字更醒目 */
+.bannerError,
+.bannerSuccess {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
   font-size: 12px;
+  line-height: 1.6;
 }
 
-.success {
+.bannerError {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.bannerSuccess {
+  background-color: var(--color-saved-soft);
   color: var(--color-saved);
-  font-size: 12px;
 }
 
 .primary {
+  width: 100%;
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
   color: var(--color-on-accent);
   font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
 }
 
-.primary:hover:not(:disabled) {
+.primary:hover {
   background-color: var(--color-accent-hover);
 }
 
-.primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* ===== 系统信息 ===== */
 
-/* 系统信息行 */
-.row {
+.infoList {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+}
+
+.infoRow {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  padding: var(--space-1) 0;
-  font-size: 13px;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
 }
 
-.rowLabel {
+.infoRow + .infoRow {
+  border-top: 1px solid var(--color-border);
+}
+
+.infoLabel {
+  flex: 0 0 auto;
   color: var(--color-text-muted);
+  font-size: 12px;
 }
 
-.rowValue {
+/* 值取等宽字体：版本号、域名、路径按字符对齐更清爽 */
+.infoValue {
+  min-width: 0;
   color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+  word-break: break-all;
 }
 
 .note {
   margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
   color: var(--color-text-faint);
   font-size: 12px;
   line-height: 1.7;
 }
 
-/* 通栏退出登录按钮：浅红底红字 */
-.logoutAll {
+/* ===== 通栏退出登录按钮 ===== */
+
+.logout {
   width: 100%;
+  margin-top: var(--space-2);
   padding: var(--space-3);
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background-color: var(--color-danger-soft);
   color: var(--color-danger);
   font-size: 13px;
   font-weight: 600;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
-.logoutAll:hover {
+.logout:hover {
   background-color: var(--color-danger);
-  color: #ffffff;
+  color: var(--color-on-danger);
 }

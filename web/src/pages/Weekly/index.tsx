@@ -72,11 +72,11 @@ const Weekly = () => {
   const currentWeek = useMemo(() => getCurrentWeek(), []);
   const currentWeekPath = `/weekly/${currentWeek.year}/${currentWeek.week}`;
 
-  /** 顶栏年份可选项：从起点年份到当前年 */
+  /** 顶栏年份可选项：从起点年份到当前年，文案统一带「年」后缀 */
   const yearOptions = useMemo<SelectOption[]>(() => {
     const options: SelectOption[] = [];
     for (let y = START_YEAR; y <= Math.max(currentWeek.year, year); y += 1) {
-      options.push({ value: String(y), label: String(y) });
+      options.push({ value: String(y), label: `${y} 年` });
     }
     return options;
   }, [currentWeek.year, year]);
