@@ -2,14 +2,15 @@
  * @component 应用骨架
  * @description 登录后的统一骨架：左栏（logo + 纵向页签 + 内容 + 账号区），右侧可选顶栏、左列与右栏抽屉；
  * 周报态为「左栏 + 左列（时间轴）+ 中栏 + 右栏」，待办态为「左栏 + 左列（筛选）+ 中栏」，
- * 左栏与左列宽度两态一致、切换不跳动
+ * 左栏与左列宽度两态一致、切换不跳动；「待办」页签带未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AccountFooter from '@/components/AccountFooter';
+import { useTodoCount } from '@/contexts/TodoCountContext';
 import { getCurrentWeek } from '@/utils/week';
 import styles from './index.module.scss';
 
@@ -91,6 +92,7 @@ const AppLayout = ({
   onToggleDrawer,
 }: AppLayoutProps) => {
   const navigate = useNavigate();
+  const { undoneCount } = useTodoCount();
 
   /**
    * 跳转到指定标签页
@@ -135,6 +137,15 @@ const AppLayout = ({
               >
                 <span className={styles.tabIcon}>{tab.icon}</span>
                 {tab.label}
+                {/* 未完成计数角标（M-09）：只在待办页签、且确实有未完成条目时出现 */}
+                {tab.key === 'todo' && undoneCount > 0 ? (
+                  // 角标只有数字，补一段只给读屏软件的文案；aria-label 挂在没有角色的
+                  // span 上不一定会被播报，用视觉隐藏的文字更可靠
+                  <span className={styles.tabBadge}>
+                    {undoneCount}
+                    <span className={styles.srOnly}>条未完成</span>
+                  </span>
+                ) : null}
               </button>
             ))}
           </nav>

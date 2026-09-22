@@ -69,6 +69,8 @@ export interface TodoRow {
   week: number | null;
   /** 分类标识：空串表示未分类，其余取值见 routes/todo.ts 的 TODO_CATEGORIES */
   category: string;
+  /** 手动排序用的序号（M-05 拖拽排序）：同组内越小越靠前，新条目取当前最大值 + 1 */
+  sort_order: number;
   /** 创建时间，ISO 8601 字符串 */
   created_at: string;
   /** 最后更新时间，ISO 8601 字符串 */

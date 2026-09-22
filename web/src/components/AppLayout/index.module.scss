@@ -129,6 +129,44 @@
   height: 100%;
 }
 
+/*
+ * 未完成计数角标（M-09）：margin-left: auto 把它推到页签行尾，
+ * 三个页签的角标不会挤动文字位置（只有「待办」有角标，其余页签文字仍左对齐）。
+ */
+.tabBadge {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* 选中页签是主色实底：角标改为反白底 + 主色字，否则深绿底上的浅绿角标几乎看不清 */
+.tabActive .tabBadge {
+  background-color: var(--color-on-accent);
+  color: var(--color-accent);
+}
+
+/* 只给读屏软件的文案：角标上只有一个数字，补一句「条未完成」才知道它是什么。
+   不能用 display: none（读屏同样读不到），只能移出可视区域并压成 1px */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ===== 左列（周报态为时间轴，待办态为筛选） ===== */
 
 /*

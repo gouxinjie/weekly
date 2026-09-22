@@ -109,5 +109,16 @@ export const migrate = (): number => {
     db.pragma('user_version = 3');
   }
 
+  // v4：待办新增排序字段，支撑 M-05「同组内拖拽调整顺序」。
+  // 默认 0 且新条目写入 max + 1，因此老数据（全是 0）仍按 id 先后排列，行为与升级前一致。
+  if (current < 4) {
+    db.exec('ALTER TABLE todo ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;');
+    db.exec('DROP INDEX IF EXISTS idx_todo_user;');
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_todo_user ON todo (user_id, pinned, sort_order, id);',
+    );
+    db.pragma('user_version = 4');
+  }
+
   return db.pragma('user_version', { simple: true }) as number;
 };

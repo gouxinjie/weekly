@@ -26,16 +26,50 @@ $track-x: $track-gutter + math.div($dot-col, 2);
   height: 100%;
 }
 
-/* 栏目标题：深色加粗，靠字号与字重压住下方列表，不再另加分隔线；
-   上下内边距收紧（8 / 4），让标题更贴近顶栏分隔线，把纵向空间让给下方周列表。
-   此处数值与 TodoFilter 的 .title 保持一致，待办态切换时标题不发生纵向位移 */
-.title {
+/* 标题行：左标题 + 右侧「展开全部 / 收起全部」，整行内边距与 TodoFilter 的 .title 一致，
+   待办态切换时标题不发生纵向位移 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   flex: 0 0 auto;
+  /* 上下内边距收紧（8 / 4），让标题更贴近顶栏分隔线，把纵向空间让给下方周列表 */
   padding: var(--space-2) var(--space-4) var(--space-1);
+}
+
+/* 栏目标题：深色加粗，靠字号与字重压住下方列表，不再另加分隔线 */
+.title {
   color: var(--color-text);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+/* 展开全部 / 收起全部：11px 文字按钮，比标题轻，不与「时间轴」抢视线 */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+.action {
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.action:hover {
+  color: var(--color-accent);
+}
+
+/* 两个动作之间的细分隔线 */
+.actionDivider {
+  color: var(--color-border-strong);
+  font-size: 11px;
 }
 
 .years {

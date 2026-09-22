@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { CreateTodoBody, TodoListResponse, UpdateTodoBody } from '@/types/api';
+import type { CreateTodoBody, TodoListResponse, TodoSummary, UpdateTodoBody } from '@/types/api';
 
 /**
  * 获取全部待办
@@ -44,3 +44,18 @@ export const updateTodo = (id: number, body: UpdateTodoBody): Promise<null> =>
  */
 export const deleteTodo = (id: number): Promise<null> =>
   request.delete<null>(`/api/todo/${id}`);
+
+/**
+ * 拖拽排序：提交同一分组内拖拽后的新顺序（M-05）
+ * @param ids - 该分组内待办的 ID 顺序
+ * @returns 无
+ */
+export const reorderTodos = (ids: number[]): Promise<null> =>
+  request.put<null>('/api/todo/order', { ids });
+
+/**
+ * 获取待办概要：只取未完成条数，供页签角标使用（M-09）
+ * @returns 未完成条数
+ */
+export const fetchTodoSummary = (): Promise<TodoSummary> =>
+  request.get<TodoSummary>('/api/todo/summary');

@@ -100,12 +100,19 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* 头部第一行：左侧返回，右侧「上一周 / 下一周」 */
+.editHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 /* 返回展示态：箭头 + 文字 */
 .back {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  align-self: flex-start;
   padding: 0;
   border: none;
   background-color: transparent;
@@ -120,6 +127,42 @@
 .backIcon {
   width: 14px;
   height: 14px;
+}
+
+/* 上一周 / 下一周：成对出现在头部第一行右侧，轻量描边按钮 */
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.weekNavButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.weekNavButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* 已到时间轴两端（2026 年第 1 周之前、当前年之后）时置灰不可点 */
+.weekNavButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.weekNavIcon {
+  width: 13px;
+  height: 13px;
 }
 
 .editHeaderMain {

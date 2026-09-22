@@ -1,7 +1,8 @@
 /**
  * @component 工作台（待办）
  * @description 三栏骨架：左栏页签、左列筛选（占据周报态时间轴那一列）、
- * 中栏标题 + 常驻新建输入框 + 日期分组清单；此态下右栏整栏移除
+ * 中栏标题 + 常驻新建输入框 + 「按周分组、组内分置顶 / 未完成 / 已完成」的清单；
+ * 此态下右栏整栏移除；增删改后刷新页签的未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
@@ -9,13 +10,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toErrorMessage } from '@/api/client';
-import { createTodo, deleteTodo, fetchTodos, updateTodo } from '@/api/todo';
+import { createTodo, deleteTodo, fetchTodos, reorderTodos, updateTodo } from '@/api/todo';
 import AppLayout from '@/components/AppLayout';
 import TodoFilter from '@/components/TodoFilter';
 import TodoList from '@/components/TodoList';
 import Select from '@/components/Select';
 import { TODO_CATEGORIES } from '@/constants';
+import { useTodoCount } from '@/contexts/TodoCountContext';
 import { getCurrentWeek, getTodoWeek, isValidWeek } from '@/utils/week';
+import { todoGroupKey, todoSegment } from '@/utils/todoGroup';
+import type { TodoSegment } from '@/utils/todoGroup';
 import type { UpdateTodoBody } from '@/types/api';
 import type { Todo as TodoModel, TodoFilter as TodoFilterValue, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
@@ -25,6 +29,7 @@ import styles from './index.module.scss';
  * @returns 页面节点
  */
 const Todo = () => {
+  const { refreshUndoneCount } = useTodoCount();
   const [todos, setTodos] = useState<TodoModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -143,12 +148,13 @@ const Todo = () => {
       setTodos((prev) => [...prev, created]);
       setNewText('');
       newInputRef.current?.focus();
+      refreshUndoneCount();
     } catch (err) {
       setError(toErrorMessage(err, '添加失败，请稍后重试'));
     } finally {
       setPending(false);
     }
-  }, [newText, newCategory, pending, defaultWeek]);
+  }, [newText, newCategory, pending, defaultWeek, refreshUndoneCount]);
 
   /**
    * 局部更新某条待办（乐观更新，失败回滚）
@@ -174,12 +180,14 @@ const Todo = () => {
 
       try {
         await updateTodo(todo.id, body);
+        // 勾选 / 取消勾选会改变未完成条数，刷新页签角标（M-09）
+        refreshUndoneCount();
       } catch (err) {
         setTodos(snapshot);
         setError(toErrorMessage(err, '更新失败，请稍后重试'));
       }
     },
-    [todos],
+    [todos, refreshUndoneCount],
   );
 
   /**
@@ -195,9 +203,67 @@ const Todo = () => {
 
       try {
         await deleteTodo(todo.id);
+        refreshUndoneCount();
       } catch (err) {
         setTodos(snapshot);
         setError(toErrorMessage(err, '删除失败，请稍后重试'));
+      }
+    },
+    [todos, refreshUndoneCount],
+  );
+
+  /**
+   * 同组拖拽排序：把 draggedId 移到 targetId 之前，先本地重排再提交（M-05）
+   * @param draggedId - 被拖动的待办 ID
+   * @param targetId - 放置目标的待办 ID
+   * @param groupKey - 所属周分组键
+   * @param segment - 所属状态段
+   * @returns 无
+   * @remarks 两条容易踩的坑：
+   *          1. 新顺序从「完整列表」而不是清单传来的可见条目里取——搜索时可见条目只是子集，
+   *             只重排子集会让被隐藏的条目顺序错乱（服务端按下标把序号从 1 重写，
+   *             没提交的那些条目仍保留旧序号，于是撞车）。
+   *          2. 落点固定是「目标之前」，与清单画在目标行顶部的插入线一致：
+   *             摘掉被拖动项后，向下拖时目标下标会左移一位，减掉这一位才不会差一格。
+   *          本地只把该段的条目按新顺序填回原来的槽位，其余条目位置不动；
+   *          服务端按下标重写 sort_order，失败则整体回滚。
+   */
+  const handleReorder = useCallback(
+    async (
+      draggedId: number,
+      targetId: number,
+      groupKey: string,
+      segment: TodoSegment,
+    ): Promise<void> => {
+      const ids = todos
+        .filter((item) => todoGroupKey(item) === groupKey && todoSegment(item) === segment)
+        .map((item) => item.id);
+      const from = ids.indexOf(draggedId);
+      const to = ids.indexOf(targetId);
+      if (from === -1 || to === -1 || from === to) return;
+
+      const next = [...ids];
+      next.splice(from, 1);
+      next.splice(to - (from < to ? 1 : 0), 0, draggedId);
+
+      const snapshot = todos;
+      const orderIndex = new Map(next.map((id, index) => [id, index]));
+
+      setError('');
+      setTodos((prev) => {
+        const affected = prev.filter((item) => orderIndex.has(item.id));
+        const sorted = [...affected].sort(
+          (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+        );
+        let cursor = 0;
+        return prev.map((item) => (orderIndex.has(item.id) ? sorted[cursor++] : item));
+      });
+
+      try {
+        await reorderTodos(next);
+      } catch (err) {
+        setTodos(snapshot);
+        setError(toErrorMessage(err, '排序失败，请稍后重试'));
       }
     },
     [todos],
@@ -322,8 +388,13 @@ const Todo = () => {
           loading={loading}
           onUpdate={(todo, patch) => void handleUpdate(todo, patch)}
           onDelete={(todo) => void handleDelete(todo)}
+          onReorder={(draggedId, targetId, groupKey, segment) =>
+            void handleReorder(draggedId, targetId, groupKey, segment)
+          }
           emptyHint={emptyHint}
           emptyAction={emptyAction}
+          // 筛选为「已完成」时整屏都是已完成段，默认折叠等于看不到内容，故强制展开
+          expandDone={filter === 'done'}
         />
       </div>
     </AppLayout>

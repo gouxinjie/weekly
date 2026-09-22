@@ -31,7 +31,7 @@ import {
   formatWeekOrdinalLabel,
   formatWeekRangeShort,
 } from '@/utils/format';
-import { getCurrentWeek, getWeekRange, isValidWeek } from '@/utils/week';
+import { getCurrentWeek, getWeekCount, getWeekRange, isValidWeek } from '@/utils/week';
 import type { EditorMode, SaveState } from '@/types/models';
 import styles from './index.module.scss';
 
@@ -233,6 +233,34 @@ const Weekly = () => {
     },
     [year, week, content, persist, navigate],
   );
+
+  /**
+   * 上一周 / 下一周的目标周次（R-03）
+   * @remarks 跨年时按 ISO 周数回退 / 前进：走到第 1 周再往前取上一年最后一周（可能是第 53 周），
+   *          走到当年最后一周再往后进入下一年第 1 周；已到时间轴两端时为 null，按钮置灰。
+   *          下一周不越过当前 ISO 年：再往后是尚未发生的年份，时间轴里也没有那些节点。
+   *          当年内的未来周次（如第 38 周时往后到第 53 周）是允许的——它们已在时间轴上，
+   *          与 R-10「可跳到 2026 年第 1 周及其后任意周」一致。
+   */
+  const weekNav = useMemo(() => {
+    const weekTotal = getWeekCount(year);
+
+    const prev =
+      week > 1
+        ? { year, week: week - 1 }
+        : year > START_YEAR
+          ? { year: year - 1, week: getWeekCount(year - 1) }
+          : null;
+
+    const next =
+      week < weekTotal
+        ? { year, week: week + 1 }
+        : year < currentWeek.year
+          ? { year: year + 1, week: 1 }
+          : null;
+
+    return { prev, next };
+  }, [year, week, currentWeek.year]);
 
   /**
    * 切换编辑 / 预览模式并保留滚动位置
@@ -453,16 +481,49 @@ const Weekly = () => {
       {/* 编辑态头部：第一行返回，第二行标题 + 保存态 + 预览 / 发布 */}
       {isEditing ? (
         <header className={styles.editHeader}>
-          <button
-            type="button"
-            className={styles.back}
-            onClick={() => changeMode('preview')}
-          >
-            <svg className={styles.backIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-              <path d="m14 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            返回
-          </button>
+          {/* 第一行：左侧返回，右侧「上一周 / 下一周」快捷切换（R-03） */}
+          <div className={styles.editHeaderTop}>
+            <button
+              type="button"
+              className={styles.back}
+              onClick={() => changeMode('preview')}
+            >
+              <svg className={styles.backIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                <path d="m14 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              返回
+            </button>
+
+            <div className={styles.weekNav}>
+              <button
+                type="button"
+                className={styles.weekNavButton}
+                disabled={weekNav.prev === null}
+                onClick={() => {
+                  if (weekNav.prev !== null) void goWeek(weekNav.prev.year, weekNav.prev.week);
+                }}
+              >
+                <svg className={styles.weekNavIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                  <path d="m14 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                上一周
+              </button>
+
+              <button
+                type="button"
+                className={styles.weekNavButton}
+                disabled={weekNav.next === null}
+                onClick={() => {
+                  if (weekNav.next !== null) void goWeek(weekNav.next.year, weekNav.next.week);
+                }}
+              >
+                下一周
+                <svg className={styles.weekNavIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                  <path d="m10 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           <div className={styles.editHeaderMain}>
             <h1 className={styles.editTitle}>{formatWeekLabel(year, week)} · 周报编辑</h1>

@@ -4,11 +4,14 @@ import type { TodoRow } from '../types/models';
 /**
  * 列出某用户的全部待办
  * @param userId - 用户 ID，必须传入
- * @returns 待办行列表，按「置顶优先、创建先后」排序
+ * @returns 待办行列表，按「置顶优先、手动排序、创建先后」排序
+ * @remarks sort_order 相同时（老数据或新条目尚未被拖动过）回落到 id 先后，保证顺序稳定。
  */
 export const listTodos = (userId: number): TodoRow[] =>
   db
-    .prepare('SELECT * FROM todo WHERE user_id = ? ORDER BY pinned DESC, id ASC')
+    .prepare(
+      'SELECT * FROM todo WHERE user_id = ? ORDER BY pinned DESC, sort_order ASC, id ASC',
+    )
     .all(userId) as TodoRow[];
 
 /**
@@ -27,12 +30,18 @@ export const findTodo = (userId: number, id: number): TodoRow | undefined =>
  * @param userId - 用户 ID，必须传入
  * @param year - ISO 年
  * @param week - ISO 周次
- * @returns 待办行列表，按创建先后排序
+ * @returns 待办行列表，按「置顶优先、未完成在前、手动排序、创建先后」排序
+ * @remarks 排序必须显式带上 pinned 与 done：拖拽只重排「同一周分组的同一状态段」，
+ *          序号在段内从 1 重新分配，于是不同段的序号会撞车（例如已完成段重排后是 1、2，
+ *          未完成段本来就是 1、2）。只按 sort_order 排会把已完成条目插进未完成条目中间，
+ *          右栏于是出现「待办夹着已完成」的错序。
  */
 export const listTodosByWeek = (userId: number, year: number, week: number): TodoRow[] =>
   db
     .prepare(
-      'SELECT * FROM todo WHERE user_id = ? AND year = ? AND week = ? ORDER BY id ASC',
+      `SELECT * FROM todo
+       WHERE user_id = ? AND year = ? AND week = ?
+       ORDER BY pinned DESC, done ASC, sort_order ASC, id ASC`,
     )
     .all(userId, year, week) as TodoRow[];
 
@@ -53,12 +62,20 @@ export const insertTodo = (
   category = '',
 ): TodoRow => {
   const now = new Date().toISOString();
+
+  // 新条目取当前最大序号 + 1，落在同组末尾；不能固定用 0，
+  // 否则拖动排序（序号从 1 起）之后新建的条目会插到最前面
+  const maxRow = db
+    .prepare('SELECT COALESCE(MAX(sort_order), 0) AS max_order FROM todo WHERE user_id = ?')
+    .get(userId) as { max_order: number };
+
   const result = db
     .prepare(
-      `INSERT INTO todo (user_id, text, done, pinned, year, week, category, created_at, updated_at)
-       VALUES (?, ?, 0, 0, ?, ?, ?, ?, ?)`,
+      `INSERT INTO todo
+         (user_id, text, done, pinned, year, week, category, sort_order, created_at, updated_at)
+       VALUES (?, ?, 0, 0, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(userId, text, year, week, category, now, now);
+    .run(userId, text, year, week, category, maxRow.max_order + 1, now, now);
 
   const created = findTodo(userId, Number(result.lastInsertRowid));
   if (!created) {
@@ -121,6 +138,36 @@ export const updateTodo = (
 export const deleteTodo = (userId: number, id: number): boolean => {
   const result = db.prepare('DELETE FROM todo WHERE id = ? AND user_id = ?').run(id, userId);
   return result.changes > 0;
+};
+
+/**
+ * 按给定顺序重排若干待办（M-05 拖拽排序）
+ * @param userId - 用户 ID，必须传入
+ * @param ids - 同一分组内拖拽后的待办 ID 顺序，序号按数组下标从 1 重新分配
+ * @returns 是否全部成功（false 表示有记录不存在或不属于该用户，此时整体回滚）
+ * @remarks 红线 1：每条 UPDATE 都写成 `WHERE id = ? AND user_id = ?`。
+ *          只要有一条 changes 为 0 就抛错回滚，避免出现「改了一半」的半成品顺序。
+ */
+export const reorderTodos = (userId: number, ids: number[]): boolean => {
+  const now = new Date().toISOString();
+  const stmt = db.prepare(
+    'UPDATE todo SET sort_order = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+  );
+
+  const apply = db.transaction((list: number[]): void => {
+    list.forEach((id, index) => {
+      if (stmt.run(index + 1, now, id, userId).changes === 0) {
+        throw new Error('待办不存在或不属于当前用户');
+      }
+    });
+  });
+
+  try {
+    apply(ids);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 /**

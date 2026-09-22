@@ -3,7 +3,8 @@
  * @description 左栏「年 > 月 > 周」三层导航，以带圆点连线的垂直时间轴呈现；
  * 未写的周灰点、已写的周绿点、当前选中的周高亮成卡片，
  * 选中态用「圆环 + 环心点」表示，颜色仍按已写（绿）/ 未写（主色）区分；
- * 月份行尾右对齐显示「已写 / 全月」周数，折叠状态下也能看出写了多少
+ * 月份行尾右对齐显示「已写 / 全月」周数，折叠状态下也能看出写了多少；
+ * 标题行右侧提供「展开全部 / 收起全部」，作用于当前年份下所有周
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
@@ -272,6 +273,37 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
     [expandedMonths, updateExpandedMonths],
   );
 
+  /**
+   * 展开当前年份下的所有周（R-07）
+   * @returns 无
+   * @remarks 只作用于当前选中的年份：其它年份保持各自的折叠状态，
+   *          避免一次性铺开上百个周节点。
+   */
+  const expandAll = useCallback((): void => {
+    if (!expandedYears.includes(year)) {
+      updateExpandedYears([...expandedYears, year]);
+    }
+
+    const node = treeData.find((item) => item.year === year);
+    if (node === undefined) return;
+
+    const keys = node.months.map((monthNode) => monthKey(year, monthNode.month));
+    updateExpandedMonths(Array.from(new Set([...expandedMonths, ...keys])));
+  }, [year, expandedYears, expandedMonths, treeData, updateExpandedYears, updateExpandedMonths]);
+
+  /**
+   * 收起当前年份（连同其下所有月份，R-07）
+   * @returns 无
+   * @remarks 同时清掉该年份的月份展开记录，下次再展开这一年时不会残留旧的展开态
+   */
+  const collapseAll = useCallback((): void => {
+    updateExpandedYears(expandedYears.filter((item) => item !== year));
+
+    // 月份键形如「2026-9」，用「年份-」前缀精确匹配，不会误伤其它年份
+    const prefix = `${year}-`;
+    updateExpandedMonths(expandedMonths.filter((key) => !key.startsWith(prefix)));
+  }, [year, expandedYears, expandedMonths, updateExpandedYears, updateExpandedMonths]);
+
   /** 上一次渲染时的选中周，用于区分「外部导航」与「用户手动折叠」 */
   const lastSelectedRef = useRef(`${year}-${week}`);
 
@@ -308,7 +340,21 @@ const Tree = ({ year, week, onChange, written }: TreeProps) => {
 
   return (
     <div className={styles.tree}>
-      <h2 className={styles.title}>时间轴</h2>
+      {/* 标题行：右侧「展开全部 / 收起全部」作用于当前年份下所有周 */}
+      <div className={styles.header}>
+        <h2 className={styles.title}>时间轴</h2>
+        <div className={styles.headerActions}>
+          <button type="button" className={styles.action} onClick={expandAll}>
+            展开全部
+          </button>
+          <span className={styles.actionDivider} aria-hidden>
+            |
+          </span>
+          <button type="button" className={styles.action} onClick={collapseAll}>
+            收起全部
+          </button>
+        </div>
+      </div>
 
       <div className={styles.years}>
         {treeData.map((node) => {

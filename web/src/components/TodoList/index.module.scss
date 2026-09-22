@@ -1,9 +1,15 @@
 /**
  * 待办清单样式
- * 说明：按「所属周」分组的清单；条目为「自绘勾选框 + 文本 + 右侧标签区（置顶 / 分类 / 未标记 / 过期 / ⋯ 菜单）」；
+ * 说明：外层按「所属周」分组，组内再分「置顶 / 未完成 / 已完成」三段，已完成段默认折叠；
+ * 条目为「拖拽手柄 + 自绘勾选框 + 文本 + 右侧标签区（置顶 / 分类 / 未标记 / 过期 / ⋯ 菜单）」；
  * 勾选框与标签对齐首行，长文本默认折 3 行并可展开，
- * 整行悬停浅底高亮，过期与未标记只染各自的小标签、不染整行底色。
+ * 整行悬停浅底高亮，过期与未标记只染各自的小标签、不染整行底色；
+ * 同段内可拖拽排序：拖动中的行半透明，放置目标顶部画一条主色插入线。
  */
+
+/* 行首占位宽度 = 拖拽手柄 14px + 勾选框 16px + 两个 --space-2 行内间距。
+   「展开全部 / 改标记面板 / 错误提示」要与正文左对齐，必须共用这一个值 */
+$row-lead: calc(14px + 16px + var(--space-2) * 2);
 
 .list {
   padding: var(--space-2) var(--space-6) var(--space-6);
@@ -57,6 +63,46 @@
   font-weight: 400;
 }
 
+/* 段标题（置顶）：比周分组低一级，只作分段提示，不与「本周 · 第 39 周」抢视线 */
+.segmentTitle {
+  padding: var(--space-1) var(--space-2) 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+/* 已完成段：默认折叠，标题（箭头 + 计数）整行可点开 */
+.doneToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.doneToggle:hover {
+  color: var(--color-accent);
+}
+
+/* 折叠箭头：收起指向右，展开旋转 90° 指向下（与时间轴同一套） */
+.doneCaret,
+.doneCaretOpen {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  transition: transform 0.15s ease;
+}
+
+.doneCaretOpen {
+  transform: rotate(90deg);
+}
+
 /*
  * 条目：整行铺开，用下分隔线区分，不做卡片包裹。
  * 「过期」不染整行底色：那会用掉 --color-bg-active，而它是全站选中态的颜色，
@@ -96,6 +142,23 @@
   background-color: var(--color-bg-subtle);
 }
 
+/* 拖动中的行：半透明，让眼睛盯着落点而不是被拖走的这一行 */
+.itemDragging {
+  opacity: 0.45;
+}
+
+/* 放置目标：在行顶画一条主色插入线，标出「松手后会插到这里」 */
+.itemDropTarget::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: var(--space-2);
+  left: var(--space-2);
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--color-accent);
+}
+
 /*
  * 行内主区：勾选框 + 文本 + 右侧标签。
  * 三者一律对齐首行而不是整块垂直居中——一条长待办会折成很多行，
@@ -114,6 +177,39 @@
 
 .mainEditing .meta {
   margin-top: var(--space-2);
+}
+
+/*
+ * 拖拽手柄：整行本身可拖，这里只是「这一行能拖」的视觉提示。
+ * 平时压到低透明度不抢视线，悬停整行时浮现；拖动起来自带 grabbing 光标。
+ */
+.dragHandle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 22px;
+  color: var(--color-text-faint);
+  cursor: grab;
+  opacity: 0.35;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.item:hover .dragHandle {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.item:active .dragHandle {
+  cursor: grabbing;
+}
+
+.dragHandle svg {
+  width: 14px;
+  height: 14px;
 }
 
 /*
@@ -202,7 +298,7 @@
 /* 展开 / 收起：与文本左对齐。必须显式 align-self，否则列向 flex 里会被拉满整行、文字居中 */
 .expandToggle {
   align-self: flex-start;
-  margin-left: calc(16px + var(--space-2));
+  margin-left: $row-lead;
   padding: 0;
   border: none;
   background-color: transparent;
@@ -429,12 +525,12 @@
   font-weight: 600;
 }
 
-/* 左内边距 = 勾选框宽度 + 行内间距，让面板与条目文本左对齐 */
+/* 左内边距 = 行首占位宽度，让面板与条目文本左对齐 */
 .tagPanel {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) 0 0 calc(16px + var(--space-2));
+  padding: var(--space-2) 0 0 $row-lead;
 }
 
 .tagAction {
@@ -456,7 +552,7 @@
 }
 
 .error {
-  padding-left: calc(16px + var(--space-2));
+  padding-left: $row-lead;
   color: var(--color-danger);
   font-size: 11px;
   line-height: 18px;

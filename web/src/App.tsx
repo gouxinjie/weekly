@@ -8,6 +8,7 @@
 import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { TodoCountProvider } from '@/contexts/TodoCountContext';
 import Login from '@/pages/Login';
 import Settings from '@/pages/Settings';
 import Todo from '@/pages/Todo';
@@ -65,44 +66,47 @@ const RedirectToCurrentWeek = () => {
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<RedirectToCurrentWeek />} />
+      {/* 待办计数 Provider：页签角标（M-09）在周报 / 待办 / 设置三页都可见，故放在路由之外统一维护 */}
+      <TodoCountProvider>
+        <Routes>
+          <Route path="/" element={<RedirectToCurrentWeek />} />
 
-        {/* /weekly 不带参数时补全为当前 ISO 年的当前周 */}
-        <Route path="/weekly" element={<RedirectToCurrentWeek />} />
-        <Route
-          path="/weekly/:year/:week"
-          element={
-            <RequireAuth>
-              <Weekly />
-            </RequireAuth>
-          }
-        />
+          {/* /weekly 不带参数时补全为当前 ISO 年的当前周 */}
+          <Route path="/weekly" element={<RedirectToCurrentWeek />} />
+          <Route
+            path="/weekly/:year/:week"
+            element={
+              <RequireAuth>
+                <Weekly />
+              </RequireAuth>
+            }
+          />
 
-        {/* 旧链接兼容：备忘模块更名为待办，历史 /memo 链接一律重定向到 /todo */}
-        <Route path="/memo" element={<RedirectMemoToTodo />} />
+          {/* 旧链接兼容：备忘模块更名为待办，历史 /memo 链接一律重定向到 /todo */}
+          <Route path="/memo" element={<RedirectMemoToTodo />} />
 
-        <Route
-          path="/todo"
-          element={
-            <RequireAuth>
-              <Todo />
-            </RequireAuth>
-          }
-        />
+          <Route
+            path="/todo"
+            element={
+              <RequireAuth>
+                <Todo />
+              </RequireAuth>
+            }
+          />
 
-        <Route
-          path="/settings"
-          element={
-            <RequireAuth>
-              <Settings />
-            </RequireAuth>
-          }
-        />
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth>
+                <Settings />
+              </RequireAuth>
+            }
+          />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<RedirectToCurrentWeek />} />
-      </Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<RedirectToCurrentWeek />} />
+        </Routes>
+      </TodoCountProvider>
     </AuthProvider>
   </BrowserRouter>
 );

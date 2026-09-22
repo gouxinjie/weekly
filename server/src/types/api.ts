@@ -124,6 +124,18 @@ export interface UpdateTodoBody {
   category: string;
 }
 
+/** 待办拖拽排序入参（M-05：只提交同一分组内的新顺序） */
+export interface ReorderTodosBody {
+  /** 同一分组内拖拽后的待办 ID 顺序 */
+  ids: number[];
+}
+
+/** 待办概要出参（M-09：页签角标只关心未完成条数） */
+export interface TodoSummaryDto {
+  /** 未完成的待办条数 */
+  undone: number;
+}
+
 /** 健康检查出参 */
 export interface HealthDto {
   /** 服务存活标记 */

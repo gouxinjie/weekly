@@ -1,9 +1,23 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifySchema } from 'fastify';
 import { requireAuth } from '../middleware/session';
-import { deleteTodo, insertTodo, listTodos, listTodosByWeek, updateTodo } from '../db/todo';
+import {
+  countUndoneTodos,
+  deleteTodo,
+  insertTodo,
+  listTodos,
+  listTodosByWeek,
+  reorderTodos,
+  updateTodo,
+} from '../db/todo';
 import { isValidWeek } from '../utils/week';
 import { ERROR_CODES, fail, internalError, ok } from '../utils/response';
-import type { CreateTodoBody, TodoDto, UpdateTodoBody } from '../types/api';
+import type {
+  CreateTodoBody,
+  ReorderTodosBody,
+  TodoDto,
+  TodoSummaryDto,
+  UpdateTodoBody,
+} from '../types/api';
 import type { TodoRow } from '../types/models';
 
 /**
@@ -59,6 +73,27 @@ const updateTodoSchema = (): FastifySchema => ({
       year: nullableInteger(),
       week: nullableInteger(),
       category: categorySchema(),
+    },
+  },
+});
+
+/**
+ * 拖拽排序请求体校验（M-05）
+ * @returns 请求体 JSON Schema
+ */
+const reorderSchema = (): FastifySchema => ({
+  body: {
+    type: 'object',
+    required: ['ids'],
+    additionalProperties: false,
+    properties: {
+      ids: {
+        type: 'array',
+        minItems: 1,
+        // 上限兜底：单次排序不可能超过一个用户的待办总量，防止超大数组打满事务
+        maxItems: 500,
+        items: { type: 'integer', minimum: 1 },
+      },
     },
   },
 });
@@ -149,6 +184,17 @@ export const todoRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
+  /** 待办概要：只返回未完成条数，供页签角标使用（M-09），不为了一个数字拉全量列表 */
+  app.get('/summary', async (request, reply) => {
+    try {
+      const summary: TodoSummaryDto = { undone: countUndoneTodos(request.userId) };
+      return reply.send(ok(summary, '获取成功'));
+    } catch (error) {
+      request.log.error({ err: error }, '统计待办概要失败');
+      return reply.code(500).send(internalError());
+    }
+  });
+
   /** 列出标记到指定周的待办（周报右栏「本周待办」） */
   app.get<{ Params: { year: string; week: string } }>(
     '/reference/:year/:week',
@@ -195,6 +241,29 @@ export const todoRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         return reply.code(201).send(ok(toTodoDto(created), '已添加'));
       } catch (error) {
         request.log.error({ err: error }, '新建待办失败');
+        return reply.code(500).send(internalError());
+      }
+    },
+  );
+
+  /**
+   * 拖拽排序（M-05）：只提交「同一分组内」拖拽后的完整顺序，服务端按下标重排序号
+   * 说明：路由注册在 PUT /:id 之前；`/order` 是静态段，也不会被 `^\d+$` 的 id 校验吞掉
+   */
+  app.put<{ Body: ReorderTodosBody }>(
+    '/order',
+    { schema: reorderSchema() },
+    async (request, reply) => {
+      try {
+        // 红线 1：db 层逐条按 id + user_id 更新，任一条不属于该用户则整体回滚
+        const reordered = reorderTodos(request.userId, request.body.ids);
+        if (!reordered) {
+          return reply.code(404).send(fail(ERROR_CODES.TODO_NOT_FOUND, '待办不存在'));
+        }
+
+        return reply.send(ok(null, '已保存'));
+      } catch (error) {
+        request.log.error({ err: error }, '待办排序失败');
         return reply.code(500).send(internalError());
       }
     },

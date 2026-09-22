@@ -106,6 +106,30 @@ test('A 改 B 的待办：失败', async () => {
   assert.equal(m.findTodo(bId, bTodo.id)?.text, 'B 的另一条待办');
 });
 
+test('A 重排 B 的待办顺序：失败，且 B 的先后顺序不变', async () => {
+  const m = await modulesPromise;
+  const first = m.insertTodo(bId, 'B 排序用第一条', null, null);
+  const second = m.insertTodo(bId, 'B 排序用第二条', null, null);
+
+  const reordered = m.reorderTodos(aId, [second.id, first.id]);
+
+  assert.equal(reordered, false, '重排别人的待办必须返回 false');
+
+  const ids = m.listTodos(bId).map((item) => item.id);
+  assert.ok(ids.indexOf(first.id) < ids.indexOf(second.id), 'B 的原有先后顺序不应被改动');
+});
+
+test('本人重排生效：按提交的数组下标重新落库', async () => {
+  const m = await modulesPromise;
+  const first = m.insertTodo(aId, 'A 排序用第一条', null, null);
+  const second = m.insertTodo(aId, 'A 排序用第二条', null, null);
+
+  assert.equal(m.reorderTodos(aId, [second.id, first.id]), true, '本人重排应成功');
+
+  const ids = m.listTodos(aId).map((item) => item.id);
+  assert.ok(ids.indexOf(second.id) < ids.indexOf(first.id), '重排后第二条应排在第一条之前');
+});
+
 test('A 的列表查询只返回自己的记录，不含 B 的', async () => {
   const m = await modulesPromise;
 

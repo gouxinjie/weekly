@@ -55,6 +55,18 @@ export interface UpdateTodoBody {
   category: string;
 }
 
+/** 待办拖拽排序入参（M-05：只提交同一分组内的新顺序） */
+export interface ReorderTodosBody {
+  /** 同一分组内拖拽后的待办 ID 顺序 */
+  ids: number[];
+}
+
+/** 待办概要（M-09 页签角标） */
+export interface TodoSummary {
+  /** 未完成的待办条数 */
+  undone: number;
+}
+
 /** 注册 / 登录 / me 接口出参 */
 export type UserResponse = User;
 

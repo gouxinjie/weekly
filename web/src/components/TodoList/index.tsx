@@ -1,16 +1,23 @@
 /**
  * @component 待办清单
- * @description 按「所属周」分组（手动标记的周优先，未标记时按创建时间推导）的待办清单，
- * 支持勾选、就地编辑、删除、置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
+ * @description 外层按「所属周」分组（新周在前），组内按状态分三段：置顶 / 未完成 / 已完成，
+ * 已完成段默认折叠、标题可点开（M-02）；同一周分组的同一状态段内支持拖拽调整顺序（M-05）；
+ * 条目支持勾选、就地编辑、删除、置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
+ * @remarks PRD 4.2 的 M-02 写「三段分组」，5.6 写「按所属周分组」，两处口径冲突。
+ *          这里取两者的并集：外层仍是按周分组（与筛选、周报右栏同一口径），
+ *          组内再按状态分三段，已完成默认折叠——两边的要求都不丢。
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
-import { MAX_WEEK, TODO_CATEGORIES, START_YEAR } from '@/constants';
+import { MAX_WEEK, START_YEAR, TODO_CATEGORIES } from '@/constants';
 import { getCurrentWeek, getTodoWeek, getWeekOfDate, isPastWeek } from '@/utils/week';
+import { todoGroupKey, todoSegment } from '@/utils/todoGroup';
+import type { TodoSegment } from '@/utils/todoGroup';
 import type { UpdateTodoBody } from '@/types/api';
 import type { Todo, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
@@ -29,8 +36,32 @@ interface WeekGroup {
   key: string;
   /** 组标题 */
   label: string;
-  /** 该组待办 */
-  todos: Todo[];
+  /** 置顶段条目 */
+  pinnedItems: Todo[];
+  /** 未完成段条目 */
+  undoneItems: Todo[];
+  /** 已完成段条目 */
+  doneItems: Todo[];
+  /** 该组总条数，用于组标题计数 */
+  total: number;
+}
+
+/** 拖拽排序绑定：清单持有拖拽状态，条目只负责把它挂到 DOM 上 */
+interface TodoDragBinding {
+  /** 本条是否正在被拖动 */
+  dragging: boolean;
+  /** 本条是否是当前放置目标 */
+  dropTarget: boolean;
+  /** 开始拖动本条 */
+  onDragStart: (event: DragEvent<HTMLLIElement>) => void;
+  /** 拖到本条上方 */
+  onDragOver: (event: DragEvent<HTMLLIElement>) => void;
+  /** 拖离本条（移到行外时才触发，行内子元素之间不触发） */
+  onDragLeave: (event: DragEvent<HTMLLIElement>) => void;
+  /** 在本条上放下 */
+  onDrop: (event: DragEvent<HTMLLIElement>) => void;
+  /** 拖动结束（成功或取消） */
+  onDragEnd: () => void;
 }
 
 /** TodoList 属性 */
@@ -43,10 +74,27 @@ interface TodoListProps {
   onUpdate: (todo: Todo, patch: Partial<UpdateTodoBody>) => void;
   /** 删除某条待办 */
   onDelete: (todo: Todo) => void;
+  /**
+   * 同一分组内拖拽后的新顺序
+   * @param draggedId - 被拖动的待办 ID
+   * @param targetId - 放置目标的待办 ID，落点固定是它之前
+   * @param groupKey - 所属周分组键
+   * @param segment - 所属状态段
+   * @remarks 只上报「谁放到谁之前」，新顺序由页面按完整列表算出：
+   *          搜索状态下清单里只是一部分条目，拿可见的这几条去重排会让被隐藏的条目顺序错乱。
+   */
+  onReorder: (
+    draggedId: number,
+    targetId: number,
+    groupKey: string,
+    segment: TodoSegment,
+  ) => void;
   /** 空态文案 */
   emptyHint: string;
   /** 空态附带的动作，可选 */
   emptyAction?: EmptyAction;
+  /** 是否默认展开「已完成」段，默认 false；筛选为「已完成」时应传 true，否则整屏折叠、看不到内容 */
+  expandDone?: boolean;
 }
 
 /** TodoItem 属性 */
@@ -63,6 +111,8 @@ interface TodoItemProps {
   menuOpen: boolean;
   /** 切换菜单展开状态 */
   onToggleMenu: () => void;
+  /** 拖拽排序绑定（M-05） */
+  drag: TodoDragBinding;
 }
 
 /** 分类标识 → 样式类名映射（CSS Modules 不便动态拼接，显式映射） */
@@ -102,7 +152,15 @@ const groupTitle = (year: number, week: number, current: WeekRef): string =>
  * @param props - 见 TodoItemProps
  * @returns 条目节点
  */
-const TodoItem = ({ todo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMenu }: TodoItemProps) => {
+const TodoItem = ({
+  todo,
+  onUpdate,
+  onDelete,
+  yearOptions,
+  menuOpen,
+  onToggleMenu,
+  drag,
+}: TodoItemProps) => {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(todo.text);
   const [tagging, setTagging] = useState(false);
@@ -201,9 +259,41 @@ const TodoItem = ({ todo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
   /** 展示态文本类名：完成态置灰，展开态解除行数限制 */
   const textClass = [todo.done ? styles.textDone : styles.text, ...(expanded ? [styles.textExpanded] : [])].join(' ');
 
+  /** 编辑中与改标记中禁止拖动：前者要选文本、后者要点下拉，拖动都会互相打断 */
+  const canDrag = !editing && !tagging;
+
+  /** 条目类名：叠加「拖动中 / 放置目标」两个修饰类 */
+  const itemClass = [
+    styles.item,
+    drag.dragging ? styles.itemDragging : '',
+    drag.dropTarget ? styles.itemDropTarget : '',
+  ]
+    .filter((name) => name !== '')
+    .join(' ');
+
   return (
-    <li className={styles.item}>
+    <li
+      className={itemClass}
+      draggable={canDrag}
+      onDragStart={drag.onDragStart}
+      onDragOver={drag.onDragOver}
+      onDragLeave={drag.onDragLeave}
+      onDrop={drag.onDrop}
+      onDragEnd={drag.onDragEnd}
+    >
       <div className={editing ? `${styles.main} ${styles.mainEditing}` : styles.main}>
+        {/* 拖拽手柄：整行本身可拖，这里只是「这一行能拖」的视觉提示 */}
+        <span className={styles.dragHandle} title="按住拖动可调整同组内顺序" aria-hidden>
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="6" cy="4" r="1.1" />
+            <circle cx="10" cy="4" r="1.1" />
+            <circle cx="6" cy="8" r="1.1" />
+            <circle cx="10" cy="8" r="1.1" />
+            <circle cx="6" cy="12" r="1.1" />
+            <circle cx="10" cy="12" r="1.1" />
+          </svg>
+        </span>
+
         <input
           type="checkbox"
           className={styles.checkbox}
@@ -397,9 +487,31 @@ const TodoItem = ({ todo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
  * @param props - 见 TodoListProps
  * @returns 分组清单节点
  */
-const TodoList = ({ todos, loading, onUpdate, onDelete, emptyHint, emptyAction }: TodoListProps) => {
+const TodoList = ({
+  todos,
+  loading,
+  onUpdate,
+  onDelete,
+  onReorder,
+  emptyHint,
+  emptyAction,
+  expandDone = false,
+}: TodoListProps) => {
   /** 当前展开菜单的待办 ID，null 表示全部收起 */
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  /** 已展开「已完成」段的分组键；不在集合里即折叠（M-02 要求默认折叠） */
+  const [expandedDoneKeys, setExpandedDoneKeys] = useState<Set<string>>(new Set());
+  /** 正在被拖动的条目及其所属分组 / 状态段（M-05） */
+  const [dragState, setDragState] = useState<{
+    /** 被拖动的待办 ID */
+    id: number;
+    /** 所属周分组键 */
+    groupKey: string;
+    /** 所属状态段 */
+    segment: TodoSegment;
+  } | null>(null);
+  /** 当前悬停到的放置目标条目 ID */
+  const [overId, setOverId] = useState<number | null>(null);
 
   /** 年份可选项：从起点年份到当前年份 */
   const yearOptions = useMemo<SelectOption[]>(() => {
@@ -411,34 +523,221 @@ const TodoList = ({ todos, loading, onUpdate, onDelete, emptyHint, emptyAction }
     return options;
   }, []);
 
-  /** 按所属周分组，周次新的在前；组内置顶优先、创建先后 */
+  /**
+   * 按所属周分组、组内按状态分段
+   * @remarks 段内顺序 = 入参顺序：服务端已按「置顶优先、手动排序、创建先后」返回，
+   *          前端不再重排，拖拽调整后的顺序才能原样呈现。
+   */
   const groups = useMemo<WeekGroup[]>(() => {
     const current = getCurrentWeek();
+    const buckets = new Map<string, WeekGroup>();
 
-    const sorted = [...todos].sort((a, b) => {
-      const weekA = getTodoWeek(a);
-      const weekB = getTodoWeek(b);
-      if (weekA.year !== weekB.year) return weekB.year - weekA.year;
-      if (weekA.week !== weekB.week) return weekB.week - weekA.week;
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return a.id - b.id;
-    });
-
-    // Map 保持插入顺序，因此分组的先后就是上面排好的周次先后
-    const map = new Map<string, WeekGroup>();
-    for (const todo of sorted) {
+    for (const todo of todos) {
       const { year, week } = getTodoWeek(todo);
-      const key = `${year}-${week}`;
-      const bucket = map.get(key);
-      if (bucket === undefined) {
-        map.set(key, { key, label: groupTitle(year, week, current), todos: [todo] });
-      } else {
-        bucket.todos.push(todo);
-      }
+      const key = todoGroupKey(todo);
+      const bucket = buckets.get(key) ?? {
+        key,
+        label: groupTitle(year, week, current),
+        pinnedItems: [],
+        undoneItems: [],
+        doneItems: [],
+        total: 0,
+      };
+      buckets.set(key, bucket);
+
+      bucket.total += 1;
+      const segment = todoSegment(todo);
+      if (segment === 'pinned') bucket.pinnedItems.push(todo);
+      else if (segment === 'undone') bucket.undoneItems.push(todo);
+      else bucket.doneItems.push(todo);
     }
 
-    return [...map.values()];
+    // 周次新的在前：分组键形如「年-周」，按年、周倒序重排
+    return [...buckets.values()].sort((a, b) => {
+      const [yearA, weekA] = a.key.split('-').map(Number);
+      const [yearB, weekB] = b.key.split('-').map(Number);
+      if (yearA !== yearB) return yearB - yearA;
+      return weekB - weekA;
+    });
   }, [todos]);
+
+  /*
+   * 筛选为「已完成」时默认全部展开：那种筛选下整屏都是已完成段，
+   * 若仍默认折叠就等于看不到任何内容。
+   * 只对「首次出现的分组」自动展开——否则用户手动折叠某组后，
+   * 任何一次增删改都会让 groups 变化，把折叠好的分组又强行展开。
+   */
+  const autoExpandedKeys = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!expandDone) return;
+    setExpandedDoneKeys((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const group of groups) {
+        if (autoExpandedKeys.current.has(group.key)) continue;
+        autoExpandedKeys.current.add(group.key);
+        if (!next.has(group.key)) {
+          next.add(group.key);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [expandDone, groups]);
+
+  /** 清空所有拖拽态 */
+  const resetDrag = useCallback((): void => {
+    setDragState(null);
+    setOverId(null);
+  }, []);
+
+  /**
+   * 开始拖动某条待办
+   * @param groupKey - 所属周分组键
+   * @param segment - 所属状态段
+   * @param todo - 被拖动的待办
+   * @param event - 拖拽事件，用于写入 dataTransfer
+   * @returns 无
+   */
+  const handleDragStart = useCallback(
+    (
+      groupKey: string,
+      segment: TodoSegment,
+      todo: Todo,
+      event: DragEvent<HTMLLIElement>,
+    ): void => {
+      // Firefox 必须写入 dataTransfer 才会真正进入拖拽
+      event.dataTransfer.setData('text/plain', String(todo.id));
+      event.dataTransfer.effectAllowed = 'move';
+      setDragState({ id: todo.id, groupKey, segment });
+      setOverId(null);
+    },
+    [],
+  );
+
+  /**
+   * 拖到某条待办上方
+   * @param groupKey - 目标所属周分组键
+   * @param segment - 目标所属状态段
+   * @param todo - 目标待办
+   * @param event - 拖拽事件
+   * @returns 无
+   * @remarks 只接受「同一周分组的同一状态段」：跨段拖会与勾选分组语义打架。
+   *          落到不可放置的条目上时要顺手清掉插入线，否则它会停在上一处目标行上不消失。
+   */
+  const handleDragOver = useCallback(
+    (
+      groupKey: string,
+      segment: TodoSegment,
+      todo: Todo,
+      event: DragEvent<HTMLLIElement>,
+    ): void => {
+      if (dragState === null) return;
+      if (
+        dragState.groupKey !== groupKey ||
+        dragState.segment !== segment ||
+        dragState.id === todo.id
+      ) {
+        setOverId(null);
+        return;
+      }
+
+      // 必须 preventDefault，否则浏览器不认这是一个可放置目标
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      setOverId(todo.id);
+    },
+    [dragState],
+  );
+
+  /**
+   * 拖离某条待办
+   * @param event - 拖拽事件，用于判断是移到行外还是行内子元素之间
+   * @returns 无
+   * @remarks dragleave 在子元素之间移动时也会触发，用 relatedTarget 过滤掉，
+   *          否则插入线会在行内划过时不停闪烁。
+   */
+  const handleDragLeave = useCallback((event: DragEvent<HTMLLIElement>): void => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && event.currentTarget.contains(next)) return;
+    setOverId(null);
+  }, []);
+
+  /**
+   * 在某条待办上放下
+   * @param groupKey - 目标所属周分组键
+   * @param segment - 目标所属状态段
+   * @param todo - 目标待办
+   * @param event - 拖拽事件
+   * @returns 无
+   * @remarks 只上报「把哪一条放到哪一条之前」，新顺序交给页面按完整列表计算：
+   *          搜索状态下清单里只是一部分条目，拿可见的这几条去排会让被隐藏的条目顺序错乱。
+   */
+  const handleDrop = useCallback(
+    (
+      groupKey: string,
+      segment: TodoSegment,
+      todo: Todo,
+      event: DragEvent<HTMLLIElement>,
+    ): void => {
+      event.preventDefault();
+      if (dragState === null) {
+        resetDrag();
+        return;
+      }
+      if (dragState.groupKey !== groupKey || dragState.segment !== segment) {
+        resetDrag();
+        return;
+      }
+
+      const draggedId = dragState.id;
+      resetDrag();
+      if (draggedId === todo.id) return;
+      onReorder(draggedId, todo.id, groupKey, segment);
+    },
+    [dragState, onReorder, resetDrag],
+  );
+
+  /**
+   * 组装传给 TodoItem 的拖拽绑定
+   * @param groupKey - 所属周分组键
+   * @param segment - 所属状态段
+   * @param todo - 目标待办
+   * @returns 拖拽绑定
+   */
+  const buildDrag = (
+    groupKey: string,
+    segment: TodoSegment,
+    todo: Todo,
+  ): TodoDragBinding => ({
+    dragging: dragState !== null && dragState.id === todo.id,
+    dropTarget: overId === todo.id,
+    onDragStart: (event) => handleDragStart(groupKey, segment, todo, event),
+    onDragOver: (event) => handleDragOver(groupKey, segment, todo, event),
+    onDragLeave: handleDragLeave,
+    onDrop: (event) => handleDrop(groupKey, segment, todo, event),
+    onDragEnd: resetDrag,
+  });
+
+  /**
+   * 渲染单条待办
+   * @param groupKey - 所属周分组键
+   * @param segment - 所属状态段
+   * @param todo - 待办
+   * @returns 条目节点
+   */
+  const renderItem = (groupKey: string, segment: TodoSegment, todo: Todo) => (
+    <TodoItem
+      key={todo.id}
+      todo={todo}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+      yearOptions={yearOptions}
+      menuOpen={openMenuId === todo.id}
+      onToggleMenu={() => setOpenMenuId(openMenuId === todo.id ? null : todo.id)}
+      drag={buildDrag(groupKey, segment, todo)}
+    />
+  );
 
   if (loading) {
     // 套用空态容器，让加载提示与清单保持同一段左内边距
@@ -464,29 +763,70 @@ const TodoList = ({ todos, loading, onUpdate, onDelete, emptyHint, emptyAction }
 
   return (
     <div className={styles.list}>
-      {groups.map((group) => (
-        <section key={group.key} className={styles.group}>
-          <h3 className={styles.groupTitle}>
-            {group.label}
-            <span className={styles.groupCount}>（{group.todos.length}）</span>
-          </h3>
-          <ul>
-            {group.todos.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                yearOptions={yearOptions}
-                menuOpen={openMenuId === todo.id}
-                onToggleMenu={() =>
-                  setOpenMenuId(openMenuId === todo.id ? null : todo.id)
-                }
-              />
-            ))}
-          </ul>
-        </section>
-      ))}
+      {groups.map((group) => {
+        const doneExpanded = expandedDoneKeys.has(group.key);
+        return (
+          <section key={group.key} className={styles.group}>
+            <h3 className={styles.groupTitle}>
+              {group.label}
+              <span className={styles.groupCount}>（{group.total}）</span>
+            </h3>
+
+            {/* 置顶段：置顶且未完成；该段为空时整段不出现，不占一行说明 */}
+            {group.pinnedItems.length > 0 ? (
+              <>
+                <p className={styles.segmentTitle}>置顶</p>
+                <ul>{group.pinnedItems.map((todo) => renderItem(group.key, 'pinned', todo))}</ul>
+              </>
+            ) : null}
+
+            {/* 未完成段：清单主体，不加段标题，避免每个分组都挂一行说明 */}
+            {group.undoneItems.length > 0 ? (
+              <ul>{group.undoneItems.map((todo) => renderItem(group.key, 'undone', todo))}</ul>
+            ) : null}
+
+            {/* 已完成段：永久保留，默认折叠，标题可点开（M-02 / Q4） */}
+            {group.doneItems.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.doneToggle}
+                  aria-expanded={doneExpanded}
+                  onClick={() =>
+                    setExpandedDoneKeys((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(group.key)) {
+                        next.delete(group.key);
+                      } else {
+                        next.add(group.key);
+                      }
+                      return next;
+                    })
+                  }
+                >
+                  <svg
+                    className={doneExpanded ? styles.doneCaretOpen : styles.doneCaret}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                  已完成（{group.doneItems.length}）
+                </button>
+
+                {doneExpanded ? (
+                  <ul>{group.doneItems.map((todo) => renderItem(group.key, 'done', todo))}</ul>
+                ) : null}
+              </>
+            ) : null}
+          </section>
+        );
+      })}
     </div>
   );
 };
