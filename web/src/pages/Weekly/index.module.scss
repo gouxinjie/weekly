@@ -248,6 +248,13 @@
   font-weight: 700;
 }
 
+/* 全年周序号：附在主标题后的小字，弱化层级 */
+.cardTitleWeek {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .cardRange {
   color: var(--color-text-muted);
   font-size: 12px;

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { getWeekIndexInMonth, getWeekMonth } from '@/utils/week';
 
 /**
  * 格式化周次标题
@@ -8,6 +9,24 @@ import dayjs from 'dayjs';
  */
 export const formatWeekLabel = (year: number, week: number): string =>
   `${year} 年第 ${week} 周`;
+
+/**
+ * 格式化周次的「月份 + 月内序号」部分，作为周次主标题
+ * @param year - ISO 年
+ * @param week - ISO 周次（1-53）
+ * @returns 形如「9 月第 4 周」的字符串
+ * @remarks 月份与月内序号均按周四归属计算（见 getWeekMonth / getWeekIndexInMonth），
+ *          保证跨年首周显示为「1 月第 1 周」，不会出现 0 月第 0 周。
+ */
+export const formatWeekMonthLabel = (year: number, week: number): string =>
+  `${getWeekMonth(year, week)} 月第 ${getWeekIndexInMonth(year, week)} 周`;
+
+/**
+ * 格式化周次的全年序号部分，以次级小字附在主标题后
+ * @param week - ISO 周次（1-53）
+ * @returns 形如「（第 39 周）」的字符串
+ */
+export const formatWeekOrdinalLabel = (week: number): string => `（第 ${week} 周）`;
 
 /**
  * 格式化周次日期区间（树节点用）
