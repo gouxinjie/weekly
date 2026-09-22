@@ -374,7 +374,7 @@ const Weekly = () => {
   return (
     <AppLayout
       activeTab="weekly"
-      timeline={
+      leftColumn={
         <Tree
           year={year}
           week={week}
@@ -439,7 +439,12 @@ const Weekly = () => {
             onExport={handleExport}
           />
         ) : (
-          <WeeklyReference year={year} week={week} onGoMemo={() => navigate('/memo')} />
+          // 跳备忘页时把当前查看的周带上，新建的待办才会默认落到这一周而不是「今天所在的周」
+          <WeeklyReference
+            year={year}
+            week={week}
+            onGoMemo={() => navigate(`/memo?year=${year}&week=${week}`)}
+          />
         )
       }
       drawerCollapsed={drawerCollapsed}

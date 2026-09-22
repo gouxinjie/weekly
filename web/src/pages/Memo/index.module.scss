@@ -1,7 +1,7 @@
 /**
  * 工作台（备忘）样式
- * 布局要点：标题行（标题 + 搜索框 + 新建）与筛选页签固定在顶部，新建输入行紧随其后，
- * 清单占据剩余高度并可滚动；备忘态没有右栏。
+ * 布局要点：标题行（标题 + 搜索框 + 新建）与新建输入行固定在顶部，两者下方一条分隔线，
+ * 清单占据剩余高度并可滚动；筛选在左列，样式由 MemoFilter 自理；备忘态没有右栏。
  */
 
 .header {
@@ -50,45 +50,48 @@
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-subtle);
   font-size: 12px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .searchInput::placeholder {
   color: var(--color-text-faint);
 }
 
+/* 聚焦：描边转主色 + 一圈浅主色光晕，与下拉选择控件保持同一套聚焦反馈 */
 .searchInput:focus {
   border-color: var(--color-accent);
   background-color: var(--color-bg);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
   outline: none;
 }
 
 /* 「＋ 新建」主色按钮 */
 .create {
+  flex: 0 0 auto;
   padding: 7px var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent);
   color: var(--color-on-accent);
   font-size: 12px;
+  transition: background-color 0.15s ease;
 }
 
 .create:hover {
   background-color: var(--color-accent-hover);
 }
 
-.filterRow {
-  flex: 0 0 auto;
-  padding: 0 var(--space-6);
-  border-bottom: 1px solid var(--color-border);
-}
-
-/* 新建输入行 */
+/* 新建输入行：固定在顶部，下方一条分隔线把它与滚动清单分开 */
 .composer {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex: 0 0 auto;
   padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .composerInput {
@@ -99,16 +102,37 @@
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-subtle);
   font-size: 13px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .composerInput::placeholder {
   color: var(--color-text-faint);
 }
 
+/* 聚焦：与顶部搜索框同一套反馈，光标落进去时一眼可辨 */
 .composerInput:focus {
   border-color: var(--color-accent);
   background-color: var(--color-bg);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
   outline: none;
+}
+
+/*
+ * 默认归属周提示：新建的待办会被标记到这一周。
+ * 与清单行上的「未标记」提示共用同一种浅色胶囊，不去和主按钮抢视线。
+ */
+.composerWeek {
+  flex: 0 0 auto;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background-color: var(--color-bg-active);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .composerButton {
@@ -119,6 +143,7 @@
   background-color: var(--color-accent);
   color: var(--color-on-accent);
   font-size: 13px;
+  transition: background-color 0.15s ease;
 }
 
 .composerButton:hover:not(:disabled) {

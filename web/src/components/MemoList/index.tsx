@@ -1,19 +1,18 @@
 /**
  * @component 备忘清单
- * @description 按创建日期分组（今天 / 昨天 / 具体日期）的待办清单，支持勾选、就地编辑、删除、
- * 置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
+ * @description 按「所属周」分组（手动标记的周优先，未标记时按创建时间推导）的待办清单，
+ * 支持勾选、就地编辑、删除、置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
-import { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
 import { MAX_WEEK, MEMO_CATEGORIES, START_YEAR } from '@/constants';
-import { getCurrentWeek, isPastWeek } from '@/utils/week';
+import { getCurrentWeek, getMemoWeek, getWeekOfDate, isPastWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
-import type { Memo } from '@/types/models';
+import type { Memo, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
 
 /** 空态动作 */
@@ -24,11 +23,11 @@ interface EmptyAction {
   onClick: () => void;
 }
 
-/** 日期分组 */
-interface DateGroup {
-  /** 分组键：YYYY-MM-DD */
+/** 周分组 */
+interface WeekGroup {
+  /** 分组键：`年-周`，如 2026-39 */
   key: string;
-  /** 展示标签：今天 / 昨天 / MM-DD */
+  /** 组标题 */
   label: string;
   /** 该组备忘 */
   memos: Memo[];
@@ -87,29 +86,16 @@ const WEEK_OPTIONS: SelectOption[] = Array.from({ length: MAX_WEEK }, (_, index)
 }));
 
 /**
- * 生成分组的展示标签
- * @param key - 分组键 YYYY-MM-DD
- * @returns 相对日期标签：今天 / 昨天 / 明天；非近期日期返回空串
+ * 生成周分组的标题
+ * @param year - 该组所属 ISO 年
+ * @param week - 该组所属 ISO 周次
+ * @param current - 当前 ISO 周，用于把当周标成「本周」
+ * @returns 当前周为「本周 · 第 39 周」，其余为「第 38 周 · 26」
  */
-const relativeDayLabel = (key: string): string => {
-  const date = dayjs(key);
-  const today = dayjs().startOf('day');
-  if (date.isSame(today)) return '今天';
-  if (date.isSame(today.subtract(1, 'day'))) return '昨天';
-  if (date.isSame(today.add(1, 'day'))) return '明天';
-  return '';
-};
-
-/**
- * 生成分组的完整标题
- * @param key - 分组键 YYYY-MM-DD
- * @returns 形如「今天 · 09/22」或「09/20」的字符串
- */
-const groupTitle = (key: string): string => {
-  const date = dayjs(key);
-  const relative = relativeDayLabel(key);
-  return relative === '' ? date.format('MM/DD') : `${relative} · ${date.format('MM/DD')}`;
-};
+const groupTitle = (year: number, week: number, current: WeekRef): string =>
+  year === current.year && week === current.week
+    ? `本周 · 第 ${week} 周`
+    : `第 ${week} 周 · ${String(year).slice(-2)}`;
 
 /**
  * 单条备忘
@@ -123,11 +109,31 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
   const [draftYear, setDraftYear] = useState(memo.year ?? getCurrentWeek().year);
   const [draftWeek, setDraftWeek] = useState(memo.week ?? getCurrentWeek().week);
   const [error, setError] = useState('');
+  /** 文本是否超出展示行数被截断，决定要不要出现「展开全部」 */
+  const [overflowing, setOverflowing] = useState(false);
+  /** 长待办是否已展开全部行 */
+  const [expanded, setExpanded] = useState(false);
+
+  /** 就地编辑框引用：用于按内容自撑高度，长待办不会被压在一行里 */
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  /** 展示态文本引用：用于量出文本是否被行数限制截断 */
+  const textRef = useRef<HTMLButtonElement | null>(null);
 
   const tagged = memo.year !== null && memo.week !== null;
 
-  /** 过期高亮：标记周次已过且未完成，仅视觉提示，不改变分组、不推提醒 */
+  /*
+   * 过期：标记周次已过且未完成。只挂一枚危险色小提示，不动整行底色——
+   * 整行底色曾是 --color-bg-active，那是全站「选中态」用的颜色，
+   * 结果每一条补写往期周的备忘看起来都像被选中/被高亮，反而更吵。
+   * 仅视觉提示，不改变分组、不推提醒。
+   */
   const overdue = !memo.done && tagged && isPastWeek(memo.year as number, memo.week as number);
+
+  /** 未标记时按创建时间推导出的记录周次，仅用于「未标记」提示的说明文案 */
+  const recordedWeek = useMemo(
+    () => (tagged ? null : getWeekOfDate(memo.createdAt)),
+    [tagged, memo.createdAt],
+  );
 
   /** 提交文本编辑 */
   const commitText = (): void => {
@@ -145,6 +151,43 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
     }
   };
 
+  /*
+   * 编辑框高度跟随内容：先把高度复位为 auto 再按 scrollHeight 撑开，
+   * 否则删除文字时高度只增不减。超高时由 .textInput 的 max-height 兜底，转为框内滚动。
+   */
+  useEffect(() => {
+    const node = textAreaRef.current;
+    if (!editing || node === null) return;
+    node.style.height = 'auto';
+    node.style.height = `${node.scrollHeight}px`;
+  }, [editing, draftText]);
+
+  /*
+   * 判定文本是否被行数限制截断。
+   * line-clamp 生效时超出部分会被直接截掉、scrollHeight 不一定可信，因此临时挂上展开类量一次
+   * 完整高度再当场摘掉（同一帧内完成，不会闪）。展开态与编辑态无需判定，沿用收起时的结果，
+   * 否则「收起」入口会在展开后消失。
+   * 窗口尺寸变化会改变可用宽度、进而改变折行数，所以 resize 也要重量一次，
+   * 否则「展开全部」会一直停在旧判定上（该出现时没有、该消失时还在）。
+   */
+  useEffect(() => {
+    const node = textRef.current;
+    if (node === null || expanded || editing) return undefined;
+
+    const measure = (): void => {
+      node.classList.add(styles.textExpanded);
+      const fullHeight = node.scrollHeight;
+      node.classList.remove(styles.textExpanded);
+      setOverflowing(fullHeight > node.clientHeight + 1);
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+    };
+  }, [expanded, editing, memo.text]);
+
   /**
    * 菜单项公共行为：先收起菜单再执行动作
    * @param action - 菜单动作
@@ -155,9 +198,12 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
     action();
   };
 
+  /** 展示态文本类名：完成态置灰，展开态解除行数限制 */
+  const textClass = [memo.done ? styles.textDone : styles.text, ...(expanded ? [styles.textExpanded] : [])].join(' ');
+
   return (
-    <li className={overdue ? styles.itemOverdue : styles.item}>
-      <div className={styles.main}>
+    <li className={styles.item}>
+      <div className={editing ? `${styles.main} ${styles.mainEditing}` : styles.main}>
         <input
           type="checkbox"
           className={styles.checkbox}
@@ -167,14 +213,22 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
         />
 
         {editing ? (
-          <input
+          <textarea
+            ref={textAreaRef}
             className={styles.textInput}
             value={draftText}
             autoFocus
+            rows={1}
+            maxLength={500}
+            aria-label="编辑待办内容"
             onChange={(event) => setDraftText(event.target.value)}
             onBlur={commitText}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') commitText();
+              // 备忘是单行条目：回车直接提交，不写入换行
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                commitText();
+              }
               if (event.key === 'Escape') {
                 setDraftText(memo.text);
                 setEditing(false);
@@ -183,8 +237,9 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
           />
         ) : (
           <button
+            ref={textRef}
             type="button"
-            className={memo.done ? styles.textDone : styles.text}
+            className={textClass}
             onClick={() => {
               setDraftText(memo.text);
               setEditing(true);
@@ -196,6 +251,9 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
         )}
 
         <div className={styles.meta}>
+          {/* 置顶标记：与分类标签同处右侧标签区，不做悬在行外的角标 */}
+          {memo.pinned ? <span className={styles.pinMark}>置顶</span> : null}
+
           {/* 分类标签：彩色胶囊 */}
           {memo.category !== '' ? (
             <span className={`${styles.category} ${CATEGORY_CLASS[memo.category] ?? ''}`}>
@@ -203,10 +261,23 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             </span>
           ) : null}
 
-          {/* 周次标记标签：带上年份末两位，跨年标记才不会混淆 */}
-          {tagged ? (
-            <span className={styles.weekTag} title={`标记到 ${memo.year} 年第 ${memo.week} 周`}>
-              第 {memo.week} 周 · {String(memo.year).slice(-2)}
+          {/*
+            未标记：所属周由创建时间推导，周次已由分组标题表达，这里只提示「它不是手动标记的」——
+            这才是真正看不出来的差别：未标记的条目不会进周报右栏的「本周参考」。
+          */}
+          {recordedWeek !== null ? (
+            <span
+              className={styles.unmarkedTag}
+              title={`未标记到任何周，不计入周报「本周参考」；按创建时间属于 ${recordedWeek.year} 年第 ${recordedWeek.week} 周`}
+            >
+              未标记
+            </span>
+          ) : null}
+
+          {/* 过期：标记的周已过且这条未完成，仅视觉提示 */}
+          {overdue ? (
+            <span className={styles.overdueTag} title="标记的周已过，这条还没完成">
+              过期
             </span>
           ) : null}
 
@@ -267,7 +338,17 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
         </div>
       </div>
 
-      {memo.pinned ? <span className={styles.pinMark}>置顶</span> : null}
+      {/* 长待办默认只展示 3 行，被截断时给出展开入口 */}
+      {overflowing ? (
+        <button
+          type="button"
+          className={styles.expandToggle}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? '收起' : '展开全部'}
+        </button>
+      ) : null}
 
       {tagging ? (
         <div className={styles.tagPanel}>
@@ -330,35 +411,42 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
     return options;
   }, []);
 
-  /** 按创建日期分组，新日期在前；组内置顶优先、创建先后 */
-  const groups = useMemo<DateGroup[]>(() => {
+  /** 按所属周分组，周次新的在前；组内置顶优先、创建先后 */
+  const groups = useMemo<WeekGroup[]>(() => {
+    const current = getCurrentWeek();
+
     const sorted = [...memos].sort((a, b) => {
-      const byDate = dayjs(b.createdAt).startOf('day').valueOf() - dayjs(a.createdAt).startOf('day').valueOf();
-      if (byDate !== 0) return byDate;
+      const weekA = getMemoWeek(a);
+      const weekB = getMemoWeek(b);
+      if (weekA.year !== weekB.year) return weekB.year - weekA.year;
+      if (weekA.week !== weekB.week) return weekB.week - weekA.week;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return a.id - b.id;
     });
 
-    const map = new Map<string, Memo[]>();
+    // Map 保持插入顺序，因此分组的先后就是上面排好的周次先后
+    const map = new Map<string, WeekGroup>();
     for (const memo of sorted) {
-      const key = dayjs(memo.createdAt).format('YYYY-MM-DD');
+      const { year, week } = getMemoWeek(memo);
+      const key = `${year}-${week}`;
       const bucket = map.get(key);
       if (bucket === undefined) {
-        map.set(key, [memo]);
+        map.set(key, { key, label: groupTitle(year, week, current), memos: [memo] });
       } else {
-        bucket.push(memo);
+        bucket.memos.push(memo);
       }
     }
 
-    return [...map.entries()].map(([key, list]) => ({
-      key,
-      label: groupTitle(key),
-      memos: list,
-    }));
+    return [...map.values()];
   }, [memos]);
 
   if (loading) {
-    return <p className={styles.hint}>加载中…</p>;
+    // 套用空态容器，让加载提示与清单保持同一段左内边距
+    return (
+      <div className={styles.empty}>
+        <p className={styles.hint}>加载中…</p>
+      </div>
+    );
   }
 
   if (memos.length === 0) {

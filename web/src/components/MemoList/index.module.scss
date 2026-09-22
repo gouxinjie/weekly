@@ -1,7 +1,8 @@
 /**
  * 备忘清单样式
- * 说明：按日期分组的卡片式清单；条目为「勾选框 + 文本 + 分类彩色标签 + 日期 + ⋯ 菜单」；
- * 过期未完成的条目用浅红底提示，置顶条目带角标。
+ * 说明：按「所属周」分组的清单；条目为「自绘勾选框 + 文本 + 右侧标签区（置顶 / 分类 / 未标记 / 过期 / ⋯ 菜单）」；
+ * 勾选框与标签对齐首行，长文本默认折 3 行并可展开，
+ * 整行悬停浅底高亮，过期与未标记只染各自的小标签、不染整行底色。
  */
 
 .list {
@@ -12,59 +13,158 @@
   margin-bottom: var(--space-4);
 }
 
-/* 分组标题：今天 · 09/22（3） */
-.groupTitle {
-  padding: var(--space-2) var(--space-2);
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
+/* 组与组之间拉开一档更大的间距，换周的时候先有一处停顿 */
+.group + .group {
+  margin-top: var(--space-6);
 }
 
+/*
+ * 周次分组标题：整个列表的「章节标题」，要在一屏里一眼看出换周了。
+ * 1. 粘性吸顶——滚动时当前周一直挂在顶部，不用往回翻才知道自己在哪一周；
+ *    父级 .group 会限制吸附范围，所以它只在自己这一周内吸住，被下一周顶走。
+ * 2. 吸顶必须给不透明底色，否则条目会从文字缝里透过去。
+ * 3. 前置一根主色竖条 + 加深加粗的文字：静止时也能看出这是分节，而不是一行说明文字。
+ * 行高同样取整像素，否则分组高度会带小数，影响分隔线落点。
+ */
+.groupTitle {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 21px;
+}
+
+/* 章节竖条：用 inline-block 排，不用 flex——flex 会把后面的计数一起推开 */
+.groupTitle::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 12px;
+  margin-right: var(--space-2);
+  border-radius: 2px;
+  background-color: var(--color-accent);
+  vertical-align: -2px;
+}
+
+/* 计数取次级灰而不是最浅的灰：12px 下 --color-text-faint 只有约 2.4:1，达不到 WCAG AA */
 .groupCount {
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 400;
 }
 
-/* 条目：整行铺开，用下分隔线区分，不做卡片包裹 */
-.item,
-.itemOverdue {
+/*
+ * 条目：整行铺开，用下分隔线区分，不做卡片包裹。
+ * 「过期」不染整行底色：那会用掉 --color-bg-active，而它是全站选中态的颜色，
+ * 补写往期周的备忘会整片看起来像被选中，反而更吵。过期改为在标签区挂一枚「过期」小胶囊。
+ */
+.item {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
   background-color: transparent;
+  transition: background-color 0.15s ease;
 }
 
-/* 过期未完成：灰底提示（不改分组、不推提醒） */
-.itemOverdue {
-  border-bottom-color: transparent;
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg-active);
+/*
+ * 分隔线：用伪元素浮在行的底边上，不用 border-bottom。
+ * border-bottom 在这个场景有两个副作用：
+ * 1. 行本身是圆角卡片，边框会沿圆角在两端弯出小钩子，线看着是「翘」的；
+ * 2. 边框占盒高，于是最后一条必须再写一条 border-bottom: none 去把它摘掉，
+ *    删掉一整行反而要多一条特例。
+ * 伪元素既不进盒模型，也不受圆角影响：画到哪、有没有，都由一个 :not 选择器说了算。
+ */
+.item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background-color: var(--color-border);
 }
 
-/* 每组最后一条不画分隔线，避免与下一组标题之间出现“双线” */
-.item:last-child,
-.itemOverdue:last-child {
-  border-bottom: none;
+/* 悬停反馈：整行浅底高亮，提示这一行可勾选、可点文本就地编辑 */
+.item:hover {
+  background-color: var(--color-bg-subtle);
 }
 
+/*
+ * 行内主区：勾选框 + 文本 + 右侧标签。
+ * 三者一律对齐首行而不是整块垂直居中——一条长待办会折成很多行，
+ * 居中会让勾选框和标签漂在段落中间，跟它们所属的内容脱开。
+ */
 .main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
 }
 
-.checkbox {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  accent-color: var(--color-accent);
-  cursor: pointer;
+/* 编辑态：文本域自带 8px 上内边距，勾选框与标签要再下移一档才落在首行上 */
+.mainEditing .checkbox {
+  margin-top: calc(var(--space-2) + var(--space-1));
 }
 
+.mainEditing .meta {
+  margin-top: var(--space-2);
+}
+
+/*
+ * 勾选框：自绘方形勾选，不用原生外观。
+ * 未选中为空心描边，悬停描边转主色，选中后主色实底 + 反白对勾，
+ * 与右栏「本周参考」的只读方块保持同一套视觉语言。
+ */
+.checkbox {
+  position: relative;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  /* 3px 上边距让 16px 方块的中心落在首行文字（14px / 22px 行高，中线 11px）上（同「本周参考」的做法） */
+  margin: 3px 0 0;
+  appearance: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  background-color: var(--color-bg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.checkbox:hover {
+  border-color: var(--color-accent);
+}
+
+.checkbox:checked {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+/* 对勾：两条边框旋转 45° 画出，颜色取主色实底上的前景变量，深色模式自动跟随 */
+.checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  width: 4px;
+  height: 7px;
+  border-right: 2px solid var(--color-on-accent);
+  border-bottom: 2px solid var(--color-on-accent);
+  transform: rotate(45deg);
+}
+
+/*
+ * 文本行高写成整像素（22px ≈ 1.57 倍），而不是继承 body 的 1.6（14 × 1.6 = 22.4px）。
+ * 小数行高会让整行高度带小数，1px 的分隔线落在半像素上被抗锯齿摊成两像素，
+ * 于是「有的分割线看着比别条粗」——行数越多越明显。整像素行高让每行高度都是整数。
+ */
 .text,
 .textDone,
 .textInput {
@@ -74,9 +174,45 @@
   border: none;
   background-color: transparent;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 22px;
   text-align: left;
   word-break: break-word;
+}
+
+/*
+ * 展示态文本：点击就地编辑（光标取文本形态），并限制为 3 行。
+ * 备忘最长 500 字，整段铺开会让单条占满一屏、清单失去可扫读性；被截断的部分交给「展开全部」。
+ */
+.text,
+.textDone {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  cursor: text;
+}
+
+/* 展开态：解除行数限制（必须写在 .text / .textDone 之后，同优先级靠源码顺序生效） */
+.textExpanded {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+/* 展开 / 收起：与文本左对齐。必须显式 align-self，否则列向 flex 里会被拉满整行、文字居中 */
+.expandToggle {
+  align-self: flex-start;
+  margin-left: calc(16px + var(--space-2));
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-accent);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.expandToggle:hover {
+  text-decoration: underline;
 }
 
 .text:hover {
@@ -88,14 +224,27 @@
   text-decoration: line-through;
 }
 
+/*
+ * 就地编辑框：多行文本域，高度由 JS 按内容写入（见 MemoItem 的自动撑高 effect）。
+ * 待办最长 500 字，单行 input 只能露出一小段、看不清在改什么。
+ * 描边：主色 1px，一眼能看出「正在编辑的是这一条」。
+ *   用内阴影而不是 border —— scrollHeight 不含 border，用真实边框会多出 2px 并触发滚动条。
+ *   只描边、不加外圈光晕：1px 实框叠上 3px 光晕才是「边框感太重」的来源，单描边不会。
+ * max-height 兜底，超出后转为框内滚动，不会把清单顶下去。
+ */
 .textInput {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  display: block;
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
+  background-color: var(--color-bg);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+  max-height: 40vh;
+  resize: none;
+  overflow-y: auto;
   outline: none;
 }
 
-/* 条目右侧：分类标签 + 周标签 + 日期 + 菜单 */
+/* 条目右侧标签区：置顶 / 分类 / 未标记 / 过期 + ⋯ 菜单 */
 .meta {
   display: flex;
   align-items: center;
@@ -138,14 +287,30 @@
   color: var(--color-cat-life);
 }
 
-/* 周次标记标签 */
-.weekTag {
+/*
+ * 状态提示：未标记 / 过期，共用同一外形、只用颜色区分。
+ * 周次本身由分组标题表达，行上不再重复；留下的这两枚是「看不出来但会影响行为」的信息。
+ * 浅色底取 --color-bg-active 而不是 --color-bg-subtle：后者与整行悬停色相同，悬停时会整块消失。
+ */
+.unmarkedTag,
+.overdueTag {
+  flex: 0 0 auto;
   padding: 1px var(--space-2);
   border-radius: 999px;
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
   font-size: 11px;
   line-height: 18px;
+}
+
+/* 未标记：所属周只能按创建时间推导，因此不会进周报右栏的「本周参考」 */
+.unmarkedTag {
+  background-color: var(--color-bg-active);
+  color: var(--color-text-muted);
+}
+
+/* 过期（标记的周已过且未完成）：危险色。只染这一枚标签，不波及整行 */
+.overdueTag {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 /* ⋯ 菜单：按钮 + 绝对定位弹层 */
@@ -164,10 +329,14 @@
   color: var(--color-text-faint);
   font-size: 14px;
   line-height: 1;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
+/* 悬停底色取更深一档：整行悬停时已是 --color-bg-subtle，同色就看不见按钮反馈了 */
 .menuButton:hover {
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-bg-active);
   color: var(--color-text);
 }
 
@@ -195,6 +364,9 @@
   color: var(--color-text-muted);
   font-size: 12px;
   text-align: left;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .menuItem:hover {
@@ -225,6 +397,9 @@
   color: var(--color-text-muted);
   font-size: 11px;
   line-height: 16px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .menuCat:hover {
@@ -238,24 +413,28 @@
   color: var(--color-accent);
 }
 
-/* 置顶角标 */
+/*
+ * 置顶标记：主色实底小胶囊。
+ * 位置由原来的绝对定位角标改为流内标签，与分类 / 周次标签一起右对齐——
+ * 角标悬在行外会压到上一行的分隔线，也容易被列表滚动容器裁掉。
+ */
 .pinMark {
-  position: absolute;
-  top: -7px;
-  right: var(--space-3);
-  padding: 0 var(--space-2);
+  flex: 0 0 auto;
+  padding: 1px var(--space-2);
   border-radius: 999px;
   background-color: var(--color-accent);
   color: var(--color-on-accent);
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 600;
 }
 
+/* 左内边距 = 勾选框宽度 + 行内间距，让面板与条目文本左对齐 */
 .tagPanel {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) 0 0 calc(15px + var(--space-2));
+  padding: var(--space-2) 0 0 calc(16px + var(--space-2));
 }
 
 .tagAction {
@@ -265,6 +444,10 @@
   background-color: var(--color-bg);
   color: var(--color-text-muted);
   font-size: 11px;
+  line-height: 18px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tagAction:hover {
@@ -273,9 +456,10 @@
 }
 
 .error {
-  padding-left: calc(15px + var(--space-2));
+  padding-left: calc(16px + var(--space-2));
   color: var(--color-danger);
   font-size: 11px;
+  line-height: 18px;
 }
 
 .hint {

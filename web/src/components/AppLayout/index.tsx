@@ -1,7 +1,8 @@
 /**
  * @component 应用骨架
- * @description 登录后的统一骨架：左栏（logo + 纵向页签 + 内容 + 账号区），右侧可选顶栏与右栏抽屉；
- * 周报态三栏、备忘态两栏，左栏宽度两态一致、切换不跳动
+ * @description 登录后的统一骨架：左栏（logo + 纵向页签 + 内容 + 账号区），右侧可选顶栏、左列与右栏抽屉；
+ * 周报态为「左栏 + 左列（时间轴）+ 中栏 + 右栏」，备忘态为「左栏 + 左列（筛选）+ 中栏」，
+ * 左栏与左列宽度两态一致、切换不跳动
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-20
@@ -61,9 +62,9 @@ const TABS: TabItem[] = [
 interface AppLayoutProps {
   /** 当前激活的标签页，决定左栏页签高亮项 */
   activeTab: AppTab;
-  /** 可选时间轴列：渲染在页签栏右侧、顶栏下方，仅周报态传入 */
-  timeline?: ReactNode;
-  /** 可选顶栏：渲染在时间轴列与中栏之上（周报态的年份 / 搜索 / 通知条，编辑态与展示态都传） */
+  /** 可选左列：渲染在页签栏右侧、顶栏下方。周报态放时间轴树，备忘态放筛选列表 */
+  leftColumn?: ReactNode;
+  /** 可选顶栏：渲染在左列与中栏之上（周报态的年份 / 搜索 / 通知条，编辑态与展示态都传） */
   topbar?: ReactNode;
   /** 中栏内容 */
   children: ReactNode;
@@ -82,7 +83,7 @@ interface AppLayoutProps {
  */
 const AppLayout = ({
   activeTab,
-  timeline,
+  leftColumn,
   topbar,
   children,
   drawer,
@@ -145,9 +146,9 @@ const AppLayout = ({
           {topbar !== undefined ? <header className={styles.topbar}>{topbar}</header> : null}
 
           <div className={styles.contentRow}>
-            {/* 时间轴列：仅周报态存在，顶栏的年份切换正好压在它上方 */}
-            {timeline !== undefined ? (
-              <aside className={styles.timeline}>{timeline}</aside>
+            {/* 左列：周报态为时间轴，备忘态为筛选；周报态的年份切换正好压在它上方 */}
+            {leftColumn !== undefined ? (
+              <aside className={styles.leftColumn}>{leftColumn}</aside>
             ) : null}
 
             <main className={styles.center}>{children}</main>

@@ -1,42 +1,86 @@
 /**
- * 备忘筛选标签页样式
- * 说明：横向排列的文字标签，选中项为主线色下划线 + 深色文字（对齐设计稿）。
+ * 备忘筛选列样式
+ * 说明：备忘态的左列，与周报时间轴共用同一列宽与标题规格。标题固定在顶部，
+ * 筛选项在下方纵向排列、行尾右对齐计数；选中项为浅底圆角卡片 + 主色加粗文字。
  */
 
-.tabs {
+.panel {
   display: flex;
-  align-items: center;
-  gap: var(--space-6);
+  flex-direction: column;
+  height: 100%;
 }
 
-.tab,
-.tabActive {
-  padding: var(--space-2) 0;
+/* 栏目标题：与「时间轴」「本周参考」同级，三处标题视觉重量保持一致 */
+.title {
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* 筛选列表：与时间轴的年份列表同一段内边距，两态切换时左边界不位移 */
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+}
+
+.item,
+.itemActive {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-muted);
   font-size: 13px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.tab:hover {
-  color: var(--color-text);
-}
-
-/* 选中标签：主色下划线 + 深色文字 */
-.tabActive {
-  border-bottom-color: var(--color-accent);
-  color: var(--color-text);
   font-weight: 600;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
+.item:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+/* 选中项：浅底圆角卡片 + 主色加粗文字，与时间轴选中周的强调方式一致 */
+.itemActive {
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.label {
+  flex: 0 0 auto;
+}
+
+/*
+ * 行尾计数：等宽数字推到行尾，四项的数字纵向对齐成一列，扫读时像一张统计表。
+ * 字号取 11px，颜色不能用 --color-text-faint（浅底上仅约 2.4:1，达不到 WCAG AA），
+ * 改用次级灰 --color-text-muted（约 5:1）。
+ */
 .count {
-  color: var(--color-text-faint);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+  /* 吃掉中间空隙把计数推到行尾，各行数字才能纵向对齐 */
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
-.tabActive .count {
-  color: var(--color-text-muted);
+.itemActive .count {
+  color: var(--color-accent);
 }

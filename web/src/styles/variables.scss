@@ -65,9 +65,9 @@
 
   /* 骨架尺寸：与 PRD §五 界面结构一一对应 */
   /* 页签栏：logo + 页签 + 底部账号区，两态宽度一致、位置不跳动 */
-  --rail-width: 176px;
-  /* 时间轴列：仅周报态存在，承载「第 N 周 + 日期区间」两行文字 */
-  --timeline-width: 220px;
+  --rail-width: 200px;
+  /* 左列：周报态为时间轴（年 / 月 / 周树），备忘态为筛选列表；两态同宽，切换不跳动 */
+  --left-column-width: 220px;
   --drawer-width: 220px;
   --center-min-width: 480px;
   --settings-max-width: 600px;

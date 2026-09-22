@@ -1,12 +1,13 @@
 /**
  * @component 工作台（备忘）
- * @description 两栏骨架：左栏页签、中栏标题 + 筛选标签页 + 常驻新建输入框 + 日期分组清单；
- * 此态下右栏整栏移除
+ * @description 三栏骨架：左栏页签、左列筛选（占据周报态时间轴那一列）、
+ * 中栏标题 + 常驻新建输入框 + 日期分组清单；此态下右栏整栏移除
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toErrorMessage } from '@/api/client';
 import { createMemo, deleteMemo, fetchMemos, updateMemo } from '@/api/memo';
 import AppLayout from '@/components/AppLayout';
@@ -14,9 +15,9 @@ import MemoFilter from '@/components/MemoFilter';
 import MemoList from '@/components/MemoList';
 import Select from '@/components/Select';
 import { MEMO_CATEGORIES } from '@/constants';
-import { getCurrentWeek } from '@/utils/week';
+import { getCurrentWeek, getMemoWeek, isValidWeek } from '@/utils/week';
 import type { UpdateMemoBody } from '@/types/api';
-import type { Memo as MemoModel, MemoFilter as MemoFilterValue } from '@/types/models';
+import type { Memo as MemoModel, MemoFilter as MemoFilterValue, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
 
 /**
@@ -32,6 +33,9 @@ const Memo = () => {
   const [newText, setNewText] = useState('');
   const [newCategory, setNewCategory] = useState('');
   const [pending, setPending] = useState(false);
+
+  /** 路由查询参数：承载从周报页「＋ 新建」带过来的目标周次 */
+  const [searchParams] = useSearchParams();
 
   const newInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -58,10 +62,33 @@ const Memo = () => {
   /** 当前 ISO 周：筛选与计数共用，避免每次比较都重新构造 dayjs 对象 */
   const currentWeek = useMemo(() => getCurrentWeek(), []);
 
-  /** 是否属于本周：标记的 year + week 与当前 ISO 周一致 */
+  /*
+   * 新建待办的默认归属周。
+   * 从周报页「＋ 新建 / 去备忘添加」跳过来时 URL 会带上当时查看的周（?year=&week=），
+   * 优先沿用它——翻往期周报时新建的备忘该落到那一周，而不是「今天所在的周」；
+   * 没有参数或参数非法（含缺一个、非整数、越界）时回落到当前 ISO 周。
+   */
+  const defaultWeek = useMemo<WeekRef>(() => {
+    const year = Number(searchParams.get('year'));
+    const week = Number(searchParams.get('week'));
+    return isValidWeek(year, week) ? { year, week } : currentWeek;
+  }, [searchParams, currentWeek]);
+
+  /** 默认归属周的展示文案：跨年时补上年份末两位，与清单行上的周次标签口径一致 */
+  const defaultWeekLabel =
+    defaultWeek.year === currentWeek.year
+      ? `第 ${defaultWeek.week} 周`
+      : `第 ${defaultWeek.week} 周 · ${String(defaultWeek.year).slice(-2)}`;
+
+  /**
+   * 是否属于本周：所属周（手动标记优先，未标记按创建时间推导）与当前 ISO 周一致。
+   * 与清单分组的口径必须完全一致，否则会出现「这条在『本周』分组里，却不在『本周』筛选里」。
+   */
   const isCurrentWeek = useCallback(
-    (memo: MemoModel): boolean =>
-      memo.year === currentWeek.year && memo.week === currentWeek.week,
+    (memo: MemoModel): boolean => {
+      const week = getMemoWeek(memo);
+      return week.year === currentWeek.year && week.week === currentWeek.week;
+    },
     [currentWeek],
   );
 
@@ -104,7 +131,15 @@ const Memo = () => {
     setPending(true);
     setError('');
     try {
-      const created = await createMemo({ text, category: newCategory });
+      // 新建的待办默认标记到 defaultWeek（周报页带过来的周，否则当前 ISO 周）：
+      // 备忘是「按周攒素材」的东西，留空会导致它既不出现在「本周」筛选里，
+      // 也进不了周报右栏的「本周参考」。需要归属其它周时，创建后在「⋯」菜单改标记。
+      const created = await createMemo({
+        text,
+        category: newCategory,
+        year: defaultWeek.year,
+        week: defaultWeek.week,
+      });
       setMemos((prev) => [...prev, created]);
       setNewText('');
       newInputRef.current?.focus();
@@ -113,7 +148,7 @@ const Memo = () => {
     } finally {
       setPending(false);
     }
-  }, [newText, newCategory, pending]);
+  }, [newText, newCategory, pending, defaultWeek]);
 
   /**
    * 局部更新某条备忘（乐观更新，失败回滚）
@@ -174,7 +209,7 @@ const Memo = () => {
     if (keyword.trim() !== '') return '没有匹配的待办';
     switch (filter) {
       case 'week':
-        return '本周没有标记的待办';
+        return '本周没有待办';
       case 'undone':
         return '所有待办都已完成';
       case 'done':
@@ -198,7 +233,11 @@ const Memo = () => {
   }, [memos.length, filter, keyword]);
 
   return (
-    <AppLayout activeTab="memo">
+    <AppLayout
+      activeTab="memo"
+      // 筛选放在左列：与周报态的时间轴占同一列，切换标签页时列本身不位移
+      leftColumn={<MemoFilter value={filter} counts={counts} onChange={setFilter} />}
+    >
       {/* 标题行：备忘 + 搜索框 + 新建按钮 */}
       <header className={styles.header}>
         <h1 className={styles.title}>备忘</h1>
@@ -236,12 +275,7 @@ const Memo = () => {
         </div>
       </header>
 
-      {/* 筛选标签页 */}
-      <div className={styles.filterRow}>
-        <MemoFilter value={filter} counts={counts} onChange={setFilter} />
-      </div>
-
-      {/* 新建输入行：输入框 + 分类选择 + 添加 */}
+      {/* 新建输入行：输入框 + 分类选择 + 默认归属周 + 添加 */}
       <div className={styles.composer}>
         <input
           ref={newInputRef}
@@ -263,6 +297,13 @@ const Memo = () => {
           ariaLabel="选择分类"
           onChange={setNewCategory}
         />
+        {/* 默认归属周：新建的待办会被标记到这一周，需要改就创建后用「⋯」菜单改标记 */}
+        <span
+          className={styles.composerWeek}
+          title={`新建的待办默认标记到 ${defaultWeek.year} 年第 ${defaultWeek.week} 周；需要归属其它周时，创建后在「⋯」菜单改标记`}
+        >
+          {defaultWeekLabel}
+        </span>
         <button
           type="button"
           className={styles.composerButton}

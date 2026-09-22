@@ -1,7 +1,8 @@
 /**
- * @component 备忘筛选标签页
- * @description 备忘页顶部的横向筛选标签：全部 / 本周 / 未完成 / 已完成，各项带计数，
- * 选中项为下划线 + 深色文字
+ * @component 备忘筛选列
+ * @description 备忘态的左列，占位与宽度同周报态的时间轴：顶部固定「筛选」标题，
+ * 下方纵向排列全部 / 本周 / 未完成 / 已完成，行尾右对齐计数；
+ * 选中项为浅底圆角卡片 + 主色加粗文字（与时间轴选中周同一套强调方式）
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
@@ -36,28 +37,36 @@ interface MemoFilterProps {
 }
 
 /**
- * 备忘筛选标签页
+ * 备忘筛选列
  * @param props - 见 MemoFilterProps
- * @returns 筛选标签节点
+ * @returns 左列筛选节点
  */
 const MemoFilter = ({ value, onChange, counts }: MemoFilterProps) => (
-  <div className={styles.tabs} role="tablist" aria-label="备忘筛选">
-    {OPTIONS.map((option) => {
-      const selected = option.key === value;
-      return (
-        <button
-          key={option.key}
-          type="button"
-          role="tab"
-          aria-selected={selected}
-          className={selected ? styles.tabActive : styles.tab}
-          onClick={() => onChange(option.key)}
-        >
-          {option.label}
-          <span className={styles.count}>（{counts[option.key]}）</span>
-        </button>
-      );
-    })}
+  <div className={styles.panel}>
+    <h2 className={styles.title}>筛选</h2>
+
+    {/*
+      这里用「分组 + 按压态按钮」，不用 tablist / tab：
+      那套语义要求方向键切换与配套的 tabpanel，只写一半反而会让读屏软件给出错误的交互预期。
+      四个按钮互斥、点击即切换，aria-pressed 恰好表达这一点，键盘用 Tab 也完全可达。
+    */}
+    <div className={styles.items} role="group" aria-label="备忘筛选">
+      {OPTIONS.map((option) => {
+        const selected = option.key === value;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            aria-pressed={selected}
+            className={selected ? styles.itemActive : styles.item}
+            onClick={() => onChange(option.key)}
+          >
+            <span className={styles.label}>{option.label}</span>
+            <span className={styles.count}>{counts[option.key]}</span>
+          </button>
+        );
+      })}
+    </div>
   </div>
 );
 
