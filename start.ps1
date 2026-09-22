@@ -7,7 +7,7 @@
       1. 检查 Node / npm 是否可用；
       2. 根目录缺少 .env 时从 .env.example 复制一份（前后端共用这份配置）；
       3. 按需为 server / web 安装依赖；
-      4. 分别在新窗口启动后端（Fastify，默认 3000）与前端（Vite，默认 5173）。
+      4. 分别在新窗口启动后端（Fastify，默认 3701）与前端（Vite，默认 3700）。
 
     两个服务各自独占一个窗口，日志互不干扰，关闭窗口即停止对应服务。
 
@@ -143,6 +143,6 @@ Start-DevWindow -Title 'weekly - web' -WorkingDirectory $webDir -Command 'npm ru
 Write-Host ''
 Write-Host '已在新窗口启动：' -ForegroundColor Green
 Write-Host "  后端 API   http://127.0.0.1:$apiPort"
-Write-Host '  前端页面   http://127.0.0.1:5173'
+Write-Host '  前端页面   http://127.0.0.1:3700'
 Write-Host ''
 Write-Host '首次启动需等待编译完成后再访问；关闭对应窗口即可停止该服务。'

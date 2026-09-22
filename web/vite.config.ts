@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
     server: {
       // 显式绑定 IPv4：默认的 localhost 在 Windows 上会解析成 ::1，导致 127.0.0.1 访问不通
       host: '127.0.0.1',
-      port: 5173,
+      port: 3700,
       proxy: {
         '/api': {
           target: apiTarget,
