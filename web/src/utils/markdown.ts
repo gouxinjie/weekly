@@ -23,6 +23,95 @@ type MdToken = ReturnType<MarkdownItInstance['parse']>[number];
 /** 危险协议黑名单：命中后链接降级为不可点击，阻断 javascript: / data: 等 XSS 载体 */
 const DANGEROUS_URL = /^\s*(?:javascript|data|vbscript|file)\s*:/i;
 
+/** GFM 任务列表标记：列表项开头的「[ ]」「[x]」 */
+const TASK_MARK = /^\[([ xX])\]\s+/;
+
+/** 写进 token.meta 的任务列表标记，供 parseBlocks 渲染时取用 */
+interface TaskListMeta {
+  /** 该列表是否为任务列表（至少含一个任务项） */
+  taskList?: boolean;
+  /** 该列表项是否为任务项，以及是否已完成 */
+  task?: { checked: boolean };
+}
+
+/**
+ * 在 token 流上标记 GFM 任务列表
+ * @param tokens - markdown-it 解析出的 token 流，原地修改
+ * @returns 无
+ * @remarks markdown-it 原生不认识「- [ ] xxx」，会把它当成普通无序列表项，
+ *          预览里因此显示成「• [ ] xxx」。这里在 inline 规则之后扫描每个列表项的首个
+ *          inline，命中就把「[ ]」前缀摘掉并打上标记，再由 parseBlocks 渲染成带勾选框的任务列表。
+ */
+const markTaskLists = (tokens: MdToken[]): void => {
+  /** 列表层级栈：记录列表的 open token 与已识别出的任务项数量 */
+  const listStack: { open: MdToken; taskCount: number }[] = [];
+  /** 列表项栈：记录正在处理的列表项，以及它是否已检测过首个 inline */
+  const itemStack: { token: MdToken; scanned: boolean }[] = [];
+
+  tokens.forEach((token) => {
+    // 列表开始：先入栈，确认里面确有任务项后再整体标记
+    if (
+      token.nesting === 1 &&
+      (token.type === 'bullet_list_open' || token.type === 'ordered_list_open')
+    ) {
+      listStack.push({ open: token, taskCount: 0 });
+      return;
+    }
+
+    if (
+      token.nesting === -1 &&
+      (token.type === 'bullet_list_close' || token.type === 'ordered_list_close')
+    ) {
+      const frame = listStack.pop();
+      if (frame !== undefined && frame.taskCount > 0) {
+        frame.open.meta = { ...(frame.open.meta ?? {}), taskList: true };
+      }
+      return;
+    }
+
+    if (token.type === 'list_item_open') {
+      itemStack.push({ token, scanned: false });
+      return;
+    }
+
+    if (token.type === 'list_item_close') {
+      itemStack.pop();
+      return;
+    }
+
+    if (token.type !== 'inline') return;
+
+    // 每个列表项只看第一个 inline；嵌套列表的 inline 归属栈顶那个更内层的列表项
+    const item = itemStack[itemStack.length - 1];
+    if (item === undefined || item.scanned) return;
+    item.scanned = true;
+
+    const first = token.children?.[0];
+    if (first === undefined || first.type !== 'text') return;
+
+    const matched = first.content.match(TASK_MARK);
+    if (matched === null) return;
+
+    // 摘掉「[ ]」前缀；剩余文本为空时整体移除，避免渲染出空节点
+    first.content = first.content.slice(matched[0].length);
+    if (first.content === '') token.children?.shift();
+    token.content = token.content.slice(matched[0].length);
+
+    item.token.meta = {
+      ...(item.token.meta ?? {}),
+      task: { checked: matched[1].toLowerCase() === 'x' },
+    };
+
+    const frame = listStack[listStack.length - 1];
+    if (frame !== undefined) frame.taskCount += 1;
+  });
+};
+
+// 挂在 inline 之后：此时每个 inline 的 children 已生成，才能读到首个文本节点
+md.core.ruler.after('inline', 'weekly-task-list', (state) => {
+  markTaskLists(state.tokens);
+});
+
 /**
  * 校验链接安全性
  * @param url - 原始链接
@@ -180,7 +269,34 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
 
     if (mapped !== undefined) {
       const inner = parseBlocks(tokens, i + 1, mapped.close);
-      nodes.push(createElement(mapped.tag, { key }, ...inner.nodes));
+      const meta = token.meta as TaskListMeta | null;
+      const task = meta?.task ?? null;
+
+      if (task !== null) {
+        // 任务项：只读预览里用 defaultChecked + disabled，避免受控组件的告警
+        nodes.push(
+          createElement(
+            mapped.tag,
+            { key, 'data-type': 'taskItem', 'data-checked': String(task.checked) },
+            createElement('input', {
+              key: 'checkbox',
+              type: 'checkbox',
+              defaultChecked: task.checked,
+              disabled: true,
+            }),
+            ...inner.nodes,
+          ),
+        );
+      } else {
+        nodes.push(
+          createElement(
+            mapped.tag,
+            meta?.taskList === true ? { key, 'data-type': 'taskList' } : { key },
+            ...inner.nodes,
+          ),
+        );
+      }
+
       i = inner.next;
       continue;
     }

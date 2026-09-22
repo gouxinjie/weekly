@@ -69,6 +69,42 @@
   margin: var(--space-1) 0;
 }
 
+/* 任务列表：勾选框替代列表符号，已完成项划线置灰（与编辑器 weekly-editor 观感一致） */
+.preview ul[data-type='taskList'],
+.preview ol[data-type='taskList'] {
+  padding-left: var(--space-1);
+  list-style: none;
+}
+
+.preview [data-type='taskList'] > li[data-type='taskItem'] {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* 同一列表里与任务项混排的普通项：把列表符号加回来并保持原有缩进 */
+.preview [data-type='taskList'] > li:not([data-type='taskItem']) {
+  margin-left: var(--space-4);
+  list-style: disc;
+}
+
+.preview [data-type='taskList'] > li[data-type='taskItem'] > input[type='checkbox'] {
+  flex: 0 0 auto;
+  /* 与首行文字视觉居中：正文行高 1.8 × 14px ≈ 25px，勾选框约 13px */
+  margin: 6px 0 0;
+}
+
+.preview [data-type='taskList'] > li[data-type='taskItem'] > p {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.preview [data-type='taskList'] > li[data-type='taskItem'][data-checked='true'] > p {
+  color: var(--color-text-faint);
+  text-decoration: line-through;
+}
+
 .preview blockquote {
   margin: var(--space-3) 0;
   padding: var(--space-2) var(--space-4);
