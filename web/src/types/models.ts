@@ -35,8 +35,8 @@ export interface Weekly {
   updatedAt: string;
 }
 
-/** 备忘条目 */
-export interface Memo {
+/** 待办条目 */
+export interface Todo {
   /** 主键 */
   id: number;
   /** 待办文本 */
@@ -61,5 +61,5 @@ export type EditorMode = 'edit' | 'preview';
 /** 保存状态：用于标题栏「保存中 / 已保存」提示 */
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-/** 备忘筛选项：全部 / 本周 / 未完成 / 已完成 */
-export type MemoFilter = 'all' | 'week' | 'undone' | 'done';
+/** 待办筛选项：全部 / 本周 / 未完成 / 已完成 */
+export type TodoFilter = 'all' | 'week' | 'undone' | 'done';

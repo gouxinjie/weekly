@@ -62,7 +62,7 @@ export const migrate = (): number => {
         FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
       );
 
-      -- 备忘表：year / week 可为 NULL，为 null 时只是「未标记周次」，不影响任何行为
+      -- 待办表（v1 时名为 memo，v3 更名为 todo）：year / week 可为 NULL，为 null 时只是「未标记周次」，不影响任何行为
       CREATE TABLE memo (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id    INTEGER NOT NULL,
@@ -92,10 +92,21 @@ export const migrate = (): number => {
     db.pragma('user_version = 1');
   }
 
-  // v2：备忘新增分类字段（产品 / 开发 / 测试 / 文档 / 生活），空串表示未分类
+  // v2：待办新增分类字段（产品 / 开发 / 测试 / 文档 / 生活），空串表示未分类
   if (current < 2) {
     db.exec(`ALTER TABLE memo ADD COLUMN category TEXT NOT NULL DEFAULT '';`);
     db.pragma('user_version = 2');
+  }
+
+  // v3：备忘模块更名为「待办」，表名由 memo 同步改为 todo。
+  // 改名走 ALTER TABLE RENAME，已有数据不丢失；索引随表改名后名称不变，这里显式重建为 todo 命名。
+  // 说明：迁移只能追加，v1 的建表语句保持原样不动，因此新库同样先建 memo 再在 v3 改名，
+  //      执行路径与老库一致，不会出现「新库没跑过改名」的结构不一致。
+  if (current < 3) {
+    db.exec('ALTER TABLE memo RENAME TO todo;');
+    db.exec('DROP INDEX IF EXISTS idx_memo_user;');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_todo_user ON todo (user_id, pinned, done);');
+    db.pragma('user_version = 3');
   }
 
   return db.pragma('user_version', { simple: true }) as number;

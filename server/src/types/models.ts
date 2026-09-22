@@ -51,8 +51,8 @@ export interface WeeklyRow {
   updated_at: string;
 }
 
-/** memo 表行类型 */
-export interface MemoRow {
+/** todo 表行类型 */
+export interface TodoRow {
   /** 主键 */
   id: number;
   /** 归属用户 ID */
@@ -67,7 +67,7 @@ export interface MemoRow {
   year: number | null;
   /** 可选标记的 ISO 周次，未标记时为 null */
   week: number | null;
-  /** 分类标识：空串表示未分类，其余取值见 routes/memo.ts 的 MEMO_CATEGORIES */
+  /** 分类标识：空串表示未分类，其余取值见 routes/todo.ts 的 TODO_CATEGORIES */
   category: string;
   /** 创建时间，ISO 8601 字符串 */
   created_at: string;

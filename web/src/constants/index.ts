@@ -28,16 +28,16 @@ export const REMEMBER_PHONE_KEY = 'weekly:remember-phone';
 /** 周报内容字数上限（编辑区底部计数用） */
 export const MAX_CONTENT_CHARS = 2000;
 
-/** 备忘分类定义：value 与服务端 MEMO_CATEGORIES 保持一致 */
-export interface MemoCategoryOption {
+/** 待办分类定义：value 与服务端 TODO_CATEGORIES 保持一致 */
+export interface TodoCategoryOption {
   /** 分类标识，空串表示未分类 */
   value: string;
   /** 展示文案 */
   label: string;
 }
 
-/** 备忘分类可选项，顺序固定 */
-export const MEMO_CATEGORIES: MemoCategoryOption[] = [
+/** 待办分类可选项，顺序固定 */
+export const TODO_CATEGORIES: TodoCategoryOption[] = [
   { value: '', label: '无分类' },
   { value: 'product', label: '产品' },
   { value: 'dev', label: '开发' },

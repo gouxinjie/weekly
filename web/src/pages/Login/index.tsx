@@ -52,7 +52,7 @@ const FEATURES: FeatureItem[] = [
     ),
   },
   {
-    title: '备忘',
+    title: '待办',
     desc: '待办清单',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">

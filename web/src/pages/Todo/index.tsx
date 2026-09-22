@@ -1,5 +1,5 @@
 /**
- * @component 工作台（备忘）
+ * @component 工作台（待办）
  * @description 三栏骨架：左栏页签、左列筛选（占据周报态时间轴那一列）、
  * 中栏标题 + 常驻新建输入框 + 日期分组清单；此态下右栏整栏移除
  * @author gouxinjie
@@ -9,26 +9,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toErrorMessage } from '@/api/client';
-import { createMemo, deleteMemo, fetchMemos, updateMemo } from '@/api/memo';
+import { createTodo, deleteTodo, fetchTodos, updateTodo } from '@/api/todo';
 import AppLayout from '@/components/AppLayout';
-import MemoFilter from '@/components/MemoFilter';
-import MemoList from '@/components/MemoList';
+import TodoFilter from '@/components/TodoFilter';
+import TodoList from '@/components/TodoList';
 import Select from '@/components/Select';
-import { MEMO_CATEGORIES } from '@/constants';
-import { getCurrentWeek, getMemoWeek, isValidWeek } from '@/utils/week';
-import type { UpdateMemoBody } from '@/types/api';
-import type { Memo as MemoModel, MemoFilter as MemoFilterValue, WeekRef } from '@/types/models';
+import { TODO_CATEGORIES } from '@/constants';
+import { getCurrentWeek, getTodoWeek, isValidWeek } from '@/utils/week';
+import type { UpdateTodoBody } from '@/types/api';
+import type { Todo as TodoModel, TodoFilter as TodoFilterValue, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
 
 /**
- * 工作台（备忘）
+ * 工作台（待办）
  * @returns 页面节点
  */
-const Memo = () => {
-  const [memos, setMemos] = useState<MemoModel[]>([]);
+const Todo = () => {
+  const [todos, setTodos] = useState<TodoModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<MemoFilterValue>('all');
+  const [filter, setFilter] = useState<TodoFilterValue>('all');
   const [keyword, setKeyword] = useState('');
   const [newText, setNewText] = useState('');
   const [newCategory, setNewCategory] = useState('');
@@ -39,13 +39,13 @@ const Memo = () => {
 
   const newInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 首次加载全部备忘
+  // 首次加载全部待办
   useEffect(() => {
     let active = true;
 
-    void fetchMemos()
+    void fetchTodos()
       .then((list) => {
-        if (active) setMemos(list);
+        if (active) setTodos(list);
       })
       .catch((err: unknown) => {
         if (active) setError(toErrorMessage(err, '加载失败，请稍后重试'));
@@ -64,8 +64,8 @@ const Memo = () => {
 
   /*
    * 新建待办的默认归属周。
-   * 从周报页「＋ 新建 / 去备忘添加」跳过来时 URL 会带上当时查看的周（?year=&week=），
-   * 优先沿用它——翻往期周报时新建的备忘该落到那一周，而不是「今天所在的周」；
+   * 从周报页「＋ 新建 / 去待办添加」跳过来时 URL 会带上当时查看的周（?year=&week=），
+   * 优先沿用它——翻往期周报时新建的待办该落到那一周，而不是「今天所在的周」；
    * 没有参数或参数非法（含缺一个、非整数、越界）时回落到当前 ISO 周。
    */
   const defaultWeek = useMemo<WeekRef>(() => {
@@ -85,43 +85,43 @@ const Memo = () => {
    * 与清单分组的口径必须完全一致，否则会出现「这条在『本周』分组里，却不在『本周』筛选里」。
    */
   const isCurrentWeek = useCallback(
-    (memo: MemoModel): boolean => {
-      const week = getMemoWeek(memo);
+    (todo: TodoModel): boolean => {
+      const week = getTodoWeek(todo);
       return week.year === currentWeek.year && week.week === currentWeek.week;
     },
     [currentWeek],
   );
 
   /** 各筛选结果与计数 */
-  const counts = useMemo<Record<MemoFilterValue, number>>(
+  const counts = useMemo<Record<TodoFilterValue, number>>(
     () => ({
-      all: memos.length,
-      week: memos.filter(isCurrentWeek).length,
-      undone: memos.filter((memo) => !memo.done).length,
-      done: memos.filter((memo) => memo.done).length,
+      all: todos.length,
+      week: todos.filter(isCurrentWeek).length,
+      undone: todos.filter((todo) => !todo.done).length,
+      done: todos.filter((todo) => todo.done).length,
     }),
-    [memos, isCurrentWeek],
+    [todos, isCurrentWeek],
   );
 
   /** 先按状态筛选，再按关键词过滤（关键词仅在前端本地过滤，不额外请求接口） */
   const filtered = useMemo(() => {
-    const byStatus = ((): MemoModel[] => {
+    const byStatus = ((): TodoModel[] => {
       switch (filter) {
         case 'week':
-          return memos.filter(isCurrentWeek);
+          return todos.filter(isCurrentWeek);
         case 'undone':
-          return memos.filter((memo) => !memo.done);
+          return todos.filter((todo) => !todo.done);
         case 'done':
-          return memos.filter((memo) => memo.done);
+          return todos.filter((todo) => todo.done);
         default:
-          return memos;
+          return todos;
       }
     })();
 
     const text = keyword.trim().toLowerCase();
     if (text === '') return byStatus;
-    return byStatus.filter((memo) => memo.text.toLowerCase().includes(text));
-  }, [memos, filter, isCurrentWeek, keyword]);
+    return byStatus.filter((todo) => todo.text.toLowerCase().includes(text));
+  }, [todos, filter, isCurrentWeek, keyword]);
 
   /** 新建待办，Enter 触发且保持焦点 */
   const handleCreate = useCallback(async (): Promise<void> => {
@@ -132,15 +132,15 @@ const Memo = () => {
     setError('');
     try {
       // 新建的待办默认标记到 defaultWeek（周报页带过来的周，否则当前 ISO 周）：
-      // 备忘是「按周攒素材」的东西，留空会导致它既不出现在「本周」筛选里，
-      // 也进不了周报右栏的「本周参考」。需要归属其它周时，创建后在「⋯」菜单改标记。
-      const created = await createMemo({
+      // 待办是「按周攒素材」的东西，留空会导致它既不出现在「本周」筛选里，
+      // 也进不了周报右栏的「本周待办」。需要归属其它周时，创建后在「⋯」菜单改标记。
+      const created = await createTodo({
         text,
         category: newCategory,
         year: defaultWeek.year,
         week: defaultWeek.week,
       });
-      setMemos((prev) => [...prev, created]);
+      setTodos((prev) => [...prev, created]);
       setNewText('');
       newInputRef.current?.focus();
     } catch (err) {
@@ -151,61 +151,61 @@ const Memo = () => {
   }, [newText, newCategory, pending, defaultWeek]);
 
   /**
-   * 局部更新某条备忘（乐观更新，失败回滚）
-   * @param memo - 目标备忘
+   * 局部更新某条待办（乐观更新，失败回滚）
+   * @param todo - 目标待办
    * @param patch - 需要变更的字段
    * @returns 无
    */
   const handleUpdate = useCallback(
-    async (memo: MemoModel, patch: Partial<UpdateMemoBody>): Promise<void> => {
-      const body: UpdateMemoBody = {
-        text: patch.text ?? memo.text,
-        done: patch.done ?? memo.done,
-        pinned: patch.pinned ?? memo.pinned,
+    async (todo: TodoModel, patch: Partial<UpdateTodoBody>): Promise<void> => {
+      const body: UpdateTodoBody = {
+        text: patch.text ?? todo.text,
+        done: patch.done ?? todo.done,
+        pinned: patch.pinned ?? todo.pinned,
         // year / week 允许显式传 null，因此不能用 ?? 判断
-        year: patch.year !== undefined ? patch.year : memo.year,
-        week: patch.week !== undefined ? patch.week : memo.week,
-        category: patch.category ?? memo.category,
+        year: patch.year !== undefined ? patch.year : todo.year,
+        week: patch.week !== undefined ? patch.week : todo.week,
+        category: patch.category ?? todo.category,
       };
 
-      const snapshot = memos;
+      const snapshot = todos;
       setError('');
-      setMemos((prev) => prev.map((item) => (item.id === memo.id ? { ...item, ...body } : item)));
+      setTodos((prev) => prev.map((item) => (item.id === todo.id ? { ...item, ...body } : item)));
 
       try {
-        await updateMemo(memo.id, body);
+        await updateTodo(todo.id, body);
       } catch (err) {
-        setMemos(snapshot);
+        setTodos(snapshot);
         setError(toErrorMessage(err, '更新失败，请稍后重试'));
       }
     },
-    [memos],
+    [todos],
   );
 
   /**
-   * 删除某条备忘（乐观更新，失败回滚）
-   * @param memo - 目标备忘
+   * 删除某条待办（乐观更新，失败回滚）
+   * @param todo - 目标待办
    * @returns 无
    */
   const handleDelete = useCallback(
-    async (memo: MemoModel): Promise<void> => {
-      const snapshot = memos;
+    async (todo: TodoModel): Promise<void> => {
+      const snapshot = todos;
       setError('');
-      setMemos((prev) => prev.filter((item) => item.id !== memo.id));
+      setTodos((prev) => prev.filter((item) => item.id !== todo.id));
 
       try {
-        await deleteMemo(memo.id);
+        await deleteTodo(todo.id);
       } catch (err) {
-        setMemos(snapshot);
+        setTodos(snapshot);
         setError(toErrorMessage(err, '删除失败，请稍后重试'));
       }
     },
-    [memos],
+    [todos],
   );
 
   /** 空态文案与动作：区分「整体为空」「搜索无结果」与「某筛选结果为空」 */
   const emptyHint = useMemo(() => {
-    if (memos.length === 0) return '还没有待办，在上面输入一条试试';
+    if (todos.length === 0) return '还没有待办，在上面输入一条试试';
     if (keyword.trim() !== '') return '没有匹配的待办';
     switch (filter) {
       case 'week':
@@ -217,10 +217,10 @@ const Memo = () => {
       default:
         return '还没有待办';
     }
-  }, [memos.length, filter, keyword]);
+  }, [todos.length, filter, keyword]);
 
   const emptyAction = useMemo(() => {
-    if (memos.length === 0) {
+    if (todos.length === 0) {
       return { label: '去输入', onClick: () => newInputRef.current?.focus() };
     }
     if (keyword.trim() !== '') {
@@ -230,20 +230,20 @@ const Memo = () => {
       return { label: '查看全部', onClick: () => setFilter('all') };
     }
     return undefined;
-  }, [memos.length, filter, keyword]);
+  }, [todos.length, filter, keyword]);
 
   return (
     <AppLayout
-      activeTab="memo"
+      activeTab="todo"
       // 筛选放在左列：与周报态的时间轴占同一列，切换标签页时列本身不位移
-      leftColumn={<MemoFilter value={filter} counts={counts} onChange={setFilter} />}
+      leftColumn={<TodoFilter value={filter} counts={counts} onChange={setFilter} />}
     >
-      {/* 标题行：备忘 + 搜索框 + 新建按钮 */}
+      {/* 标题行：待办 + 搜索框 + 新建按钮 */}
       <header className={styles.header}>
-        <h1 className={styles.title}>备忘</h1>
+        <h1 className={styles.title}>待办</h1>
 
         <div className={styles.headerRight}>
-          {/* 搜索框：仅在已加载的备忘里做前端过滤，不额外请求接口 */}
+          {/* 搜索框：仅在已加载的待办里做前端过滤，不额外请求接口 */}
           <label className={styles.searchField}>
             <svg
               className={styles.searchIcon}
@@ -259,8 +259,8 @@ const Memo = () => {
             <input
               className={styles.searchInput}
               value={keyword}
-              placeholder="搜索备忘内容…"
-              aria-label="搜索备忘内容"
+              placeholder="搜索待办内容…"
+              aria-label="搜索待办内容"
               onChange={(event) => setKeyword(event.target.value)}
             />
           </label>
@@ -293,7 +293,7 @@ const Memo = () => {
         />
         <Select
           value={newCategory}
-          options={MEMO_CATEGORIES}
+          options={TODO_CATEGORIES}
           ariaLabel="选择分类"
           onChange={setNewCategory}
         />
@@ -317,11 +317,11 @@ const Memo = () => {
       {error !== '' ? <p className={styles.error}>{error}</p> : null}
 
       <div className={styles.body}>
-        <MemoList
-          memos={filtered}
+        <TodoList
+          todos={filtered}
           loading={loading}
-          onUpdate={(memo, patch) => void handleUpdate(memo, patch)}
-          onDelete={(memo) => void handleDelete(memo)}
+          onUpdate={(todo, patch) => void handleUpdate(todo, patch)}
+          onDelete={(todo) => void handleDelete(todo)}
           emptyHint={emptyHint}
           emptyAction={emptyAction}
         />
@@ -330,4 +330,4 @@ const Memo = () => {
   );
 };
 
-export default Memo;
+export default Todo;

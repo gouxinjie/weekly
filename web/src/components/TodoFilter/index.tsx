@@ -1,19 +1,19 @@
 /**
- * @component 备忘筛选列
- * @description 备忘态的左列，占位与宽度同周报态的时间轴：顶部固定「筛选」标题，
+ * @component 待办筛选列
+ * @description 待办态的左列，占位与宽度同周报态的时间轴：顶部固定「筛选」标题，
  * 下方纵向排列全部 / 本周 / 未完成 / 已完成，行尾右对齐计数；
  * 选中项为浅底圆角卡片 + 主色加粗文字（与时间轴选中周同一套强调方式）
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-22
  */
-import type { MemoFilter as MemoFilterValue } from '@/types/models';
+import type { TodoFilter as TodoFilterValue } from '@/types/models';
 import styles from './index.module.scss';
 
 /** 筛选项定义 */
 interface FilterOption {
   /** 筛选标识 */
-  key: MemoFilterValue;
+  key: TodoFilterValue;
   /** 展示文案 */
   label: string;
 }
@@ -26,22 +26,22 @@ const OPTIONS: FilterOption[] = [
   { key: 'done', label: '已完成' },
 ];
 
-/** MemoFilter 属性 */
-interface MemoFilterProps {
+/** TodoFilter 属性 */
+interface TodoFilterProps {
   /** 当前筛选值 */
-  value: MemoFilterValue;
+  value: TodoFilterValue;
   /** 切换筛选的回调 */
-  onChange: (value: MemoFilterValue) => void;
+  onChange: (value: TodoFilterValue) => void;
   /** 各筛选项的计数 */
-  counts: Record<MemoFilterValue, number>;
+  counts: Record<TodoFilterValue, number>;
 }
 
 /**
- * 备忘筛选列
- * @param props - 见 MemoFilterProps
+ * 待办筛选列
+ * @param props - 见 TodoFilterProps
  * @returns 左列筛选节点
  */
-const MemoFilter = ({ value, onChange, counts }: MemoFilterProps) => (
+const TodoFilter = ({ value, onChange, counts }: TodoFilterProps) => (
   <div className={styles.panel}>
     <h2 className={styles.title}>筛选</h2>
 
@@ -50,7 +50,7 @@ const MemoFilter = ({ value, onChange, counts }: MemoFilterProps) => (
       那套语义要求方向键切换与配套的 tabpanel，只写一半反而会让读屏软件给出错误的交互预期。
       四个按钮互斥、点击即切换，aria-pressed 恰好表达这一点，键盘用 Tab 也完全可达。
     */}
-    <div className={styles.items} role="group" aria-label="备忘筛选">
+    <div className={styles.items} role="group" aria-label="待办筛选">
       {OPTIONS.map((option) => {
         const selected = option.key === value;
         return (
@@ -70,4 +70,4 @@ const MemoFilter = ({ value, onChange, counts }: MemoFilterProps) => (
   </div>
 );
 
-export default MemoFilter;
+export default TodoFilter;

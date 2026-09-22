@@ -26,10 +26,12 @@ $track-x: $track-gutter + math.div($dot-col, 2);
   height: 100%;
 }
 
-/* 栏目标题：深色加粗，靠字号与字重压住下方列表，不再另加分隔线 */
+/* 栏目标题：深色加粗，靠字号与字重压住下方列表，不再另加分隔线；
+   上下内边距收紧（8 / 4），让标题更贴近顶栏分隔线，把纵向空间让给下方周列表。
+   此处数值与 TodoFilter 的 .title 保持一致，待办态切换时标题不发生纵向位移 */
 .title {
   flex: 0 0 auto;
-  padding: var(--space-4) var(--space-4) var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-1);
   color: var(--color-text);
   font-size: 15px;
   font-weight: 700;

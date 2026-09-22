@@ -1,5 +1,5 @@
 /**
- * @component 备忘清单
+ * @component 待办清单
  * @description 按「所属周」分组（手动标记的周优先，未标记时按创建时间推导）的待办清单，
  * 支持勾选、就地编辑、删除、置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
  * @author gouxinjie
@@ -9,10 +9,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
-import { MAX_WEEK, MEMO_CATEGORIES, START_YEAR } from '@/constants';
-import { getCurrentWeek, getMemoWeek, getWeekOfDate, isPastWeek } from '@/utils/week';
-import type { UpdateMemoBody } from '@/types/api';
-import type { Memo, WeekRef } from '@/types/models';
+import { MAX_WEEK, TODO_CATEGORIES, START_YEAR } from '@/constants';
+import { getCurrentWeek, getTodoWeek, getWeekOfDate, isPastWeek } from '@/utils/week';
+import type { UpdateTodoBody } from '@/types/api';
+import type { Todo, WeekRef } from '@/types/models';
 import styles from './index.module.scss';
 
 /** 空态动作 */
@@ -29,34 +29,34 @@ interface WeekGroup {
   key: string;
   /** 组标题 */
   label: string;
-  /** 该组备忘 */
-  memos: Memo[];
+  /** 该组待办 */
+  todos: Todo[];
 }
 
-/** MemoList 属性 */
-interface MemoListProps {
-  /** 已按筛选条件过滤后的备忘 */
-  memos: Memo[];
+/** TodoList 属性 */
+interface TodoListProps {
+  /** 已按筛选条件过滤后的待办 */
+  todos: Todo[];
   /** 是否正在加载 */
   loading: boolean;
-  /** 局部更新某条备忘 */
-  onUpdate: (memo: Memo, patch: Partial<UpdateMemoBody>) => void;
-  /** 删除某条备忘 */
-  onDelete: (memo: Memo) => void;
+  /** 局部更新某条待办 */
+  onUpdate: (todo: Todo, patch: Partial<UpdateTodoBody>) => void;
+  /** 删除某条待办 */
+  onDelete: (todo: Todo) => void;
   /** 空态文案 */
   emptyHint: string;
   /** 空态附带的动作，可选 */
   emptyAction?: EmptyAction;
 }
 
-/** MemoItem 属性 */
-interface MemoItemProps {
-  /** 备忘条目 */
-  memo: Memo;
+/** TodoItem 属性 */
+interface TodoItemProps {
+  /** 待办条目 */
+  todo: Todo;
   /** 局部更新回调 */
-  onUpdate: (memo: Memo, patch: Partial<UpdateMemoBody>) => void;
+  onUpdate: (todo: Todo, patch: Partial<UpdateTodoBody>) => void;
   /** 删除回调 */
-  onDelete: (memo: Memo) => void;
+  onDelete: (todo: Todo) => void;
   /** 周次标记可选的年份列表 */
   yearOptions: SelectOption[];
   /** 菜单是否展开（受控，保证同一时间只展开一个菜单） */
@@ -76,7 +76,7 @@ const CATEGORY_CLASS: Record<string, string> = {
 
 /** 分类标识 → 展示文案映射 */
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  MEMO_CATEGORIES.map((item) => [item.value, item.label]),
+  TODO_CATEGORIES.map((item) => [item.value, item.label]),
 );
 
 /** 周次可选项：一年最多 53 周，与 props 和状态无关，放在模块级避免每次渲染重建 */
@@ -98,16 +98,16 @@ const groupTitle = (year: number, week: number, current: WeekRef): string =>
     : `第 ${week} 周 · ${String(year).slice(-2)}`;
 
 /**
- * 单条备忘
- * @param props - 见 MemoItemProps
+ * 单条待办
+ * @param props - 见 TodoItemProps
  * @returns 条目节点
  */
-const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMenu }: MemoItemProps) => {
+const TodoItem = ({ todo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMenu }: TodoItemProps) => {
   const [editing, setEditing] = useState(false);
-  const [draftText, setDraftText] = useState(memo.text);
+  const [draftText, setDraftText] = useState(todo.text);
   const [tagging, setTagging] = useState(false);
-  const [draftYear, setDraftYear] = useState(memo.year ?? getCurrentWeek().year);
-  const [draftWeek, setDraftWeek] = useState(memo.week ?? getCurrentWeek().week);
+  const [draftYear, setDraftYear] = useState(todo.year ?? getCurrentWeek().year);
+  const [draftWeek, setDraftWeek] = useState(todo.week ?? getCurrentWeek().week);
   const [error, setError] = useState('');
   /** 文本是否超出展示行数被截断，决定要不要出现「展开全部」 */
   const [overflowing, setOverflowing] = useState(false);
@@ -119,20 +119,20 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
   /** 展示态文本引用：用于量出文本是否被行数限制截断 */
   const textRef = useRef<HTMLButtonElement | null>(null);
 
-  const tagged = memo.year !== null && memo.week !== null;
+  const tagged = todo.year !== null && todo.week !== null;
 
   /*
    * 过期：标记周次已过且未完成。只挂一枚危险色小提示，不动整行底色——
    * 整行底色曾是 --color-bg-active，那是全站「选中态」用的颜色，
-   * 结果每一条补写往期周的备忘看起来都像被选中/被高亮，反而更吵。
+   * 结果每一条补写往期周的待办看起来都像被选中/被高亮，反而更吵。
    * 仅视觉提示，不改变分组、不推提醒。
    */
-  const overdue = !memo.done && tagged && isPastWeek(memo.year as number, memo.week as number);
+  const overdue = !todo.done && tagged && isPastWeek(todo.year as number, todo.week as number);
 
   /** 未标记时按创建时间推导出的记录周次，仅用于「未标记」提示的说明文案 */
   const recordedWeek = useMemo(
-    () => (tagged ? null : getWeekOfDate(memo.createdAt)),
-    [tagged, memo.createdAt],
+    () => (tagged ? null : getWeekOfDate(todo.createdAt)),
+    [tagged, todo.createdAt],
   );
 
   /** 提交文本编辑 */
@@ -140,14 +140,14 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
     const next = draftText.trim();
     if (next === '') {
       setError('待办内容不能为空');
-      setDraftText(memo.text);
+      setDraftText(todo.text);
       setEditing(false);
       return;
     }
     setError('');
     setEditing(false);
-    if (next !== memo.text) {
-      onUpdate(memo, { text: next });
+    if (next !== todo.text) {
+      onUpdate(todo, { text: next });
     }
   };
 
@@ -186,7 +186,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
     return () => {
       window.removeEventListener('resize', measure);
     };
-  }, [expanded, editing, memo.text]);
+  }, [expanded, editing, todo.text]);
 
   /**
    * 菜单项公共行为：先收起菜单再执行动作
@@ -199,7 +199,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
   };
 
   /** 展示态文本类名：完成态置灰，展开态解除行数限制 */
-  const textClass = [memo.done ? styles.textDone : styles.text, ...(expanded ? [styles.textExpanded] : [])].join(' ');
+  const textClass = [todo.done ? styles.textDone : styles.text, ...(expanded ? [styles.textExpanded] : [])].join(' ');
 
   return (
     <li className={styles.item}>
@@ -207,9 +207,9 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
         <input
           type="checkbox"
           className={styles.checkbox}
-          checked={memo.done}
-          onChange={() => onUpdate(memo, { done: !memo.done })}
-          aria-label={memo.done ? '标记为未完成' : '标记为已完成'}
+          checked={todo.done}
+          onChange={() => onUpdate(todo, { done: !todo.done })}
+          aria-label={todo.done ? '标记为未完成' : '标记为已完成'}
         />
 
         {editing ? (
@@ -224,13 +224,13 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             onChange={(event) => setDraftText(event.target.value)}
             onBlur={commitText}
             onKeyDown={(event) => {
-              // 备忘是单行条目：回车直接提交，不写入换行
+              // 待办是单行条目：回车直接提交，不写入换行
               if (event.key === 'Enter') {
                 event.preventDefault();
                 commitText();
               }
               if (event.key === 'Escape') {
-                setDraftText(memo.text);
+                setDraftText(todo.text);
                 setEditing(false);
               }
             }}
@@ -241,34 +241,34 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             type="button"
             className={textClass}
             onClick={() => {
-              setDraftText(memo.text);
+              setDraftText(todo.text);
               setEditing(true);
             }}
             title="点击编辑"
           >
-            {memo.text}
+            {todo.text}
           </button>
         )}
 
         <div className={styles.meta}>
           {/* 置顶标记：与分类标签同处右侧标签区，不做悬在行外的角标 */}
-          {memo.pinned ? <span className={styles.pinMark}>置顶</span> : null}
+          {todo.pinned ? <span className={styles.pinMark}>置顶</span> : null}
 
           {/* 分类标签：彩色胶囊 */}
-          {memo.category !== '' ? (
-            <span className={`${styles.category} ${CATEGORY_CLASS[memo.category] ?? ''}`}>
-              {CATEGORY_LABEL[memo.category] ?? memo.category}
+          {todo.category !== '' ? (
+            <span className={`${styles.category} ${CATEGORY_CLASS[todo.category] ?? ''}`}>
+              {CATEGORY_LABEL[todo.category] ?? todo.category}
             </span>
           ) : null}
 
           {/*
             未标记：所属周由创建时间推导，周次已由分组标题表达，这里只提示「它不是手动标记的」——
-            这才是真正看不出来的差别：未标记的条目不会进周报右栏的「本周参考」。
+            这才是真正看不出来的差别：未标记的条目不会进周报右栏的「本周待办」。
           */}
           {recordedWeek !== null ? (
             <span
               className={styles.unmarkedTag}
-              title={`未标记到任何周，不计入周报「本周参考」；按创建时间属于 ${recordedWeek.year} 年第 ${recordedWeek.week} 周`}
+              title={`未标记到任何周，不计入周报「本周待办」；按创建时间属于 ${recordedWeek.year} 年第 ${recordedWeek.week} 周`}
             >
               未标记
             </span>
@@ -305,21 +305,21 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
                 <button
                   type="button"
                   className={styles.menuItem}
-                  onClick={() => runMenuAction(() => onUpdate(memo, { pinned: !memo.pinned }))}
+                  onClick={() => runMenuAction(() => onUpdate(todo, { pinned: !todo.pinned }))}
                 >
-                  {memo.pinned ? '取消置顶' : '置顶'}
+                  {todo.pinned ? '取消置顶' : '置顶'}
                 </button>
                 <div className={styles.menuCategories}>
-                  {MEMO_CATEGORIES.map((option) => (
+                  {TODO_CATEGORIES.map((option) => (
                     <button
                       key={option.value}
                       type="button"
                       className={
-                        memo.category === option.value
+                        todo.category === option.value
                           ? styles.menuCatActive
                           : styles.menuCat
                       }
-                      onClick={() => runMenuAction(() => onUpdate(memo, { category: option.value }))}
+                      onClick={() => runMenuAction(() => onUpdate(todo, { category: option.value }))}
                     >
                       {option.label}
                     </button>
@@ -328,7 +328,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
                 <button
                   type="button"
                   className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                  onClick={() => runMenuAction(() => onDelete(memo))}
+                  onClick={() => runMenuAction(() => onDelete(todo))}
                 >
                   删除
                 </button>
@@ -369,7 +369,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             className={styles.tagAction}
             onClick={() => {
               setTagging(false);
-              onUpdate(memo, { year: draftYear, week: draftWeek });
+              onUpdate(todo, { year: draftYear, week: draftWeek });
             }}
           >
             保存
@@ -379,7 +379,7 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
             className={styles.tagAction}
             onClick={() => {
               setTagging(false);
-              onUpdate(memo, { year: null, week: null });
+              onUpdate(todo, { year: null, week: null });
             }}
           >
             清除
@@ -393,12 +393,12 @@ const MemoItem = ({ memo, onUpdate, onDelete, yearOptions, menuOpen, onToggleMen
 };
 
 /**
- * 备忘清单
- * @param props - 见 MemoListProps
+ * 待办清单
+ * @param props - 见 TodoListProps
  * @returns 分组清单节点
  */
-const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }: MemoListProps) => {
-  /** 当前展开菜单的备忘 ID，null 表示全部收起 */
+const TodoList = ({ todos, loading, onUpdate, onDelete, emptyHint, emptyAction }: TodoListProps) => {
+  /** 当前展开菜单的待办 ID，null 表示全部收起 */
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   /** 年份可选项：从起点年份到当前年份 */
@@ -415,9 +415,9 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
   const groups = useMemo<WeekGroup[]>(() => {
     const current = getCurrentWeek();
 
-    const sorted = [...memos].sort((a, b) => {
-      const weekA = getMemoWeek(a);
-      const weekB = getMemoWeek(b);
+    const sorted = [...todos].sort((a, b) => {
+      const weekA = getTodoWeek(a);
+      const weekB = getTodoWeek(b);
       if (weekA.year !== weekB.year) return weekB.year - weekA.year;
       if (weekA.week !== weekB.week) return weekB.week - weekA.week;
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -426,19 +426,19 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
 
     // Map 保持插入顺序，因此分组的先后就是上面排好的周次先后
     const map = new Map<string, WeekGroup>();
-    for (const memo of sorted) {
-      const { year, week } = getMemoWeek(memo);
+    for (const todo of sorted) {
+      const { year, week } = getTodoWeek(todo);
       const key = `${year}-${week}`;
       const bucket = map.get(key);
       if (bucket === undefined) {
-        map.set(key, { key, label: groupTitle(year, week, current), memos: [memo] });
+        map.set(key, { key, label: groupTitle(year, week, current), todos: [todo] });
       } else {
-        bucket.memos.push(memo);
+        bucket.todos.push(todo);
       }
     }
 
     return [...map.values()];
-  }, [memos]);
+  }, [todos]);
 
   if (loading) {
     // 套用空态容器，让加载提示与清单保持同一段左内边距
@@ -449,7 +449,7 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
     );
   }
 
-  if (memos.length === 0) {
+  if (todos.length === 0) {
     return (
       <div className={styles.empty}>
         <p className={styles.hint}>{emptyHint}</p>
@@ -468,19 +468,19 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
         <section key={group.key} className={styles.group}>
           <h3 className={styles.groupTitle}>
             {group.label}
-            <span className={styles.groupCount}>（{group.memos.length}）</span>
+            <span className={styles.groupCount}>（{group.todos.length}）</span>
           </h3>
           <ul>
-            {group.memos.map((memo) => (
-              <MemoItem
-                key={memo.id}
-                memo={memo}
+            {group.todos.map((todo) => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 yearOptions={yearOptions}
-                menuOpen={openMenuId === memo.id}
+                menuOpen={openMenuId === todo.id}
                 onToggleMenu={() =>
-                  setOpenMenuId(openMenuId === memo.id ? null : memo.id)
+                  setOpenMenuId(openMenuId === todo.id ? null : todo.id)
                 }
               />
             ))}
@@ -491,4 +491,4 @@ const MemoList = ({ memos, loading, onUpdate, onDelete, emptyHint, emptyAction }
   );
 };
 
-export default MemoList;
+export default TodoList;

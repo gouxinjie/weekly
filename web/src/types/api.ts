@@ -3,7 +3,7 @@
  * 说明：统一响应格式定义在 client.ts 的类型守卫里，这里只放各接口的入参与出参。
  */
 
-import type { Memo, User, WeekRef, Weekly } from './models';
+import type { Todo, User, WeekRef, Weekly } from './models';
 
 /** 登录 / 注册入参 */
 export interface CredentialsBody {
@@ -27,8 +27,8 @@ export interface SaveWeeklyBody {
   content: string;
 }
 
-/** 新建备忘入参 */
-export interface CreateMemoBody {
+/** 新建待办入参 */
+export interface CreateTodoBody {
   /** 待办文本 */
   text: string;
   /** 标记的 ISO 年 */
@@ -39,8 +39,8 @@ export interface CreateMemoBody {
   category?: string;
 }
 
-/** 更新备忘入参（全量提交） */
-export interface UpdateMemoBody {
+/** 更新待办入参（全量提交） */
+export interface UpdateTodoBody {
   /** 待办文本 */
   text: string;
   /** 是否完成 */
@@ -64,5 +64,5 @@ export type WeeklyResponse = Weekly;
 /** 已写周次列表出参 */
 export type WrittenWeeksResponse = WeekRef[];
 
-/** 备忘列表接口出参 */
-export type MemoListResponse = Memo[];
+/** 待办列表接口出参 */
+export type TodoListResponse = Todo[];

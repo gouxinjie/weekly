@@ -60,7 +60,7 @@ export const getCurrentWeek = (): WeekRef => {
 };
 
 /**
- * 判断某个周次是否已过去（用于备忘过期高亮）
+ * 判断某个周次是否已过去（用于待办过期高亮）
  * @param year - ISO 年
  * @param week - ISO 周次
  * @returns 该周是否早于当前周

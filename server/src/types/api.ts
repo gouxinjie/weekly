@@ -76,8 +76,8 @@ export interface SaveWeeklyBody {
   content: string;
 }
 
-/** 备忘出参 */
-export interface MemoDto {
+/** 待办出参 */
+export interface TodoDto {
   /** 主键 */
   id: number;
   /** 待办文本 */
@@ -96,8 +96,8 @@ export interface MemoDto {
   createdAt: string;
 }
 
-/** 新建备忘入参 */
-export interface CreateMemoBody {
+/** 新建待办入参 */
+export interface CreateTodoBody {
   /** 待办文本 */
   text: string;
   /** 可选标记的 ISO 年 */
@@ -108,8 +108,8 @@ export interface CreateMemoBody {
   category?: string;
 }
 
-/** 更新备忘入参（全量提交，语义简单且天然防字段注入） */
-export interface UpdateMemoBody {
+/** 更新待办入参（全量提交，语义简单且天然防字段注入） */
+export interface UpdateTodoBody {
   /** 待办文本 */
   text: string;
   /** 是否完成 */

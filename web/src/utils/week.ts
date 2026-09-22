@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { MAX_WEEK, START_YEAR } from '@/constants';
-import type { Memo, WeekRef } from '@/types/models';
+import type { Todo, WeekRef } from '@/types/models';
 
 /**
  * 加载 dayjs 的 ISO 周插件
@@ -33,7 +33,7 @@ export const getCurrentWeek = (): WeekRef => {
 
 /**
  * 取某个日期所属的 ISO 年与周次
- * @param date - 可被 dayjs 解析的日期或时间戳字符串（如备忘的创建时间）
+ * @param date - 可被 dayjs 解析的日期或时间戳字符串（如待办的创建时间）
  * @returns 该日期所属的 ISO 年与周次
  * @remarks 同 getCurrentWeek：必须用 isoWeekYear() 而不是 year()，
  *          否则 2027-01-01 会被算成 2027 年第 1 周，而它实际属于 2026 年第 53 周。
@@ -44,16 +44,16 @@ export const getWeekOfDate = (date: string): WeekRef => {
 };
 
 /**
- * 取一条备忘的所属周：手动标记的周优先，未标记时按创建时间推导
- * @param memo - 备忘（只需要 year / week / createdAt 三个字段）
+ * 取一条待办的所属周：手动标记的周优先，未标记时按创建时间推导
+ * @param todo - 待办（只需要 year / week / createdAt 三个字段）
  * @returns 所属的 ISO 年与周次
  * @remarks 清单分组、左侧「本周」筛选、行上的状态标签都必须走这一个口径，
- *          否则会出现「同一条备忘在分组里属于本周、却不出现在『本周』筛选里」这种自相矛盾。
+ *          否则会出现「同一条待办在分组里属于本周、却不出现在『本周』筛选里」这种自相矛盾。
  */
-export const getMemoWeek = (memo: Pick<Memo, 'year' | 'week' | 'createdAt'>): WeekRef =>
-  memo.year !== null && memo.week !== null
-    ? { year: memo.year, week: memo.week }
-    : getWeekOfDate(memo.createdAt);
+export const getTodoWeek = (todo: Pick<Todo, 'year' | 'week' | 'createdAt'>): WeekRef =>
+  todo.year !== null && todo.week !== null
+    ? { year: todo.year, week: todo.week }
+    : getWeekOfDate(todo.createdAt);
 
 /**
  * 校验 (year, week) 是否落在时间轴范围内
@@ -130,7 +130,7 @@ export const getWeekIndexInMonth = (year: number, week: number): number => {
 };
 
 /**
- * 判断某个周次是否已过去（用于备忘过期提示，仅视觉）
+ * 判断某个周次是否已过去（用于待办过期提示，仅视觉）
  * @param year - ISO 年
  * @param week - ISO 周次
  * @returns 该周是否早于当前周
@@ -140,5 +140,3 @@ export const isPastWeek = (year: number, week: number): boolean => {
   if (year !== current.year) return year < current.year;
   return week < current.week;
 };
-
-

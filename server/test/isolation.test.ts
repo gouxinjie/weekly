@@ -29,14 +29,14 @@ const loadModules = async () => {
 
   const userDb = await import('../src/db/user.js');
   const weeklyDb = await import('../src/db/weekly.js');
-  const memoDb = await import('../src/db/memo.js');
+  const todoDb = await import('../src/db/todo.js');
   const weekUtil = await import('../src/utils/week.js');
 
   return {
     db: dbIndex.db,
     ...userDb,
     ...weeklyDb,
-    ...memoDb,
+    ...todoDb,
     ...weekUtil,
   };
 };
@@ -86,33 +86,33 @@ test('A 改 B 的周报（拿 B 的 id）：changes 为 0，表现为失败', as
   );
 });
 
-test('A 删 B 的备忘：失败，且 B 的记录仍在', async () => {
+test('A 删 B 的待办：失败，且 B 的记录仍在', async () => {
   const m = await modulesPromise;
-  const bMemo = m.insertMemo(bId, 'B 的待办', null, null);
+  const bTodo = m.insertTodo(bId, 'B 的待办', null, null);
 
-  const deleted = m.deleteMemo(aId, bMemo.id);
+  const deleted = m.deleteTodo(aId, bTodo.id);
 
-  assert.equal(deleted, false, '删别人的备忘必须返回 false');
-  assert.ok(m.findMemo(bId, bMemo.id), 'B 的备忘应仍然存在');
+  assert.equal(deleted, false, '删别人的待办必须返回 false');
+  assert.ok(m.findTodo(bId, bTodo.id), 'B 的待办应仍然存在');
 });
 
-test('A 改 B 的备忘：失败', async () => {
+test('A 改 B 的待办：失败', async () => {
   const m = await modulesPromise;
-  const bMemo = m.insertMemo(bId, 'B 的另一条待办', null, null);
+  const bTodo = m.insertTodo(bId, 'B 的另一条待办', null, null);
 
-  const changed = m.updateMemo(aId, bMemo.id, '被篡改', true, true, null, null);
+  const changed = m.updateTodo(aId, bTodo.id, '被篡改', true, true, null, null);
 
-  assert.equal(changed, false, '改别人的备忘必须返回 false');
-  assert.equal(m.findMemo(bId, bMemo.id)?.text, 'B 的另一条待办');
+  assert.equal(changed, false, '改别人的待办必须返回 false');
+  assert.equal(m.findTodo(bId, bTodo.id)?.text, 'B 的另一条待办');
 });
 
 test('A 的列表查询只返回自己的记录，不含 B 的', async () => {
   const m = await modulesPromise;
 
-  m.insertMemo(aId, 'A 独有的待办', null, null);
-  const aList = m.listMemos(aId);
+  m.insertTodo(aId, 'A 独有的待办', null, null);
+  const aList = m.listTodos(aId);
 
-  assert.ok(aList.length > 0, 'A 应有自己的备忘');
+  assert.ok(aList.length > 0, 'A 应有自己的待办');
   assert.ok(
     aList.every((item) => item.user_id === aId),
     'A 的列表里不应出现他人的记录',

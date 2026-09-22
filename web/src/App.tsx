@@ -3,14 +3,14 @@
  * @description 定义 4 条路由与登录态守卫；登录页为独立布局，其余页面共用应用骨架
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-22
  */
 import type { ReactElement } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import Login from '@/pages/Login';
-import Memo from '@/pages/Memo';
 import Settings from '@/pages/Settings';
+import Todo from '@/pages/Todo';
 import Weekly from '@/pages/Weekly';
 import { getCurrentWeek } from '@/utils/week';
 import styles from './App.module.scss';
@@ -43,6 +43,16 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
 };
 
 /**
+ * 备忘旧链接兼容跳转
+ * @description 备忘模块更名为待办后，把历史 /memo 链接（连同 ?year=&week= 等查询参数）重定向到 /todo
+ * @returns 重定向节点
+ */
+const RedirectMemoToTodo = () => {
+  const location = useLocation();
+  return <Navigate to={`/todo${location.search}`} replace />;
+};
+
+/**
  * 跳转到当前 ISO 周
  * @returns 重定向节点
  */
@@ -69,11 +79,14 @@ const App = () => (
           }
         />
 
+        {/* 旧链接兼容：备忘模块更名为待办，历史 /memo 链接一律重定向到 /todo */}
+        <Route path="/memo" element={<RedirectMemoToTodo />} />
+
         <Route
-          path="/memo"
+          path="/todo"
           element={
             <RequireAuth>
-              <Memo />
+              <Todo />
             </RequireAuth>
           }
         />

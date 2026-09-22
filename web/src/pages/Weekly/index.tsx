@@ -1,7 +1,7 @@
 /**
  * @component 工作台（周报）
  * @description 三栏骨架：左栏时间轴、中栏周报（展示态为封面卡片 + 渲染内容，编辑态为工具条 + 编辑器）、
- * 右栏抽屉（展示态为本周备忘，编辑态为模板 / 插入 / 导出面板）
+ * 右栏抽屉（展示态为本周待办，编辑态为模板 / 插入 / 导出面板）
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-20
@@ -439,11 +439,11 @@ const Weekly = () => {
             onExport={handleExport}
           />
         ) : (
-          // 跳备忘页时把当前查看的周带上，新建的待办才会默认落到这一周而不是「今天所在的周」
+          // 跳待办页时把当前查看的周带上，新建的待办才会默认落到这一周而不是「今天所在的周」
           <WeeklyReference
             year={year}
             week={week}
-            onGoMemo={() => navigate(`/memo?year=${year}&week=${week}`)}
+            onGoTodo={() => navigate(`/todo?year=${year}&week=${week}`)}
           />
         )
       }

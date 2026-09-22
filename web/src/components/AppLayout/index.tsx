@@ -1,7 +1,7 @@
 /**
  * @component 应用骨架
  * @description 登录后的统一骨架：左栏（logo + 纵向页签 + 内容 + 账号区），右侧可选顶栏、左列与右栏抽屉；
- * 周报态为「左栏 + 左列（时间轴）+ 中栏 + 右栏」，备忘态为「左栏 + 左列（筛选）+ 中栏」，
+ * 周报态为「左栏 + 左列（时间轴）+ 中栏 + 右栏」，待办态为「左栏 + 左列（筛选）+ 中栏」，
  * 左栏与左列宽度两态一致、切换不跳动
  * @author gouxinjie
  * @created 2026-09-18
@@ -14,7 +14,7 @@ import { getCurrentWeek } from '@/utils/week';
 import styles from './index.module.scss';
 
 /** 左栏标签页标识 */
-export type AppTab = 'weekly' | 'memo' | 'settings';
+export type AppTab = 'weekly' | 'todo' | 'settings';
 
 /** 页签定义：标识 + 文案 + 线性图标 */
 interface TabItem {
@@ -37,8 +37,8 @@ const TABS: TabItem[] = [
     ),
   },
   {
-    key: 'memo',
-    label: '备忘',
+    key: 'todo',
+    label: '待办',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
         <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
@@ -62,13 +62,13 @@ const TABS: TabItem[] = [
 interface AppLayoutProps {
   /** 当前激活的标签页，决定左栏页签高亮项 */
   activeTab: AppTab;
-  /** 可选左列：渲染在页签栏右侧、顶栏下方。周报态放时间轴树，备忘态放筛选列表 */
+  /** 可选左列：渲染在页签栏右侧、顶栏下方。周报态放时间轴树，待办态放筛选列表 */
   leftColumn?: ReactNode;
   /** 可选顶栏：渲染在左列与中栏之上（周报态的年份 / 搜索 / 通知条，编辑态与展示态都传） */
   topbar?: ReactNode;
   /** 中栏内容 */
   children: ReactNode;
-  /** 右栏内容；备忘态不传，此栏整栏移除而不是收起 */
+  /** 右栏内容；待办态不传，此栏整栏移除而不是收起 */
   drawer?: ReactNode;
   /** 右栏是否收起，仅在传入 drawer 时生效，默认 false */
   drawerCollapsed?: boolean;
@@ -146,7 +146,7 @@ const AppLayout = ({
           {topbar !== undefined ? <header className={styles.topbar}>{topbar}</header> : null}
 
           <div className={styles.contentRow}>
-            {/* 左列：周报态为时间轴，备忘态为筛选；周报态的年份切换正好压在它上方 */}
+            {/* 左列：周报态为时间轴，待办态为筛选；周报态的年份切换正好压在它上方 */}
             {leftColumn !== undefined ? (
               <aside className={styles.leftColumn}>{leftColumn}</aside>
             ) : null}

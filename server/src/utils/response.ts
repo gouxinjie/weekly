@@ -18,8 +18,8 @@ export const ERROR_CODES = {
   RATE_LIMITED: 'RATE_LIMITED',
   /** 周次越界（早于起点年份或超过周次上限） */
   WEEK_OUT_OF_RANGE: 'WEEK_OUT_OF_RANGE',
-  /** 备忘不存在或不属于当前用户 */
-  MEMO_NOT_FOUND: 'MEMO_NOT_FOUND',
+  /** 待办不存在或不属于当前用户 */
+  TODO_NOT_FOUND: 'TODO_NOT_FOUND',
   /** 服务异常 */
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
