@@ -13,8 +13,12 @@ import { Color, TextStyle } from '@tiptap/extension-text-style';
 
 /** renderMarkdown 收到的合成节点（只用到 attrs） */
 interface MarkdownSyntheticNode {
-  /** 节点属性；textStyle 标记时可能含 color / gradient */
-  attrs?: { color?: string | null; gradient?: string | null } | null;
+  /** 节点属性；textStyle 标记时可能含 color / backgroundColor / gradient */
+  attrs?: {
+    color?: string | null;
+    backgroundColor?: string | null;
+    gradient?: string | null;
+  } | null;
 }
 
 /** renderMarkdown 收到的渲染辅助函数 */
@@ -123,20 +127,38 @@ export const TextStyleWithMarkdown = TextStyle.extend({
 
   /**
    * 序列化为 Markdown
-   * @param node - 合成节点，attrs 含 color / gradient
+   * @param node - 合成节点，attrs 含 color / backgroundColor / gradient
    * @param helpers - 渲染辅助函数
-   * @returns 序列化结果：渐变优先，其次纯色，都没有时原样返回子内容
+   * @returns 序列化结果：渐变与纯色互斥，背景色可与两者叠加；都没有时原样返回子内容
+   * @remarks 所有样式合并进一个 span（预览侧按属性白名单整体解析），
+   *          属性顺序固定，便于解析端用同一条白名单表达式匹配
    */
   renderMarkdown(node, helpers) {
     const children = helpers.renderChildren();
+    const parts: string[] = [];
+
     const gradient = node.attrs?.gradient;
     if (typeof gradient === 'string' && SAFE_GRADIENT.test(gradient)) {
-      return `<span style="color:transparent;background-image:${gradient};-webkit-background-clip:text;background-clip:text">${children}</span>`;
+      parts.push(
+        `background-image:${gradient}`,
+        '-webkit-background-clip:text',
+        'background-clip:text',
+        'color:transparent',
+      );
+    } else {
+      const color = node.attrs?.color;
+      if (typeof color === 'string' && SAFE_COLOR.test(color)) {
+        parts.push(`color:${color}`);
+      }
     }
 
-    const color = node.attrs?.color;
-    if (typeof color !== 'string' || !SAFE_COLOR.test(color)) return children;
-    return `<span style="color:${color}">${children}</span>`;
+    const backgroundColor = node.attrs?.backgroundColor;
+    if (typeof backgroundColor === 'string' && SAFE_COLOR.test(backgroundColor)) {
+      parts.push(`background-color:${backgroundColor}`);
+    }
+
+    if (parts.length === 0) return children;
+    return `<span style="${parts.join(';')}">${children}</span>`;
   },
 });
 

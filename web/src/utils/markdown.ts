@@ -31,65 +31,82 @@ const COLOR_VALUE =
 const GRADIENT_VALUE = `linear-gradient\\(\\s*90deg\\s*,\\s*${COLOR_VALUE}\\s*,\\s*${COLOR_VALUE}\\s*\\)`;
 
 /**
- * 编辑器序列化的颜色 / 渐变 span 开标签
- * 捕获组：1 = 纯色值、2 = 纯色内文、3 = 渐变值、4 = 渐变内文
+ * 单条允许出现在颜色 span 上的样式声明：属性名与取值都在白名单内
+ * 覆盖编辑器序列化会产出的全部样式：color / background-color / gradient 三件套
  */
-const COLOR_SPAN_RE = new RegExp(
-  `<span style="color:(${COLOR_VALUE})">([\\s\\S]*?)</span>` +
-    `|<span style="color:transparent;background-image:(${GRADIENT_VALUE});-webkit-background-clip:text;background-clip:text">([\\s\\S]*?)</span>`,
-  'g',
-);
+const STYLE_ENTRY =
+  `(?:color|background-color|background-image|-webkit-background-clip|background-clip)` +
+  `\\s*:\\s*(?:${COLOR_VALUE}|${GRADIENT_VALUE}|text|transparent)`;
 
-/** 颜色开哨兵（私有区字符，正文几乎不可能出现），后跟色值或渐变值 */
-const COLOR_OPEN_SENTINEL = '\uE000';
-/** 颜色闭哨兵 */
-const COLOR_CLOSE_SENTINEL = '\uE001';
+/** 颜色 span 的样式串白名单：一到多条白名单声明，以分号连接 */
+const STYLE_LIST_RE = new RegExp(`^${STYLE_ENTRY}(?:;${STYLE_ENTRY})*$`);
 
-/** 哨兵值白名单：纯色或渐变（与 COLOR_SPAN_RE 的取值部分一致） */
-const SENTINEL_VALUE_RE = new RegExp(`^(?:${COLOR_VALUE}|${GRADIENT_VALUE})$`);
+/** 颜色 span 开标签：样式串作为捕获组（取值随后再做白名单校验） */
+const COLOR_SPAN_OPEN = /^<span style="([^"]*)">/;
+
+/** 颜色 span 闭标签 */
+const COLOR_SPAN_CLOSE = '</span>';
+
+/** 内联样式属性名到 React 样式键的映射（未列出的属性一律忽略） */
+const STYLE_KEY_MAP: Record<string, string> = {
+  color: 'color',
+  'background-color': 'backgroundColor',
+  'background-image': 'backgroundImage',
+  'background-clip': 'backgroundClip',
+  '-webkit-background-clip': 'WebkitBackgroundClip',
+};
 
 /**
- * 把编辑器序列化的颜色 / 渐变 span 换成哨兵标记
- * 说明：预览渲染在 html: false 下不解析任何原始 HTML（红线 2），
- * 颜色 span 会被当成普通文字。这里只把严格匹配白名单的颜色 / 渐变 span
- * 换成私有区哨兵，再由自定义 inline 规则解析成带样式的 React 节点。
- * @param source - Markdown 原文
- * @returns 替换后的文本
+ * 把内联样式串转成 React 样式对象
+ * @param raw - 形如「color:#fff;background-color:#000」的样式串（已通过白名单校验）
+ * @returns React 样式对象；React 的 style 只接受对象，字符串会被忽略
  */
-const preprocessColorSpans = (source: string): string =>
-  source.replace(
-    COLOR_SPAN_RE,
-    (
-      _match: string,
-      color: string | undefined,
-      colorInner: string,
-      gradient: string | undefined,
-      gradientInner: string,
-    ) => {
-      const value = color ?? gradient ?? '';
-      const inner = color !== undefined ? colorInner : gradientInner;
-      return `${COLOR_OPEN_SENTINEL}${value}${COLOR_CLOSE_SENTINEL}${inner}${COLOR_CLOSE_SENTINEL}`;
-    },
-  );
+const parseInlineStyle = (raw: string): CSSProperties => {
+  const style: Record<string, string> = {};
+
+  raw.split(';').forEach((entry) => {
+    const index = entry.indexOf(':');
+    if (index <= 0) return;
+
+    const key = STYLE_KEY_MAP[entry.slice(0, index).trim()];
+    if (key === undefined) return;
+
+    style[key] = entry.slice(index + 1).trim();
+  });
+
+  return style;
+};
 
 /**
- * 把哨兵还原成颜色 span（用于代码块 / 行内代码等不解析颜色的场景）
- * @param text - 含哨兵的文本
- * @returns 还原后的文本
+ * 找到与开标签配对的 </span> 位置
+ * @param src - 整段内联文本
+ * @param from - 内文起始下标
+ * @returns 配对闭标签的下标；找不到时返回 -1
+ * @remarks 按嵌套层数配对，保证嵌套的颜色 span 也能正确收口
  */
-const restoreColorSpans = (text: string): string =>
-  text
-    .replace(
-      new RegExp(
-        `${COLOR_OPEN_SENTINEL}([^${COLOR_CLOSE_SENTINEL}]+)${COLOR_CLOSE_SENTINEL}`,
-        'g',
-      ),
-      (_match: string, value: string) =>
-        value.startsWith('linear-gradient')
-          ? `<span style="color:transparent;background-image:${value};-webkit-background-clip:text;background-clip:text">`
-          : `<span style="color:${value}">`,
-    )
-    .replaceAll(COLOR_CLOSE_SENTINEL, '</span>');
+const findColorSpanEnd = (src: string, from: number): number => {
+  let depth = 1;
+  let cursor = from;
+
+  while (cursor < src.length) {
+    const nextOpen = src.indexOf('<span style="', cursor);
+    const nextClose = src.indexOf(COLOR_SPAN_CLOSE, cursor);
+    if (nextClose === -1) return -1;
+
+    // 先遇到更靠前的开标签就是嵌套一层
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth += 1;
+      cursor = nextOpen + 1;
+      continue;
+    }
+
+    depth -= 1;
+    if (depth === 0) return nextClose;
+    cursor = nextClose + COLOR_SPAN_CLOSE.length;
+  }
+
+  return -1;
+};
 
 /** GFM 任务列表标记：列表项开头的「[ ]」「[x]」 */
 const TASK_MARK = /^\[([ xX])\]\s+/;
@@ -181,40 +198,39 @@ md.core.ruler.after('inline', 'weekly-task-list', (state) => {
 });
 
 /**
- * 颜色哨兵的 inline 解析规则
- * 说明：注册在 text 规则之前，把「开哨兵 + 色值 + 闭哨兵」拆成 color_open /
- * color_close 两个 token，中间内容仍是普通文本 token，加粗等嵌套格式照常解析。
- * 色值必须命中白名单，未命中时按普通文本处理（不会吞内容）。
+ * 颜色 span 的 inline 解析规则
+ * 说明：注册在 text 规则之前（「<」是 text 规则的终止字符，因此每个标签位置都会被本规则轮到），
+ * 一次匹配「开标签 + 内文 + 配对闭标签」，产出 color_open / color_close 包住内文 token。
+ * 内文用 inline 解析递归处理，因此加粗、链接等格式照常生效；
+ * 样式串与内文都必须命中白名单，未命中时按普通文本处理（不会吞内容）。
  */
 md.inline.ruler.before('text', 'weekly-color', (state, silent) => {
-  const code = state.src.charCodeAt(state.pos);
+  if (state.src.charCodeAt(state.pos) !== 0x3c /* < */) return false;
 
-  // 开哨兵：读取色值并要求存在配对的闭哨兵
-  if (code === 0xe000) {
-    const close = state.src.indexOf(COLOR_CLOSE_SENTINEL, state.pos + 1);
-    if (close === -1) return false;
+  const open = COLOR_SPAN_OPEN.exec(state.src.slice(state.pos));
+  if (open === null) return false;
 
-    const color = state.src.slice(state.pos + 1, close);
-    if (!SENTINEL_VALUE_RE.test(color)) return false;
+  const style = open[1];
+  if (!STYLE_LIST_RE.test(style)) return false;
 
-    if (!silent) {
-      const token = state.push('color_open', '', 0);
-      token.attrSet('color', color);
-      state.pos = close + 1;
-    }
-    return true;
+  const innerStart = state.pos + open[0].length;
+  const innerEnd = findColorSpanEnd(state.src, innerStart);
+  if (innerEnd === -1) return false;
+
+  if (!silent) {
+    const token = state.push('color_open', '', 1);
+    token.attrSet('style', style);
+
+    // 内文再跑一遍 inline 解析，保证 span 内的加粗、链接等格式不被丢掉
+    const innerTokens: MdToken[] = [];
+    state.md.inline.parse(state.src.slice(innerStart, innerEnd), state.md, state.env, innerTokens);
+    innerTokens.forEach((innerToken) => state.tokens.push(innerToken));
+
+    state.push('color_close', '', -1);
+    state.pos = innerEnd + COLOR_SPAN_CLOSE.length;
   }
 
-  // 闭哨兵
-  if (code === 0xe001) {
-    if (!silent) {
-      state.push('color_close', '', 0);
-      state.pos += 1;
-    }
-    return true;
-  }
-
-  return false;
+  return true;
 });
 
 /**
@@ -270,21 +286,10 @@ const renderInline = (tokens: MdToken[]): ReactNode[] => {
     // token 序列是静态渲染，用「类型 + 下标」组合作为 key 已足够稳定
     const key = `${token.type}-${index}`;
 
-    // 颜色开标记：渲染为带 style 的 span（纯色或渐变），交给通用闭合逻辑收口
+    // 颜色开标记：渲染为带 style 的 span（纯色 / 背景色 / 渐变），交给通用闭合逻辑收口
     if (token.type === 'color_open') {
-      const value = getAttr(token, 'color');
-      // React 的 style 只接受对象，字符串形式会被忽略（颜色将不生效）
-      let style: CSSProperties | undefined;
-      if (value.startsWith('linear-gradient')) {
-        style = {
-          backgroundImage: value,
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
-        };
-      } else if (value !== '') {
-        style = { color: value };
-      }
+      const raw = getAttr(token, 'style');
+      const style = raw === '' ? undefined : parseInlineStyle(raw);
       stack.push({
         tag: 'span',
         props: style === undefined ? {} : { style },
@@ -322,7 +327,7 @@ const renderInline = (tokens: MdToken[]): ReactNode[] => {
         current.push(token.content);
         return;
       case 'code_inline':
-        current.push(createElement('code', { key }, restoreColorSpans(token.content)));
+        current.push(createElement('code', { key }, token.content));
         return;
       case 'softbreak':
         current.push(' ');
@@ -458,9 +463,7 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
         break;
       case 'fence':
       case 'code_block':
-        nodes.push(
-          createElement('pre', { key }, createElement('code', null, restoreColorSpans(token.content))),
-        );
+        nodes.push(createElement('pre', { key }, createElement('code', null, token.content)));
         i += 1;
         break;
       case 'hr':
@@ -483,4 +486,4 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
  * @returns React 节点数组，可直接放进 JSX
  */
 export const renderMarkdown = (source: string): ReactNode[] =>
-  parseBlocks(md.parse(preprocessColorSpans(source), {}), 0, null).nodes;
+  parseBlocks(md.parse(source, {}), 0, null).nodes;
