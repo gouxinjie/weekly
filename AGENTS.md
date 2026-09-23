@@ -361,8 +361,6 @@ interface TreeProps {
   /* 登录页 */
   --login-card-width:    420px;
   --login-card-inset-x:  92px;
-  --login-hero-inset-x:  84px;
-  --login-hero-inset-y:  104px;
 
   --space-1: 4px;  --space-2: 8px;   --space-3: 12px;
   --space-4: 16px; --space-6: 24px;  --space-8: 32px;
