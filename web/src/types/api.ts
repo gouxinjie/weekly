@@ -3,7 +3,7 @@
  * 说明：统一响应格式定义在 client.ts 的类型守卫里，这里只放各接口的入参与出参。
  */
 
-import type { Todo, User, WeekRef, Weekly } from './models';
+import type { Note, NoteColor, Todo, User, WeekRef, Weekly } from './models';
 
 /** 登录 / 注册入参 */
 export interface CredentialsBody {
@@ -61,6 +61,24 @@ export interface ReorderTodosBody {
   ids: number[];
 }
 
+/** 新建便签入参 */
+export interface CreateNoteBody {
+  /** 纯文本内容，缺省视为空串（先开一张空白便签再写） */
+  content?: string;
+  /** 便签纸颜色标识，缺省表示默认底色 */
+  color?: NoteColor;
+}
+
+/** 更新便签入参（全量提交） */
+export interface UpdateNoteBody {
+  /** 纯文本内容 */
+  content: string;
+  /** 便签纸颜色标识，空串表示默认底色 */
+  color: NoteColor;
+  /** 是否置顶 */
+  pinned: boolean;
+}
+
 /** 待办概要（M-09 页签角标） */
 export interface TodoSummary {
   /** 未完成的待办条数 */
@@ -78,3 +96,6 @@ export type WrittenWeeksResponse = WeekRef[];
 
 /** 待办列表接口出参 */
 export type TodoListResponse = Todo[];
+
+/** 便签列表接口出参 */
+export type NoteListResponse = Note[];

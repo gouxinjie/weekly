@@ -30,6 +30,7 @@ const loadModules = async () => {
   const userDb = await import('../src/db/user.js');
   const weeklyDb = await import('../src/db/weekly.js');
   const todoDb = await import('../src/db/todo.js');
+  const noteDb = await import('../src/db/note.js');
   const weekUtil = await import('../src/utils/week.js');
 
   return {
@@ -37,6 +38,7 @@ const loadModules = async () => {
     ...userDb,
     ...weeklyDb,
     ...todoDb,
+    ...noteDb,
     ...weekUtil,
   };
 };
@@ -196,4 +198,72 @@ test('红线 3：周次上限是 53，2027-01-01 归属 2026 年第 53 周', asy
   );
   assert.equal(m.isValidWeek(2026, 54), false, '超过 53 周必须被拒绝');
   assert.equal(m.isValidWeek(2026, 0), false, '周次从 1 开始');
+});
+
+test('A 读 B 的便签：查不到，列表里也不出现', async () => {
+  const m = await modulesPromise;
+  const bNote = m.insertNote(bId, 'B 的便签', 'yellow');
+  // 先给 A 建一张：否则下面的列表断言作用在空数组上，恒真而失去意义
+  const aNote = m.insertNote(aId, 'A 自己的便签');
+
+  assert.equal(m.findNote(aId, bNote.id), undefined, 'A 不应读到 B 的便签');
+
+  const aList = m.listNotes(aId);
+  assert.ok(aList.length > 0, '前置条件：A 应能读到自己的便签');
+  assert.ok(
+    aList.every((item) => item.user_id === aId),
+    'A 的便签列表里不应出现他人的记录',
+  );
+  assert.ok(
+    aList.some((item) => item.id === aNote.id),
+    'A 自己的便签应出现在列表里',
+  );
+  assert.ok(
+    aList.every((item) => item.id !== bNote.id),
+    'B 的便签不应出现在 A 的列表里',
+  );
+});
+
+test('便签计数只统计自己的：B 新增的便签不计入 A 的张数', async () => {
+  const m = await modulesPromise;
+  const before = m.countNotes(aId);
+
+  m.insertNote(bId, 'B 又一张便签');
+  m.insertNote(aId, 'A 又一张便签');
+
+  assert.equal(m.countNotes(aId), before + 1, '计数不应包含他人的记录');
+});
+
+test('A 改 B 的便签：失败，且 B 的内容与颜色不变', async () => {
+  const m = await modulesPromise;
+  const bNote = m.insertNote(bId, 'B 的另一张便签', 'blue');
+
+  const changed = m.updateNote(aId, bNote.id, '被篡改', 'pink', true);
+
+  assert.equal(changed, false, '改别人的便签必须返回 false');
+  const after = m.findNote(bId, bNote.id);
+  assert.equal(after?.content, 'B 的另一张便签');
+  assert.equal(after?.color, 'blue');
+  assert.equal(after?.pinned, 0, '置顶状态也不应被他人改动');
+});
+
+test('A 删 B 的便签：失败，且 B 的记录仍在', async () => {
+  const m = await modulesPromise;
+  const bNote = m.insertNote(bId, 'B 待删除的便签');
+
+  const deleted = m.deleteNote(aId, bNote.id);
+
+  assert.equal(deleted, false, '删别人的便签必须返回 false');
+  assert.ok(m.findNote(bId, bNote.id), 'B 的便签应仍然存在');
+});
+
+test('本人改自己的便签：成功，且置顶项排在列表最前', async () => {
+  const m = await modulesPromise;
+  const note = m.insertNote(aId, 'A 的便签');
+
+  assert.equal(m.updateNote(aId, note.id, 'A 改过的便签', 'green', true), true, '本人更新应成功');
+
+  const list = m.listNotes(aId);
+  assert.equal(list[0]?.id, note.id, '置顶的便签应排在最前');
+  assert.equal(list[0]?.content, 'A 改过的便签');
 });

@@ -120,5 +120,27 @@ export const migrate = (): number => {
     db.pragma('user_version = 4');
   }
 
+  // v5：新增便签表（PRD 4.4）。
+  // 与 todo 的两处刻意差异：
+  //   1. 没有 done —— 便签是「没成型的碎片」，不存在完成语义，与待办彻底分开；
+  //   2. 没有 year / week —— 便签不归属任何周次，不参与周报的时间轴。
+  // 也没有 sort_order：便签不做拖拽排序，列表按「置顶优先、新的在前」排列（pinned DESC, id DESC）。
+  if (current < 5) {
+    db.exec(`
+      CREATE TABLE note (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id    INTEGER NOT NULL,
+        content    TEXT    NOT NULL DEFAULT '',
+        color      TEXT    NOT NULL DEFAULT '',
+        pinned     INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT    NOT NULL,
+        updated_at TEXT    NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE
+      );
+      CREATE INDEX idx_note_user ON note (user_id, pinned, id);
+    `);
+    db.pragma('user_version = 5');
+  }
+
   return db.pragma('user_version', { simple: true }) as number;
 };

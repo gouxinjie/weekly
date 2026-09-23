@@ -136,6 +136,40 @@ export interface TodoSummaryDto {
   undone: number;
 }
 
+/** 便签出参 */
+export interface NoteDto {
+  /** 主键 */
+  id: number;
+  /** 纯文本内容，新建后未写时为空串 */
+  content: string;
+  /** 便签纸颜色标识，空串表示默认底色 */
+  color: string;
+  /** 是否置顶 */
+  pinned: boolean;
+  /** 创建时间 */
+  createdAt: string;
+  /** 最后更新时间 */
+  updatedAt: string;
+}
+
+/** 新建便签入参 */
+export interface CreateNoteBody {
+  /** 纯文本内容，允许为空串（先开一张空白便签再写） */
+  content?: string;
+  /** 便签纸颜色标识，缺省表示默认底色 */
+  color?: string;
+}
+
+/** 更新便签入参（全量提交，语义简单且天然防字段注入） */
+export interface UpdateNoteBody {
+  /** 纯文本内容 */
+  content: string;
+  /** 便签纸颜色标识，空串表示默认底色 */
+  color: string;
+  /** 是否置顶 */
+  pinned: boolean;
+}
+
 /** 健康检查出参 */
 export interface HealthDto {
   /** 服务存活标记 */

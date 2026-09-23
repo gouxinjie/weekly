@@ -55,6 +55,25 @@ export interface Todo {
   createdAt: string;
 }
 
+/** 便签纸颜色标识：空串表示默认底色，其余与服务端 routes/note.ts 的 NOTE_COLORS 一致 */
+export type NoteColor = '' | 'yellow' | 'green' | 'blue' | 'pink';
+
+/** 便签（独立模块：纯文本、无完成态、不归属任何周次） */
+export interface Note {
+  /** 主键 */
+  id: number;
+  /** 纯文本内容，新建后未写时为空串 */
+  content: string;
+  /** 便签纸颜色标识 */
+  color: NoteColor;
+  /** 是否置顶 */
+  pinned: boolean;
+  /** 创建时间 */
+  createdAt: string;
+  /** 最后更新时间 */
+  updatedAt: string;
+}
+
 /** 编辑模式：编辑 / 预览 */
 export type EditorMode = 'edit' | 'preview';
 

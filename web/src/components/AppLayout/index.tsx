@@ -21,8 +21,8 @@ import { getCurrentWeek } from '@/utils/week';
 import { isViewTransitionActive, navigateWithTransition } from '@/utils/routeTransition';
 import styles from './index.module.scss';
 
-/** 左栏标签页标识 */
-export type AppTab = 'weekly' | 'todo' | 'settings';
+/** 页签栏标签页标识 */
+export type AppTab = 'weekly' | 'todo' | 'notes' | 'settings';
 
 /** 页签定义：标识 + 文案 + 线性图标 */
 interface TabItem {
@@ -32,7 +32,7 @@ interface TabItem {
   icon: ReactNode;
 }
 
-/** 三个页签，顺序与设计稿一致 */
+/** 四个页签，顺序与设计稿一致 */
 const TABS: TabItem[] = [
   {
     key: 'weekly',
@@ -51,6 +51,16 @@ const TABS: TabItem[] = [
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
         <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
         <path d="m8.2 12.2 2.5 2.5 5-5.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'notes',
+    label: '便签',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <path d="M4.5 4.5h15V14l-4.5 4.5H4.5z" strokeLinejoin="round" />
+        <path d="M19.5 14H15v4.5" strokeLinejoin="round" />
       </svg>
     ),
   },

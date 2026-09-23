@@ -38,7 +38,7 @@
 .subtitle {
   margin-top: var(--space-1);
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* ===== 卡片 ===== */
@@ -58,7 +58,7 @@
   gap: var(--space-2);
   margin-bottom: var(--space-2);
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
@@ -75,7 +75,7 @@
 /* 卡片副标题：补充说明该组设置的作用范围，比标题再弱一级 */
 .cardDesc {
   color: var(--color-text-faint);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -129,7 +129,7 @@
 .profilePhone {
   color: var(--color-text-faint);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.02em;
 }
 
@@ -141,7 +141,7 @@
   border-radius: 999px;
   background-color: var(--color-saved-soft);
   color: var(--color-saved);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.6;
 }
@@ -207,7 +207,7 @@
 
 .actionDesc {
   color: var(--color-text-faint);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -232,7 +232,7 @@
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -268,7 +268,7 @@
 .infoLabel {
   flex: 0 0 auto;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* 值取等宽字体：版本号、域名、路径按字符对齐更清爽 */
@@ -276,7 +276,7 @@
   min-width: 0;
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   text-align: right;
   word-break: break-all;
 }
@@ -286,7 +286,7 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
   color: var(--color-text-faint);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
 }
 

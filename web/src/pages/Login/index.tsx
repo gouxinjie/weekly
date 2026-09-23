@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import loginBg from '@/assets/login-bg.jpg';
+import loginBg from '@/assets/login-bg.png';
 import { CONTACT_PHONE, REMEMBER_PHONE_KEY } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { navigateWithTransition } from '@/utils/routeTransition';

@@ -3,6 +3,7 @@
  * 说明：START_YEAR 与 MAX_WEEK 由构建时的环境变量注入（见 vite.config.ts 的 define），
  * 注入的是数字字面量，不会把整个环境变量表暴露到前端产物里。
  */
+import type { NoteColor } from '@/types/models';
 
 /** 时间轴起点年份（红线 3），必须与服务端一致，不可从用户注册时间推导 */
 export const START_YEAR: number = __START_YEAR__;
@@ -88,6 +89,30 @@ export const TODO_CATEGORIES: TodoCategoryOption[] = [
   { value: 'doc', label: '文档' },
   { value: 'life', label: '生活' },
 ];
+
+/** 便签纸颜色选项：value 与服务端 routes/note.ts 的 NOTE_COLORS 保持一致 */
+export interface NoteColorOption {
+  /** 颜色标识，空串表示默认底色 */
+  value: NoteColor;
+  /** 展示文案，用于颜色圆点的无障碍标签 */
+  label: string;
+}
+
+/** 便签纸颜色可选项，顺序固定；样式类名映射见 components/NoteCard */
+export const NOTE_COLORS: NoteColorOption[] = [
+  { value: '', label: '默认底色' },
+  { value: 'yellow', label: '黄色便签' },
+  { value: 'green', label: '绿色便签' },
+  { value: 'blue', label: '蓝色便签' },
+  { value: 'pink', label: '粉色便签' },
+];
+
+/**
+ * 单张便签的纯文本长度上限
+ * 说明：与服务端 constants.ts 的 NOTE_MAX_LENGTH 必须一致，
+ * 前端计数器与该上限对齐，服务端另有一道 schema 兜底。
+ */
+export const NOTE_MAX_CHARS = 2000;
 
 /** 新周报首次进入时注入的模板 */
 export const WEEKLY_TEMPLATE = `### 本周进展

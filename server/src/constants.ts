@@ -46,3 +46,14 @@ export const PHONE_PATTERN = '^1[3-9]\\d{9}$';
 
 /** 密码最短长度，与前端校验保持一致 */
 export const PASSWORD_MIN_LENGTH = 6;
+
+/** 单张便签的纯文本长度上限，与前端 constants/index.ts 的 NOTE_MAX_CHARS 保持一致 */
+export const NOTE_MAX_LENGTH = 2000;
+
+/**
+ * 单个用户的便签数量上限
+ * 说明：便签是唯一允许「空白即存在」的模块，新建成本最低，需要一个数量上限兜底，
+ * 否则登录用户可以无限灌数据（多用户共用一个库文件）。2000 张对「随手记」而言足够宽裕，
+ * 达到上限时新建会被拒绝，用户清理几张即可继续。
+ */
+export const NOTE_MAX_PER_USER = 2000;

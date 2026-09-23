@@ -1,0 +1,178 @@
+/**
+ * 工作台（便签）样式
+ * 布局要点：便签态是「页签栏 + 中栏」两栏，没有左列与右栏（与待办态的区别就在这里）。
+ * 中栏顶部标题行固定，下方是多列瀑布流的便签墙；列宽与墙宽取自 variables.scss。
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-6) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+/* 标题行右侧：搜索框 + 新建按钮 */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+
+/* 搜索框：图标绝对定位在左侧 */
+.searchField {
+  position: relative;
+  display: block;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 240px;
+  padding: 7px var(--space-3) 7px 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-subtle);
+  font-size: 12px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-faint);
+}
+
+/* 聚焦：描边转主色 + 一圈浅主色光晕 */
+.searchInput:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  outline: none;
+}
+
+/* 「＋ 新建」主色按钮 */
+.create {
+  flex: 0 0 auto;
+  padding: 7px var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: 12px;
+  transition: background-color 0.15s ease;
+}
+
+.create:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-6) 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-4) var(--space-6) 0;
+  overflow-y: auto;
+}
+
+/*
+ * 便签墙：多列瀑布流。
+ * 用 CSS 多列（column-width）而不是 grid：卡片高度随内容变化，
+ * grid 会把同一行的卡片拉到等高、留下大片空白，多列则按列依次填充、自动平衡。
+ * 列宽固定，列数随可用宽度自适应；墙本身限宽，超宽屏下不至于拉出一排过窄的列。
+ */
+.grid {
+  columns: var(--note-column-width);
+  column-gap: var(--space-4);
+  max-width: var(--note-wall-max-width);
+}
+
+.hint {
+  padding: var(--space-2) 0;
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-6);
+}
+
+/* 加载失败文案：与 .error（操作失败，固定在标题行下方）区分，这里只占空态区域的一行 */
+.loadError {
+  padding: var(--space-2) 0;
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
+/*
+ * 空态行动按钮
+ * 说明：不再是纯文字链接——浅主色底 + 主色文字 + 图标，给它「可点」的重量；
+ * hover 翻转为主色实底，与标题行主按钮共用同一套主色语义。
+ * inline-flex 让图标与文字对齐，图标取 currentColor，随文字一起变色。
+ */
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.emptyAction:hover {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* 按下只把底色压深一档，不改尺寸、不位移 */
+.emptyAction:active {
+  background-color: var(--color-accent-hover);
+  color: var(--color-on-accent);
+}
+
+.emptyActionIcon {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+}

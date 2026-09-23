@@ -20,6 +20,10 @@ export const ERROR_CODES = {
   WEEK_OUT_OF_RANGE: 'WEEK_OUT_OF_RANGE',
   /** 待办不存在或不属于当前用户 */
   TODO_NOT_FOUND: 'TODO_NOT_FOUND',
+  /** 便签不存在或不属于当前用户 */
+  NOTE_NOT_FOUND: 'NOTE_NOT_FOUND',
+  /** 便签数量已达单用户上限 */
+  NOTE_LIMIT_REACHED: 'NOTE_LIMIT_REACHED',
   /** 服务异常 */
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

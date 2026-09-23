@@ -1,0 +1,211 @@
+/**
+ * 便签卡片样式
+ * 说明：整卡底色即便签纸色，五套色由 NOTE_COLORS 映射的类名决定，取值来自 variables.scss
+ * 的 --note-bg-* 变量（三套主题各有一组）。内容区是无边框的 textarea，随输入自撑高度。
+ * 卡片自身不参与多列拆分（break-inside: avoid），否则会被拦腰截到下一列。
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  /* 多列瀑布流中不被拆到两列去 */
+  break-inside: avoid;
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* 卡内有焦点（正在写这张便签）：描主色边 + 一圈浅主色光晕，与其它输入控件同一套反馈 */
+.card:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+/* ===== 便签纸颜色：与 constants 的 NOTE_COLORS 一一对应 ===== */
+.colorDefault {
+  background-color: var(--note-bg-default);
+}
+
+.colorYellow {
+  background-color: var(--note-bg-yellow);
+}
+
+.colorGreen {
+  background-color: var(--note-bg-green);
+}
+
+.colorBlue {
+  background-color: var(--note-bg-blue);
+}
+
+.colorPink {
+  background-color: var(--note-bg-pink);
+}
+
+/* ===== 内容区 ===== */
+.text {
+  width: 100%;
+  /* 空白便签也留出可写的余地，不至于只有一行高 */
+  min-height: 84px;
+  max-height: 320px;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.7;
+  /* 换行与连续空格原样保留：便签常用来记对齐过的短清单 */
+  white-space: pre-wrap;
+  resize: none;
+  overflow-y: auto;
+}
+
+.text::placeholder {
+  color: var(--color-text-faint);
+}
+
+/* 焦点反馈由整卡承担，textarea 自身不再画轮廓 */
+.text:focus {
+  outline: none;
+}
+
+/* ===== 底部：时间 / 保存态 / 操作区 ===== */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  margin-top: var(--space-2);
+}
+
+/*
+ * 更新时间：用 --color-text-muted 而不是 --color-text-faint。
+ * 便签底色比页面底色浅/深不一（五套便签纸色横跨亮暗），
+ * --color-text-faint 在浅色便签上只有约 2.6:1、深色主题下约 3.8:1，达不到 WCAG AA 的 4.5:1；
+ * --color-text-muted 在五种底色与三套主题下均 ≥ 4.5:1。
+ */
+.time {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.state {
+  color: var(--color-saved-strong);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.stateError {
+  color: var(--color-danger);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 接近字数上限时的计数：等宽数字，与更新时间同一档字号，不去抢保存态的视线 */
+.limit {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 操作区推到行尾 */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: var(--space-1);
+}
+
+/* 颜色圆点：12px 的小圆，底色即该便签纸色 */
+.dot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.dot:hover {
+  transform: scale(1.15);
+}
+
+/* 当前颜色：外扩一圈主色环，靠两层阴影画出来，不占布局空间 */
+.dotActive {
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 3.5px var(--color-accent);
+}
+
+.dotDefault {
+  background-color: var(--note-bg-default);
+}
+
+.dotYellow {
+  background-color: var(--note-bg-yellow);
+}
+
+.dotGreen {
+  background-color: var(--note-bg-green);
+}
+
+.dotBlue {
+  background-color: var(--note-bg-blue);
+}
+
+.dotPink {
+  background-color: var(--note-bg-pink);
+}
+
+/* 置顶 / 删除：24px 的图标按钮 */
+.action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background-color: transparent;
+  color: var(--color-text-faint);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.action:hover {
+  background-color: var(--color-bg-active);
+  color: var(--color-text);
+}
+
+/* 已置顶：常驻主色，一眼能看出这张在置顶区 */
+.actionActive {
+  color: var(--color-accent);
+}
+
+.actionActive:hover {
+  color: var(--color-accent-hover);
+}

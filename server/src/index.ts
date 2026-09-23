@@ -4,6 +4,7 @@ import type { FastifyError } from 'fastify';
 import { config } from './config';
 import { migrate } from './db/index';
 import { authRoutes } from './routes/auth';
+import { noteRoutes } from './routes/note';
 import { todoRoutes } from './routes/todo';
 import { weeklyRoutes } from './routes/weekly';
 import { ERROR_CODES, fail, internalError } from './utils/response';
@@ -49,6 +50,7 @@ const start = async (): Promise<void> => {
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(weeklyRoutes, { prefix: '/api/weekly' });
   await app.register(todoRoutes, { prefix: '/api/todo' });
+  await app.register(noteRoutes, { prefix: '/api/notes' });
 
   // 统一错误处理：参数校验失败归为 400，其余异常一律 500 且不透出内部细节
   app.setErrorHandler((error: FastifyError, request, reply) => {

@@ -77,6 +77,24 @@ export interface TodoRow {
   updated_at: string;
 }
 
+/** note 表行类型 */
+export interface NoteRow {
+  /** 主键 */
+  id: number;
+  /** 归属用户 ID */
+  user_id: number;
+  /** 纯文本内容，允许为空串（新建后还没写） */
+  content: string;
+  /** 便签纸颜色标识：空串表示默认底色，其余取值见 routes/note.ts 的 NOTE_COLORS */
+  color: string;
+  /** 是否置顶：0 普通 / 1 置顶 */
+  pinned: number;
+  /** 创建时间，ISO 8601 字符串 */
+  created_at: string;
+  /** 最后更新时间，ISO 8601 字符串 */
+  updated_at: string;
+}
+
 /** login_attempt 表行类型 */
 export interface LoginAttemptRow {
   /** 主键 */

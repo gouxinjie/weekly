@@ -1,6 +1,6 @@
 /**
  * @component 应用根组件
- * @description 定义 4 条路由与登录态守卫；登录页为独立布局，其余页面共用应用骨架
+ * @description 定义 5 条路由与登录态守卫；登录页为独立布局，其余页面共用应用骨架
  * @author gouxinjie
  * @created 2026-09-18
  * @updated 2026-09-23
@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { TodoCountProvider } from '@/contexts/TodoCountContext';
 import Login from '@/pages/Login';
+import Notes from '@/pages/Notes';
 import Settings from '@/pages/Settings';
 import Todo from '@/pages/Todo';
 import Weekly from '@/pages/Weekly';
@@ -93,6 +94,15 @@ const App = () => (
               element={
                 <RequireAuth>
                   <Todo />
+                </RequireAuth>
+              }
+            />
+
+            <Route
+              path="/notes"
+              element={
+                <RequireAuth>
+                  <Notes />
                 </RequireAuth>
               }
             />
