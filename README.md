@@ -193,3 +193,11 @@ cd web && npm run build        # 产出 web/dist/，由 Nginx 托管
 | `doc/weekly-PRD.md` | 产品需求文档，唯一事实来源 |
 | `AGENTS.md` | 代码规范、目录与命名约定、设计变量 |
 | `ui.png` | 界面设计稿 |
+
+---
+
+## 开源协议
+
+[MIT](LICENSE) © 2026 gouxinjie
+
+可自由使用、修改、分发（含商用），只需保留版权与许可声明。

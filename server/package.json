@@ -2,6 +2,7 @@
   "name": "weekly-server",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "weekly 后端 API 服务（Fastify + SQLite）",
   "main": "dist/index.js",
   "scripts": {

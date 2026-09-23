@@ -2,6 +2,7 @@
   "name": "weekly-web",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "weekly 前端 SPA（React 19 + Vite）",
   "type": "module",
   "scripts": {
