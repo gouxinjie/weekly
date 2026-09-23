@@ -584,6 +584,14 @@ const Weekly = () => {
                 <span className={styles.cardMonthWeek}>{formatWeekMonthLabel(year, week)}</span>
                 <span className={styles.cardSpacer} />
                 {isWritten ? <span className={styles.writtenBadge}>已写</span> : null}
+                {/* 查看入口：进入编辑态看完整内容，放在标题行右侧 */}
+                <button
+                  type="button"
+                  className={styles.viewAll}
+                  onClick={() => changeMode('edit')}
+                >
+                  查看全部 ›
+                </button>
               </header>
 
               <div className={styles.cardBody}>
@@ -595,15 +603,6 @@ const Weekly = () => {
                   <MarkdownPreview source={content} />
                 )}
               </div>
-
-              {/* 查看入口：进入编辑态看完整内容 */}
-              <button
-                type="button"
-                className={styles.viewAll}
-                onClick={() => changeMode('edit')}
-              >
-                查看全部 ›
-              </button>
 
               <footer className={styles.cardMeta}>
                 <span className={styles.metaTime}>

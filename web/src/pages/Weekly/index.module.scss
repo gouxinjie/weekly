@@ -343,11 +343,12 @@
   padding: var(--space-2) var(--space-6) 0;
 }
 
-/* 卡片底部的「查看全部」：主色软底胶囊，作为卡片的主要操作入口保持醒目 */
+/* 标题行右侧的「查看全部」：主色软底胶囊，作为卡片的主要操作入口保持醒目。
+   标题行按基线对齐，按钮改用垂直居中避免被基线拉低 */
 .viewAll {
-  align-self: flex-start;
-  margin: var(--space-2) var(--space-6) var(--space-3);
-  padding: 5px var(--space-4);
+  align-self: center;
+  margin-left: var(--space-2);
+  padding: 4px var(--space-3);
   border: none;
   border-radius: var(--radius-sm);
   background-color: var(--color-accent-soft);

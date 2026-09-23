@@ -17,6 +17,7 @@ import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
 import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
+import { ColorWithTransparentReset, TextStyleWithMarkdown } from './textStyleMarkdown';
 import styles from './index.module.scss';
 
 /** 编辑器对外暴露的能力 */
@@ -78,6 +79,9 @@ const MarkdownEditor = ({ value, onChange, editorRef, onEditorReady }: MarkdownE
   const editor = useEditor({
     extensions: [
       StarterKit,
+      // 文本样式标记（含 Markdown 序列化支持）必须先于 Color 注册，后者给它挂 color 属性
+      TextStyleWithMarkdown,
+      ColorWithTransparentReset,
       Markdown,
       TaskList,
       TaskItem.configure({ nested: true }),

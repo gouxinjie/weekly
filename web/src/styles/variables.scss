@@ -61,6 +61,10 @@
   --color-cat-life: #4a8b3c;
   --color-cat-life-bg: #eaf3e6;
 
+  /* 悬停提示气泡：深底反白（工具条按钮的自定义 tooltip） */
+  --tooltip-bg: #33383b;
+  --tooltip-text: #ffffff;
+
   /* 引言卡：右栏「本周待办」底部，浅绿到浅蓝的斜向渐变 + 右下角柔光 */
   --color-quote-from: #e8f0ec;
   --color-quote-to: #dfe9ec;
@@ -156,6 +160,10 @@
   --color-cat-life: #6fae5c;
   --color-cat-life-bg: #273526;
 
+  /* 深色下气泡底比页面底更亮一档，才能从深底上浮出来 */
+  --tooltip-bg: #454f49;
+  --tooltip-text: #ffffff;
+
   --color-quote-from: #253430;
   --color-quote-to: #232e31;
   --color-quote-glow: rgb(111 165 144 / 20%);
@@ -209,6 +217,10 @@
   /* 生活与已保存同色，与亮色主题（两者同为 #4a8b3c）保持一致 */
   --color-cat-life: #3f7530;
   --color-cat-life-bg: #ebf1e3;
+
+  /* 气泡底取暖调深褐，与米黄纸感协调 */
+  --tooltip-bg: #4a4334;
+  --tooltip-text: #ffffff;
 
   --color-quote-from: #efe7d5;
   --color-quote-to: #e9e4d5;

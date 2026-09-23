@@ -20,6 +20,7 @@
 }
 
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -56,4 +57,186 @@
 .button:disabled {
   color: var(--color-text-faint);
   cursor: not-allowed;
+}
+
+/* ---------- 悬停提示气泡 ---------- */
+
+/* 提示气泡：深底反白，参考系统 tooltip 观感；文案取自按钮的 data-tip 属性。
+   悬停约 0.4s 后淡入，避免快速扫过工具条时气泡乱闪 */
+.button::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, -2px);
+  z-index: var(--z-pop);
+  padding: 5px 10px;
+  border-radius: var(--radius-xs);
+  background-color: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease 0.4s,
+    visibility 0.12s ease 0.4s,
+    transform 0.12s ease 0.4s;
+}
+
+/* 悬停或键盘聚焦时浮现气泡（聚焦提示兼顾无障碍） */
+.button:hover::after,
+.button:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* 激活态按钮不显示气泡：颜色按钮展开菜单时气泡会压在菜单上 */
+.button.active::after {
+  content: none;
+}
+
+/* ---------- 文字颜色下拉 ---------- */
+
+/* 颜色按钮的容器：作为计算菜单坐标与「点击外部关闭」的判定范围 */
+.colorWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 颜色按钮内容：字母 A + 底部当前色条 */
+.colorLabel {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+/* 底部色条：展示当前选中颜色，未选色时跟随文字色 */
+.colorUnderline {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background-color: currentColor;
+}
+
+/* 下拉菜单：固定定位于视口（坐标由组件按按钮位置计算），
+   避免被祖先容器的 overflow 裁切；极限情况下内部滚动。
+   宽度 = 色板 236px（10×20 + 9×4 间隙）+ 左右内边距 24px */
+.colorMenu {
+  position: fixed;
+  z-index: var(--z-pop);
+  width: 260px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: var(--space-3);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+/* 菜单分区标题 */
+.menuTitle {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* 首个分区标题不加上边距 */
+.menuTitle:first-child {
+  margin-top: 0;
+}
+
+/* 单行色块容器（默认行 / 渐变行） */
+.menuRow {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* 色板网格：10 列固定列宽，列宽与色块尺寸保持一致 */
+.palette {
+  display: grid;
+  grid-template-columns: repeat(10, 20px);
+  gap: 4px;
+  margin-top: var(--space-1);
+}
+
+/* 默认行的大色块：清除颜色与渐变 */
+.defaultSwatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: #000000;
+  color: #ffffff;
+}
+
+/* 默认行对勾尺寸 */
+.defaultSwatch svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* 默认行文字标签 */
+.defaultLabel {
+  align-self: center;
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+/* 渐变块：横向长条，展示渐变背景 */
+.gradientSwatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 选中态：轻微放大标识，不再使用描边 */
+.swatchActive {
+  transform: scale(1.15);
+}
+
+/* 单个色块：固定尺寸，避免在 flex/grid 中被拉伸；
+   必须显式清掉 button 的 UA 默认边框，否则会出现深色描边 */
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 选中角标（对勾）：常白 + 深色投影，任何底色上都清晰 */
+.swatch svg,
+.gradientSwatch svg {
+  width: 14px;
+  height: 14px;
+  color: #ffffff;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+
+/* 悬停时轻微放大，标识可点；已选中的保持更大的选中比例 */
+.swatch:not(.swatchActive):hover,
+.gradientSwatch:not(.swatchActive):hover {
+  transform: scale(1.1);
 }

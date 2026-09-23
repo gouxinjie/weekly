@@ -1,6 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import { createElement } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * Markdown 渲染工具
@@ -22,6 +22,74 @@ type MdToken = ReturnType<MarkdownItInstance['parse']>[number];
 
 /** 危险协议黑名单：命中后链接降级为不可点击，阻断 javascript: / data: 等 XSS 载体 */
 const DANGEROUS_URL = /^\s*(?:javascript|data|vbscript|file)\s*:/i;
+
+/** 颜色值片段（与编辑器序列化白名单一致）：十六进制 / rgb() / rgba() */
+const COLOR_VALUE =
+  '(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgba?\\(\\s*[\\d.]+(?:\\s*,\\s*[\\d.]+%?){2,3}\\s*\\))';
+
+/** 渐变值片段：仅允许水平两段式 linear-gradient，色段命中颜色白名单 */
+const GRADIENT_VALUE = `linear-gradient\\(\\s*90deg\\s*,\\s*${COLOR_VALUE}\\s*,\\s*${COLOR_VALUE}\\s*\\)`;
+
+/**
+ * 编辑器序列化的颜色 / 渐变 span 开标签
+ * 捕获组：1 = 纯色值、2 = 纯色内文、3 = 渐变值、4 = 渐变内文
+ */
+const COLOR_SPAN_RE = new RegExp(
+  `<span style="color:(${COLOR_VALUE})">([\\s\\S]*?)</span>` +
+    `|<span style="color:transparent;background-image:(${GRADIENT_VALUE});-webkit-background-clip:text;background-clip:text">([\\s\\S]*?)</span>`,
+  'g',
+);
+
+/** 颜色开哨兵（私有区字符，正文几乎不可能出现），后跟色值或渐变值 */
+const COLOR_OPEN_SENTINEL = '\uE000';
+/** 颜色闭哨兵 */
+const COLOR_CLOSE_SENTINEL = '\uE001';
+
+/** 哨兵值白名单：纯色或渐变（与 COLOR_SPAN_RE 的取值部分一致） */
+const SENTINEL_VALUE_RE = new RegExp(`^(?:${COLOR_VALUE}|${GRADIENT_VALUE})$`);
+
+/**
+ * 把编辑器序列化的颜色 / 渐变 span 换成哨兵标记
+ * 说明：预览渲染在 html: false 下不解析任何原始 HTML（红线 2），
+ * 颜色 span 会被当成普通文字。这里只把严格匹配白名单的颜色 / 渐变 span
+ * 换成私有区哨兵，再由自定义 inline 规则解析成带样式的 React 节点。
+ * @param source - Markdown 原文
+ * @returns 替换后的文本
+ */
+const preprocessColorSpans = (source: string): string =>
+  source.replace(
+    COLOR_SPAN_RE,
+    (
+      _match: string,
+      color: string | undefined,
+      colorInner: string,
+      gradient: string | undefined,
+      gradientInner: string,
+    ) => {
+      const value = color ?? gradient ?? '';
+      const inner = color !== undefined ? colorInner : gradientInner;
+      return `${COLOR_OPEN_SENTINEL}${value}${COLOR_CLOSE_SENTINEL}${inner}${COLOR_CLOSE_SENTINEL}`;
+    },
+  );
+
+/**
+ * 把哨兵还原成颜色 span（用于代码块 / 行内代码等不解析颜色的场景）
+ * @param text - 含哨兵的文本
+ * @returns 还原后的文本
+ */
+const restoreColorSpans = (text: string): string =>
+  text
+    .replace(
+      new RegExp(
+        `${COLOR_OPEN_SENTINEL}([^${COLOR_CLOSE_SENTINEL}]+)${COLOR_CLOSE_SENTINEL}`,
+        'g',
+      ),
+      (_match: string, value: string) =>
+        value.startsWith('linear-gradient')
+          ? `<span style="color:transparent;background-image:${value};-webkit-background-clip:text;background-clip:text">`
+          : `<span style="color:${value}">`,
+    )
+    .replaceAll(COLOR_CLOSE_SENTINEL, '</span>');
 
 /** GFM 任务列表标记：列表项开头的「[ ]」「[x]」 */
 const TASK_MARK = /^\[([ xX])\]\s+/;
@@ -113,6 +181,43 @@ md.core.ruler.after('inline', 'weekly-task-list', (state) => {
 });
 
 /**
+ * 颜色哨兵的 inline 解析规则
+ * 说明：注册在 text 规则之前，把「开哨兵 + 色值 + 闭哨兵」拆成 color_open /
+ * color_close 两个 token，中间内容仍是普通文本 token，加粗等嵌套格式照常解析。
+ * 色值必须命中白名单，未命中时按普通文本处理（不会吞内容）。
+ */
+md.inline.ruler.before('text', 'weekly-color', (state, silent) => {
+  const code = state.src.charCodeAt(state.pos);
+
+  // 开哨兵：读取色值并要求存在配对的闭哨兵
+  if (code === 0xe000) {
+    const close = state.src.indexOf(COLOR_CLOSE_SENTINEL, state.pos + 1);
+    if (close === -1) return false;
+
+    const color = state.src.slice(state.pos + 1, close);
+    if (!SENTINEL_VALUE_RE.test(color)) return false;
+
+    if (!silent) {
+      const token = state.push('color_open', '', 0);
+      token.attrSet('color', color);
+      state.pos = close + 1;
+    }
+    return true;
+  }
+
+  // 闭哨兵
+  if (code === 0xe001) {
+    if (!silent) {
+      state.push('color_close', '', 0);
+      state.pos += 1;
+    }
+    return true;
+  }
+
+  return false;
+});
+
+/**
  * 校验链接安全性
  * @param url - 原始链接
  * @returns 安全时返回原链接，否则返回占位符 '#'
@@ -145,8 +250,8 @@ const INLINE_OPEN_TAG: Record<string, string> = {
 interface InlineFrame {
   /** HTML 标签名 */
   tag: string;
-  /** 标签属性 */
-  props: Record<string, string>;
+  /** 标签属性（style 必须是对象，React 不接受字符串形式） */
+  props: Record<string, string | CSSProperties>;
   /** 子节点 */
   children: ReactNode[];
 }
@@ -164,6 +269,31 @@ const renderInline = (tokens: MdToken[]): ReactNode[] => {
   tokens.forEach((token, index) => {
     // token 序列是静态渲染，用「类型 + 下标」组合作为 key 已足够稳定
     const key = `${token.type}-${index}`;
+
+    // 颜色开标记：渲染为带 style 的 span（纯色或渐变），交给通用闭合逻辑收口
+    if (token.type === 'color_open') {
+      const value = getAttr(token, 'color');
+      // React 的 style 只接受对象，字符串形式会被忽略（颜色将不生效）
+      let style: CSSProperties | undefined;
+      if (value.startsWith('linear-gradient')) {
+        style = {
+          backgroundImage: value,
+          WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
+          color: 'transparent',
+        };
+      } else if (value !== '') {
+        style = { color: value };
+      }
+      stack.push({
+        tag: 'span',
+        props: style === undefined ? {} : { style },
+        children: [],
+      });
+      current = stack[stack.length - 1].children;
+      return;
+    }
+
     const openTag = INLINE_OPEN_TAG[token.type];
 
     if (openTag !== undefined) {
@@ -192,7 +322,7 @@ const renderInline = (tokens: MdToken[]): ReactNode[] => {
         current.push(token.content);
         return;
       case 'code_inline':
-        current.push(createElement('code', { key }, token.content));
+        current.push(createElement('code', { key }, restoreColorSpans(token.content)));
         return;
       case 'softbreak':
         current.push(' ');
@@ -329,7 +459,7 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
       case 'fence':
       case 'code_block':
         nodes.push(
-          createElement('pre', { key }, createElement('code', null, token.content)),
+          createElement('pre', { key }, createElement('code', null, restoreColorSpans(token.content))),
         );
         i += 1;
         break;
@@ -353,4 +483,4 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
  * @returns React 节点数组，可直接放进 JSX
  */
 export const renderMarkdown = (source: string): ReactNode[] =>
-  parseBlocks(md.parse(source, {}), 0, null).nodes;
+  parseBlocks(md.parse(preprocessColorSpans(source), {}), 0, null).nodes;
