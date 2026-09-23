@@ -343,19 +343,23 @@
   padding: var(--space-2) var(--space-6) 0;
 }
 
-/* 卡片底部的「查看全部」文字链 */
+/* 卡片底部的「查看全部」：主色软底胶囊，作为卡片的主要操作入口保持醒目 */
 .viewAll {
   align-self: flex-start;
   margin: var(--space-2) var(--space-6) var(--space-3);
-  padding: 0;
+  padding: 5px var(--space-4);
   border: none;
-  background-color: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
 }
 
 .viewAll:hover {
-  color: var(--color-accent);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 /* 元信息行：更新时间（带时钟图标）+ 字数 */
