@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it';
 import { createElement } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { FONT_SIZE_PATTERN } from '@/constants';
 
 /**
  * Markdown 渲染工具
@@ -31,15 +32,22 @@ const COLOR_VALUE =
 const GRADIENT_VALUE = `linear-gradient\\(\\s*90deg\\s*,\\s*${COLOR_VALUE}\\s*,\\s*${COLOR_VALUE}\\s*\\)`;
 
 /**
- * 单条允许出现在颜色 span 上的样式声明：属性名与取值都在白名单内
- * 覆盖编辑器序列化会产出的全部样式：color / background-color / gradient 三件套
+ * 单条允许出现在样式 span 上的声明：属性名与可用取值成对约束。
+ * 原先是属性名白名单与取值白名单各自独立匹配，`color:16px` 这种两边单看都合法、
+ * 组合起来毫无意义的声明也能通过；成对之后每种属性只认自己的取值。
+ * 覆盖编辑器序列化会产出的全部样式：
+ * color / background-color / background-image + background-clip（渐变文字）/ font-size
  */
-const STYLE_ENTRY =
-  `(?:color|background-color|background-image|-webkit-background-clip|background-clip)` +
-  `\\s*:\\s*(?:${COLOR_VALUE}|${GRADIENT_VALUE}|text|transparent)`;
+const STYLE_ENTRY = [
+  `color\\s*:\\s*(?:${COLOR_VALUE}|transparent)`,
+  `background-color\\s*:\\s*(?:${COLOR_VALUE}|transparent)`,
+  `background-image\\s*:\\s*${GRADIENT_VALUE}`,
+  `(?:-webkit-)?background-clip\\s*:\\s*text`,
+  `font-size\\s*:\\s*${FONT_SIZE_PATTERN}`,
+].join('|');
 
-/** 颜色 span 的样式串白名单：一到多条白名单声明，以分号连接 */
-const STYLE_LIST_RE = new RegExp(`^${STYLE_ENTRY}(?:;${STYLE_ENTRY})*$`);
+/** 样式 span 的样式串白名单：一到多条白名单声明，以分号连接 */
+const STYLE_LIST_RE = new RegExp(`^(?:${STYLE_ENTRY})(?:;(?:${STYLE_ENTRY}))*$`);
 
 /** 颜色 span 开标签：样式串作为捕获组（取值随后再做白名单校验） */
 const COLOR_SPAN_OPEN = /^<span style="([^"]*)">/;
@@ -54,6 +62,7 @@ const STYLE_KEY_MAP: Record<string, string> = {
   'background-image': 'backgroundImage',
   'background-clip': 'backgroundClip',
   '-webkit-background-clip': 'WebkitBackgroundClip',
+  'font-size': 'fontSize',
 };
 
 /**

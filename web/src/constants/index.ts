@@ -99,3 +99,33 @@ export const WEEKLY_TEMPLATE = `### 本周进展
 
 /** 忘记密码联系方式（G-05：人工核对后重置） */
 export const CONTACT_PHONE = '13113183859';
+
+/** 正文默认字号：编辑器基础字号，也是字号下拉没有设置过字号时的回显值 */
+export const DEFAULT_FONT_SIZE = '14px';
+
+/** 字号档位（与设计稿一致），顺序即下拉中的排列顺序 */
+export const FONT_SIZE_OPTIONS: string[] = [
+  '12px',
+  '13px',
+  '14px',
+  '15px',
+  '16px',
+  '19px',
+  '22px',
+  '24px',
+  '29px',
+  '32px',
+  '40px',
+  '48px',
+];
+
+/**
+ * 字号白名单正则源码（不含定界符）：8–72px 的整数
+ * 说明：档位最高 48px，上限放宽到 72px 以容忍从外部粘贴进来的更大字号。
+ * 编辑器（解析与渲染）与预览（解析内联样式）共用这一份定义——
+ * 各写一份时极易只改一侧，出现「编辑区显示正常、预览里字号丢失」的隐蔽回归。
+ */
+export const FONT_SIZE_PATTERN = '(?:[89]|1\\d|2\\d|3\\d|4\\d|5\\d|6\\d|7[0-2])px';
+
+/** 单个字号值是否合法（编辑器侧的解析与渲染校验） */
+export const SAFE_FONT_SIZE = new RegExp(`^${FONT_SIZE_PATTERN}$`);

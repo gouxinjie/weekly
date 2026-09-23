@@ -7,17 +7,21 @@
  * - 渐变：以 gradient 全局属性挂在 textStyle 上，序列化成
  *   <span style="color:transparent;background-image:linear-gradient(90deg,…)">…</span>，
  *   解析方向从 background-image 读回。
+ * - 字号：见文件末尾的 FontSizeWithWhitelist，序列化成
+ *   <span style="font-size:16px">…</span>，解析方向从 font-size 读回。
  * 所有写入 style 的值都经过白名单校验，阻断样式注入。
  */
-import { Color, TextStyle } from '@tiptap/extension-text-style';
+import { Color, FontSize, TextStyle } from '@tiptap/extension-text-style';
+import { SAFE_FONT_SIZE } from '@/constants';
 
 /** renderMarkdown 收到的合成节点（只用到 attrs） */
 interface MarkdownSyntheticNode {
-  /** 节点属性；textStyle 标记时可能含 color / backgroundColor / gradient */
+  /** 节点属性；textStyle 标记时可能含 color / backgroundColor / gradient / fontSize */
   attrs?: {
     color?: string | null;
     backgroundColor?: string | null;
     gradient?: string | null;
+    fontSize?: string | null;
   } | null;
 }
 
@@ -129,7 +133,7 @@ export const TextStyleWithMarkdown = TextStyle.extend({
    * 序列化为 Markdown
    * @param node - 合成节点，attrs 含 color / backgroundColor / gradient
    * @param helpers - 渲染辅助函数
-   * @returns 序列化结果：渐变与纯色互斥，背景色可与两者叠加；都没有时原样返回子内容
+   * @returns 序列化结果：渐变与纯色互斥，字号与背景色可与两者叠加；都没有时原样返回子内容
    * @remarks 所有样式合并进一个 span（预览侧按属性白名单整体解析），
    *          属性顺序固定，便于解析端用同一条白名单表达式匹配
    */
@@ -150,6 +154,11 @@ export const TextStyleWithMarkdown = TextStyle.extend({
       if (typeof color === 'string' && SAFE_COLOR.test(color)) {
         parts.push(`color:${color}`);
       }
+    }
+
+    const fontSize = node.attrs?.fontSize;
+    if (typeof fontSize === 'string' && SAFE_FONT_SIZE.test(fontSize)) {
+      parts.push(`font-size:${fontSize}`);
     }
 
     const backgroundColor = node.attrs?.backgroundColor;
@@ -201,6 +210,51 @@ export const ColorWithTransparentReset = Color.extend({
               const color = attributes.color;
               if (typeof color !== 'string' || !SAFE_COLOR.test(color)) return {};
               return { style: `color:${color}` };
+            },
+          },
+        },
+      },
+    ];
+  },
+});
+
+/** 解析字号防护后的 FontSize 扩展（替代原版注册进编辑器） */
+export const FontSizeWithWhitelist = FontSize.extend({
+  /**
+   * 覆写 fontSize 属性的解析与渲染：
+   * 原版直接信任 DOM 上的 font-size，从外部粘贴内容时会带进 5vw、9999px 这类值，
+   * 渲染时会把编辑区撑变形；这里只接受 8–72px 的整数字号，
+   * 与预览侧白名单一致，字号无法成为样式注入的入口。
+   */
+  addGlobalAttributes() {
+    return [
+      {
+        // 取扩展自身的 types（默认 ['textStyle']），保证 configure({ types }) 仍然生效
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            /** 未设置字号时为 null */
+            default: null,
+            /**
+             * 从 DOM style 读回字号
+             * @param element - 被解析的元素
+             * @returns 命中白名单时返回字号值，否则 null
+             */
+            parseHTML: (element: HTMLElement) => {
+              const raw = element.style.fontSize;
+              if (typeof raw !== 'string' || raw === '') return null;
+              const value = raw.replace(/\s+/g, '');
+              return SAFE_FONT_SIZE.test(value) ? value : null;
+            },
+            /**
+             * 渲染为内联样式
+             * @param attributes - 标记属性
+             * @returns 命中白名单时返回字号样式，否则空对象
+             */
+            renderHTML: (attributes: { fontSize?: string | null }) => {
+              const fontSize = attributes.fontSize;
+              if (typeof fontSize !== 'string' || !SAFE_FONT_SIZE.test(fontSize)) return {};
+              return { style: `font-size:${fontSize}` };
             },
           },
         },

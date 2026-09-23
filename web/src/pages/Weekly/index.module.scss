@@ -2,7 +2,7 @@
  * 工作台（周报）样式
  * 布局要点：顶栏（年份切换 / 搜索 / 通知）在编辑态与展示态都常驻，
  * 编辑态 = 顶栏 + 返回行 + 标题行 + 带边框的编辑容器 + 底部状态栏；
- * 展示态 = 顶栏 + 居中的周报卡片（全宽封面 + 标题行 + 内容 + 查看全部 + 元信息）。
+ * 展示态 = 顶栏 + 居中的周报卡片（全宽封面 + 标题行 + 内容 + 编辑 + 元信息）。
  */
 
 /* ===== 顶栏（编辑态与展示态常驻） ===== */
@@ -343,9 +343,9 @@
   padding: var(--space-2) var(--space-6) 0;
 }
 
-/* 标题行右侧的「查看全部」：主色软底胶囊，作为卡片的主要操作入口保持醒目。
+/* 标题行右侧的「编辑」：主色软底胶囊，作为卡片的主要操作入口保持醒目。
    标题行按基线对齐，按钮改用垂直居中避免被基线拉低 */
-.viewAll {
+.editButton {
   align-self: center;
   margin-left: var(--space-2);
   padding: 4px var(--space-3);
@@ -358,7 +358,7 @@
   transition: background-color 0.15s ease;
 }
 
-.viewAll:hover {
+.editButton:hover {
   background-color: var(--color-accent);
   color: var(--color-on-accent);
 }

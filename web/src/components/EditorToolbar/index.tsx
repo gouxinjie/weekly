@@ -1,8 +1,8 @@
 /**
  * @component 编辑工具条
  * @description 编辑区上方的格式工具栏；除 Markdown 原生格式外，还提供段落格式下拉、
- * 文字颜色与背景颜色（分别以 <span style="color"> 与 <span style="background-color">
- * 形式无损保存在 Markdown 中）、渐变文字与附件入口（暂未开放）。
+ * 字号、文字颜色与背景颜色（分别以 <span style="font-size">、<span style="color"> 与
+ * <span style="background-color"> 形式无损保存在 Markdown 中）、渐变文字与附件入口（暂未开放）。
  * 图标统一用线性 SVG，避免 emoji 在不同系统下字形与颜色不一致
  * @author gouxinjie
  * @created 2026-09-18
@@ -11,6 +11,7 @@
 import type { Editor } from '@tiptap/core';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
+import { DEFAULT_FONT_SIZE, FONT_SIZE_OPTIONS } from '@/constants';
 import ToolbarColorMenu from './ToolbarColorMenu';
 import { Icon, ToolButton } from './ToolbarButton';
 import styles from './index.module.scss';
@@ -28,6 +29,19 @@ const HEADING_OPTIONS: SelectOption[] = [
 
 /** 标题层级联合类型（与 TipTap 的 heading 层级一致） */
 type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** 字号下拉里「清除字号」项的取值，与 constants 中的档位值不会冲突 */
+const CLEAR_FONT_SIZE_VALUE = 'clear';
+
+/**
+ * 字号下拉的可选项：首项清除，其余为档位（档位取自 constants，与设计稿一致）。
+ * 不设「默认」档：正文本身就是 14px，没设置过字号时下拉直接回显 14px；
+ * 要撤销已写入的字号标记则用首项「清除字号」
+ */
+const FONT_SIZE_SELECT_OPTIONS: SelectOption[] = [
+  { value: CLEAR_FONT_SIZE_VALUE, label: '清除字号' },
+  ...FONT_SIZE_OPTIONS.map((size) => ({ value: size, label: size })),
+];
 
 /** 段落格式取值到标题层级的映射：null 表示正文 */
 const HEADING_LEVELS: Record<string, HeadingLevel | null> = {
@@ -120,7 +134,7 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
   const isActive = (name: string, attrs?: Record<string, unknown>): boolean =>
     editor !== null && editor.isActive(name, attrs);
 
-  /** textStyle 标记上的属性集合：color / backgroundColor / gradient */
+  /** textStyle 标记上的属性集合：color / backgroundColor / gradient / fontSize */
   const textStyleAttrs = editor?.getAttributes('textStyle');
 
   /** 当前文字颜色（透明色为渐变文字所用，视为未设置） */
@@ -140,6 +154,26 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
   );
   const headingValue = activeHeadingLevel === undefined ? 'paragraph' : `h${activeHeadingLevel}`;
 
+  /** textStyle 标记上的字号（未设置时为 undefined） */
+  const fontSizeAttr = textStyleAttrs?.fontSize;
+
+  /**
+   * 字号下拉的选项：常规档位；
+   * 从外部粘贴进来的非档位字号补一项进来，否则下拉会显示成空白
+   */
+  const fontSizeOptions: SelectOption[] =
+    typeof fontSizeAttr !== 'string' ||
+    FONT_SIZE_OPTIONS.some((size) => size === fontSizeAttr)
+      ? FONT_SIZE_SELECT_OPTIONS
+      : [...FONT_SIZE_SELECT_OPTIONS, { value: fontSizeAttr, label: fontSizeAttr }];
+
+  /**
+   * 字号下拉的当前值：没设过字号就回显正文默认的 14px。
+   * 注意这里不按段落分级：光标在 H1（固有 20px）且没有字号标记时同样回显 14px，
+   * 因为「14px」表达的是「没有额外设置字号」，不是「当前生效的字号」
+   */
+  const fontSizeValue = typeof fontSizeAttr === 'string' ? fontSizeAttr : DEFAULT_FONT_SIZE;
+
   /**
    * 应用段落格式
    * @param value - 下拉取值（paragraph 表示正文，h1~h6 表示标题层级）
@@ -156,6 +190,23 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
       return;
     }
     editor.chain().focus().setHeading({ level }).run();
+  };
+
+  /**
+   * 设置或清除字号
+   * @param value - 下拉取值；clear 表示清除字号标记，其余为 12–48px 的档位值
+   * @returns 无
+   * @remarks 选具体档位时即使与正文同为 14px 也照常写入标记：在标题里选 14px 是要把标题压小，
+   *          若一并按清除处理会退回标题自带的 20px，与预期相反
+   */
+  const applyFontSize = (value: string): void => {
+    if (editor === null) return;
+
+    if (value === CLEAR_FONT_SIZE_VALUE) {
+      editor.chain().focus().unsetFontSize().run();
+      return;
+    }
+    editor.chain().focus().setFontSize(value).run();
   };
 
   /**
@@ -280,7 +331,19 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
           onChange={applyHeading}
           ariaLabel="段落格式"
           disabled={disabled}
-          className={styles.headingSelect}
+          className={styles.toolbarSelect}
+        />
+      </div>
+
+      <div className={styles.group}>
+        {/* 字号：与段落格式同属文本级属性，但分属独立容器，避免被读成同一组操作 */}
+        <Select
+          value={fontSizeValue}
+          options={fontSizeOptions}
+          onChange={applyFontSize}
+          ariaLabel="字号"
+          disabled={disabled}
+          className={styles.toolbarSelect}
         />
       </div>
 
@@ -477,8 +540,14 @@ const EditorToolbar = ({ editor, formatDisabled, onExport, onCopy }: EditorToolb
         />
       </div>
 
+      {/* 复制到剪贴板与导出文件是两个互不相干的动作，各自独占一个容器：
+          同组内按钮间距（4px）刻意比组间（12px）更近，暗示「同一类操作」，
+          两者放一起会被读成一族同源的格式按钮 */}
       <div className={styles.group}>
         <ToolButton label="复制" title="复制 Markdown" onClick={onCopy} disabled={formatDisabled} />
+      </div>
+
+      <div className={styles.group}>
         <ToolButton label="导出" title="导出 Markdown 文件" onClick={onExport} disabled={formatDisabled} />
       </div>
     </div>

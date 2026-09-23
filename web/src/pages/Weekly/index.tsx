@@ -584,13 +584,13 @@ const Weekly = () => {
                 <span className={styles.cardMonthWeek}>{formatWeekMonthLabel(year, week)}</span>
                 <span className={styles.cardSpacer} />
                 {isWritten ? <span className={styles.writtenBadge}>已写</span> : null}
-                {/* 查看入口：进入编辑态看完整内容，放在标题行右侧 */}
+                {/* 编辑入口：切到编辑态修改本周内容，放在标题行右侧 */}
                 <button
                   type="button"
-                  className={styles.viewAll}
+                  className={styles.editButton}
                   onClick={() => changeMode('edit')}
                 >
-                  查看全部 ›
+                  编辑
                 </button>
               </header>
 

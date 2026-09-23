@@ -4,7 +4,7 @@
  * 因此自动保存、单周导出、右栏参考等既有链路完全不变
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-18
+ * @updated 2026-09-23
  */
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
@@ -18,7 +18,11 @@ import TableCell from '@tiptap/extension-table-cell';
 import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { BackgroundColor } from '@tiptap/extension-text-style';
-import { ColorWithTransparentReset, TextStyleWithMarkdown } from './textStyleMarkdown';
+import {
+  ColorWithTransparentReset,
+  FontSizeWithWhitelist,
+  TextStyleWithMarkdown,
+} from './textStyleMarkdown';
 import styles from './index.module.scss';
 
 /** 编辑器对外暴露的能力 */
@@ -80,11 +84,12 @@ const MarkdownEditor = ({ value, onChange, editorRef, onEditorReady }: MarkdownE
   const editor = useEditor({
     extensions: [
       StarterKit,
-      // 文本样式标记（含 Markdown 序列化支持）必须先于 Color / BackgroundColor 注册，
-      // 后两者给它挂 color 与 backgroundColor 属性（两者相互独立，可同时存在）
+      // 文本样式标记（含 Markdown 序列化支持）必须先于 Color / BackgroundColor / FontSize 注册，
+      // 后三者给它挂 color、backgroundColor 与 fontSize 属性（三者相互独立，可同时存在）
       TextStyleWithMarkdown,
       ColorWithTransparentReset,
       BackgroundColor,
+      FontSizeWithWhitelist,
       Markdown,
       TaskList,
       TaskItem.configure({ nested: true }),

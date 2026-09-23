@@ -31,15 +31,15 @@
   border-radius: var(--radius-sm);
   background-color: var(--color-bg);
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
 }
 
 /* 线性图标按按钮尺寸统一缩放 */
 .button svg {
   display: block;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 .button:hover:not(:disabled) {
@@ -99,11 +99,24 @@
   content: none;
 }
 
-/* ---------- 段落格式下拉 ---------- */
+/* ---------- 文本级下拉（段落格式 / 字号） ---------- */
 
-/* 宽度固定，避免切换「正文 / 一级标题」时按钮与后续分组左右跳动 */
-.headingSelect {
-  width: 76px;
+/*
+ * 工具条内的下拉：宽度固定，避免切换取值时后续分组左右跳动。
+ * 最长文案是「四级标题」「清除字号」（4 个中文字 × 13px = 52px），
+ * 加上左右内边距 16px、内容间距 8px、箭头 6px、左右描边 2px 共 84px；
+ * 90px 是在此基础上留 6px 余量——贴到 84px 会落在临界值上，
+ * 字体度量或像素取整稍有差异就会被 ellipsis 截成「四级标…」。
+ */
+.toolbarSelect {
+  width: 90px;
+}
+
+/* 下拉按钮字号跟工具条按钮对齐（都是 13px）。
+   Select 的 sm 尺寸把字号定死在 12px，这里必须用后代选择器提高优先级；
+   写成同级单类会与 Select 模块自身的 .sizeSm 同优先级，胜负由样式表顺序决定，不可靠 */
+.toolbarSelect button {
+  font-size: 13px;
 }
 
 /* ---------- 文字颜色下拉 ---------- */
