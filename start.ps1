@@ -51,7 +51,7 @@ Write-Host '=== weekly 开发环境启动 ===' -ForegroundColor Cyan
 
 $nodeCmd = Get-Command 'node' -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
-    Write-Host '[错误] 未找到 node，请先安装 Node.js 22 LTS 后再运行本脚本。' -ForegroundColor Red
+    Write-Host '[错误] 未找到 node，请先安装 Node.js 20 LTS（≥ 20.12）后再运行本脚本。' -ForegroundColor Red
     exit 1
 }
 
@@ -101,7 +101,7 @@ if ($NoInstall) {
 # ---- 4. 启动前后端 --------------------------------------------------------
 
 # 后端端口以 .env 为准，改端口只需改一处，这里同步提示访问地址
-$apiPort = 3000
+$apiPort = 3701
 if (Test-Path -LiteralPath $envFile) {
     $match = Select-String -LiteralPath $envFile -Pattern '^\s*PORT\s*=\s*(\d+)' | Select-Object -First 1
     if ($match) {

@@ -37,7 +37,7 @@
 | 登录方式 | 手机号 + 密码（无短信验证码） |
 | 用户模型 | 多用户，注册入口长期开放，按 `user_id` 隔离 |
 | 会话有效期 | 30 天 |
-| 进程守护 | systemd |
+| 进程守护 | pm2 |
 
 ### 技术栈
 
@@ -62,7 +62,7 @@ weekly/
 
 | 后端 | 选型 |
 |---|---|
-| 运行时 | Node.js 22 LTS + TypeScript |
+| 运行时 | Node.js 20 LTS + TypeScript |
 | Web 框架 | Fastify |
 | 数据库 | SQLite（`better-sqlite3`），WAL 模式 |
 | 查询方式 | 手写 SQL + 薄封装 |
@@ -492,7 +492,7 @@ weekly/
 
 **做**
 
-- Fastify + TypeScript 服务部署到 ECS，systemd 守护
+- Fastify + TypeScript 服务部署到 ECS，pm2 守护
 - React 19 + Vite 构建为静态产物，Nginx 托管
 - 子域名 + Nginx 反向代理
 - 注册 + 登录 + 密码哈希 + 限流（密码强制数字 + 字母、≥ 6 位）

@@ -1,0 +1,219 @@
+# weekly 自动部署：推送到 main 后构建产物并发布到阿里云 ECS
+#
+# 流程：构建前端 / 后端 → 打包产物 → scp 上传 → SSH 执行 deploy/release.sh → 外网健康检查
+#
+# 设计约定（与 AGENTS.md §21 一致）：
+#   - CI 只上传构建产物，不在服务器上编译源码；
+#   - node_modules 不在 CI 构建，改由服务器执行 npm ci --omit=dev（原生模块必须在目标机器安装）；
+#   - .env 与 data/ 只存在于服务器，不进仓库、不进发布包。
+#
+# 需要在仓库 Settings → Secrets and variables → Actions 中配置：
+#   ECS_HOST        ECS 公网 IP，如 47.101.33.206
+#   ECS_SSH_KEY     部署私钥全文（PEM / OpenSSH 均可）
+#   ECS_USER        可选，默认 root
+#   ECS_PORT        可选，默认 22
+#   ECS_KNOWN_HOSTS 可选，服务器 host key；不填则部署时现场 ssh-keyscan
+
+name: 部署到阿里云 ECS
+
+on:
+  push:
+    branches:
+      - main
+  # 支持在 Actions 页面手动触发一次发布
+  workflow_dispatch:
+
+# 同一时刻只允许一个发布，避免两次发布交叉覆盖产物
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # 与线上 ECS 的 node 版本保持一致：该机器上 node 由 archive / flow-calendar /
+  # prompt-gallery 等多个应用共用（当前 v20.20.2），不单独为 weekly 升级。
+  # 若这里写 22，会出现「用 22 构建、用 20 运行」的隐性差异。
+  NODE_VERSION: '20'
+  APP_DIR: /var/www/weekly
+  SITE_URL: http://weekly.gouxinjie.com
+
+jobs:
+  build:
+    name: 构建产物
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            web/package-lock.json
+
+      # 仓库不提交 .env，而前端构建需要用 START_YEAR / MAX_WEEK 注入常量，
+      # 因此在这里生成一份仅用于构建的副本：不含任何密钥，也不会被打进发布包。
+      # 端口与线上一致（3701），避免出现「构建用一套、线上用另一套」的困惑
+      - name: 生成构建用 .env
+        run: |
+          cat > .env <<'EOF'
+          PORT=3701
+          HOST=127.0.0.1
+          DB_PATH=data/weekly.db
+          NODE_ENV=production
+          SESSION_DAYS=30
+          MAX_WEEK=53
+          START_YEAR=2026
+          REGISTER_LIMIT_PER_HOUR=10
+          EOF
+
+      - name: 构建前端
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: 构建后端
+        working-directory: server
+        run: |
+          npm ci
+          npm run build
+
+      # 只打包运行时需要的东西：dist 产物 + 依赖清单
+      # 不打包 node_modules（原生模块必须在服务器上安装）、不打包 .env、不打包源码
+      - name: 打包发布产物
+        run: |
+          tar -czf release.tar.gz \
+            web/dist \
+            server/dist \
+            server/package.json \
+            server/package-lock.json
+
+      - name: 留存产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-release
+          path: release.tar.gz
+          retention-days: 7
+
+  deploy:
+    name: 发布到 ECS
+    needs: build
+    runs-on: ubuntu-latest
+    # 记录部署历史，可在 Actions 页面看到每次发布的版本
+    environment: production
+    steps:
+      - name: 拉取代码（取 deploy/ 下的发布脚本）
+        uses: actions/checkout@v4
+
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: weekly-release
+
+      - name: 准备 SSH 密钥
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ECS_SSH_KEY }}
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_PORT: ${{ secrets.ECS_PORT }}
+          KNOWN_HOSTS: ${{ secrets.ECS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${ECS_HOST:?未配置 secrets.ECS_HOST}"
+          : "${SSH_PRIVATE_KEY:?未配置 secrets.ECS_SSH_KEY}"
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+
+          # 私钥通过 env 传入再原样写入：直接内嵌到 run 块里会破坏多行格式，
+          # OpenSSH 解析时报 error in libcrypto
+          printf '%s\n' "${SSH_PRIVATE_KEY}" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          # 优先使用预先登记的 host key；未配置时现场扫描（首次配置可省略该 secret）
+          if [[ -n "${KNOWN_HOSTS:-}" ]]; then
+            printf '%s\n' "${KNOWN_HOSTS}" > "$HOME/.ssh/known_hosts"
+          else
+            ssh-keyscan -p "${ECS_PORT:-22}" -H "${ECS_HOST}" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          fi
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: 确保服务器目录存在
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          ECS_PORT: ${{ secrets.ECS_PORT }}
+        run: |
+          set -euo pipefail
+          SSH_USER="${ECS_USER:-root}"
+          SSH_PORT="${ECS_PORT:-22}"
+
+          # scp 不会自动创建目标目录，首次部署时目录可能还没建，这里先兜一次底
+          ssh -i "$HOME/.ssh/deploy_key" -p "${SSH_PORT}" \
+            -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "${SSH_USER}@${ECS_HOST}" \
+            "mkdir -p ${APP_DIR}/{web,server,data,backup,deploy,releases}"
+
+      - name: 上传发布包与脚本
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          ECS_PORT: ${{ secrets.ECS_PORT }}
+        run: |
+          set -euo pipefail
+          SSH_USER="${ECS_USER:-root}"
+          SSH_PORT="${ECS_PORT:-22}"
+          PKG_NAME="release-${GITHUB_SHA:0:7}.tar.gz"
+
+          # 发布包按 commit 短 SHA 命名，便于在服务器上定位与回退
+          cp release.tar.gz "${PKG_NAME}"
+
+          SCP_OPTS=(
+            -i "$HOME/.ssh/deploy_key"
+            -P "${SSH_PORT}"
+            -o IdentitiesOnly=yes
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts"
+          )
+
+          scp "${SCP_OPTS[@]}" "${PKG_NAME}" "${SSH_USER}@${ECS_HOST}:${APP_DIR}/releases/"
+
+          # 发布脚本、备份脚本与 pm2 进程配置每次一并同步，保证服务器上执行的是当前仓库版本
+          scp "${SCP_OPTS[@]}" \
+            deploy/release.sh deploy/backup.sh deploy/backup.cjs deploy/ecosystem.config.cjs \
+            "${SSH_USER}@${ECS_HOST}:${APP_DIR}/deploy/"
+
+          echo "PKG_NAME=${PKG_NAME}" >> "$GITHUB_ENV"
+
+      - name: 在服务器上执行发布
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          ECS_PORT: ${{ secrets.ECS_PORT }}
+        run: |
+          set -euo pipefail
+          SSH_USER="${ECS_USER:-root}"
+          SSH_PORT="${ECS_PORT:-22}"
+
+          ssh -i "$HOME/.ssh/deploy_key" -p "${SSH_PORT}" \
+            -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "${SSH_USER}@${ECS_HOST}" \
+            "bash ${APP_DIR}/deploy/release.sh ${APP_DIR}/releases/${PKG_NAME} ${GITHUB_SHA:0:7}"
+
+      # 从公网侧验证：Nginx 是否托管了新产物、API 是否反代成功
+      - name: 验证线上可用性
+        run: |
+          set -euo pipefail
+
+          echo "首页状态码："
+          curl -fsS -o /dev/null -w '  HTTP %{http_code}\n' --retry 5 --retry-delay 3 "${SITE_URL}/"
+
+          echo "健康检查："
+          curl -fsS --retry 5 --retry-delay 3 "${SITE_URL}/api/health"
+          echo

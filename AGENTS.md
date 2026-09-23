@@ -146,7 +146,7 @@ weekly/
 
 | 后端 | 选型 |
 |---|---|
-| 运行时 | Node.js 22 LTS + TypeScript |
+| 运行时 | Node.js 20 LTS + TypeScript（版本约束见 §21.1） |
 | Web 框架 | Fastify |
 | 数据库 | SQLite（`better-sqlite3`），WAL 模式 |
 | 查询方式 | 手写 SQL + 薄封装 |
@@ -906,14 +906,14 @@ const w = dayjs(date).isoWeek();      // ISO 周次 1-53
 
 | 检查 | 预期 |
 |---|---|
-| `sudo systemctl status weekly` | `active (running)`，无重启循环 |
-| `curl -s http://127.0.0.1:3000/api/health` | 返回 `{"ok":true}` |
+| `pm2 status weekly` | `online`，重启次数不持续增长 |
+| `curl -s http://127.0.0.1:3701/api/health` | 返回 `{"ok":true}` |
 | 浏览器打开 `http://weekly.gouxinjie.com/login` | 登录页正常，**不是 Nginx 默认页** |
 | 刷新 `/weekly/2026/38` 这类深层路由 | 不 404（`try_files` 生效） |
 | 登录后点任意写操作 | 正常保存，Cookie 能带上（`secure` 没被误开） |
 | `sqlite3 data/weekly.db "PRAGMA journal_mode;"` | 返回 `wal` |
-| 服务器上 `ss -lntp \| grep 3000` | 监听 `127.0.0.1:3000`，**不是** `0.0.0.0:3000` |
-| 从公网直连 3000 端口 | **连不上**（只走 Nginx） |
+| 服务器上 `ss -lntp \| grep 3701` | 监听 `127.0.0.1:3701`，**不是** `0.0.0.0:3701` |
+| 从公网直连 3701 端口 | **连不上**（只走 Nginx） |
 
 ---
 
@@ -1074,24 +1074,25 @@ sqlite3 data/weekly.db "SELECT * FROM user;"        # 查看用户
 sqlite3 data/weekly.db "PRAGMA user_version;"       # 查看迁移版本
 sqlite3 data/weekly.db "PRAGMA journal_mode;"       # 应返回 wal
 
-# 数据备份（生产）
-sqlite3 data/weekly.db "VACUUM INTO 'backup/weekly-$(date +%F).db'"
+# 数据备份（生产）：统一走部署脚本，内部由 better-sqlite3 执行 VACUUM INTO
+bash /var/www/weekly/deploy/backup.sh
 ```
 
 **部署相关命令（在服务器上执行）**
 
 ```bash
 # 首次部署
-sudo mkdir -p /var/www/weekly /var/lib/weekly/backup
-sudo chown -R www-data:www-data /var/lib/weekly
+sudo mkdir -p /var/www/weekly/{web,server,data,backup,deploy,releases}
+# pm2 由哪个用户持有，/var/www/weekly 下的文件就归谁（release.sh 会按执行用户 chown）
 
 # 发布
-sudo systemctl restart weekly
-sudo systemctl status weekly
+pm2 startOrReload /var/www/weekly/deploy/ecosystem.config.cjs --update-env
+pm2 save                        # 持久化进程列表，供 pm2 startup 的开机自启读取
+pm2 status weekly
 
 # 看日志（排查 502 必用）
-sudo journalctl -u weekly -n 100 --no-pager
-sudo journalctl -u weekly -f
+pm2 logs weekly --lines 100 --nostream
+pm2 logs weekly
 
 # Nginx
 sudo nginx -t                  # 改配置后必须先测语法
@@ -1099,11 +1100,11 @@ sudo systemctl reload nginx
 sudo tail -f /var/log/nginx/weekly.error.log
 
 # 健康检查（在服务器本机执行）
-curl -s http://127.0.0.1:3000/api/health
+curl -s http://127.0.0.1:3701/api/health
 curl -sI http://weekly.gouxinjie.com
 ```
 
-**排障顺序**：`systemctl status weekly` 看进程活没活 → `journalctl` 看 Node 报错 → `nginx -t` 看配置 → 查 `/var/log/nginx/weekly.error.log` 看 502/504。四步走完再动代码。
+**排障顺序**：`pm2 status weekly` 看进程活没活 → `pm2 logs weekly` 看 Node 报错 → `nginx -t` 看配置 → 查 `/var/log/nginx/weekly.error.log` 看 502/504。四步走完再动代码。
 
 ---
 
@@ -1123,7 +1124,7 @@ curl -sI http://weekly.gouxinjie.com
 
 | 变量 | 用于 | 默认 | 说明 |
 |---|---|---|---|
-| `PORT` | server | `3000` | 服务端口，仅监听内网 |
+| `PORT` | server | `3701` | 服务端口，仅监听内网 |
 | `HOST` | server | `127.0.0.1` | **不要设 `0.0.0.0`**，只监听本机由 Nginx 转发 |
 | `DB_PATH` | server | `data/weekly.db` | 数据库文件路径 |
 | `NODE_ENV` | 两端 | `development` | 生产环境必须为 `production` |
@@ -1144,7 +1145,7 @@ curl -sI http://weekly.gouxinjie.com
 ```ts
 /** 服务配置（启动时一次性读取并校验） */
 export const config = {
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT ?? 3701),
   host: process.env.HOST ?? '127.0.0.1',   // 只监听本机
   dbPath: process.env.DB_PATH ?? 'data/weekly.db',
   sessionDays: Number(process.env.SESSION_DAYS ?? 30),
@@ -1153,13 +1154,13 @@ export const config = {
 
 ### 20.3 本地开发
 
-开发时前端跑 Vite（5173）、后端跑 Fastify（3000），需要在 `vite.config.ts` 配置代理把 `/api` 转发到后端，避免跨域：
+开发时前端跑 Vite（3700）、后端跑 Fastify（3701），需要在 `vite.config.ts` 配置代理把 `/api` 转发到后端，避免跨域：
 
 ```ts
 // vite.config.ts
 server: {
   proxy: {
-    '/api': { target: 'http://127.0.0.1:3000', changeOrigin: true },
+    '/api': { target: 'http://127.0.0.1:3701', changeOrigin: true },
   },
 },
 ```
@@ -1170,17 +1171,21 @@ server: {
 
 ## 21. 部署规范
 
-部署环境：阿里云 ECS + Nginx + systemd。域名 `weekly.gouxinjie.com`，HTTP。
+部署环境：阿里云 ECS + Nginx + pm2。域名 `weekly.gouxinjie.com`，HTTP。
 
 ### 21.1 部署拓扑
 
 ```
 浏览器 ──HTTP──> Nginx（80 端口，公网）
                     ├── /            → 托管 web/dist 静态产物
-                    └── /api/*       → 反代到 127.0.0.1:3000（Node）
+                    └── /api/*       → 反代到 127.0.0.1:3701（Node）
 ```
 
 **Node 只监听 `127.0.0.1`**，不直接暴露公网。安全组只开放 80（以及 22）。
+
+**Node 版本约束（重要）**：这台 ECS 上的 node 由多个应用共用（`archive` / `flow-calendar` / `prompt-gallery`，当前 v20.20.2），**不要为了 weekly 单独升级 node**——升级会连带重启这几个应用。CI 的 `NODE_VERSION` 必须与线上一致（20），否则会出现「用 22 构建、用 20 运行」的隐性差异。
+
+weekly 的依赖都支持 Node 20：`better-sqlite3@12` 要求 `20.x || 22.x || ...`、`argon2@0.45` 要求 `>= 16.17`；代码里唯一有下限的 API 是 `config.ts` 的 `process.loadEnvFile`（Node ≥ 20.12）。`server/package.json` 的 `engines.node` 已声明 `>=20.12.0`。
 
 ### 21.2 Nginx 配置要点
 
@@ -1200,7 +1205,7 @@ server {
 
     # API 反代
     location /api/ {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3701;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;      # 限流需要真实 IP
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -1214,37 +1219,43 @@ server {
 2. **`X-Real-IP` 必须透传**——否则后端限流拿到的是 Nginx 的 IP（127.0.0.1），所有用户共用一个限流额度，限流形同虚设
 3. **改 `server_name` 前先确认 DNS 已解析**——否则改了 Nginx 但域名指向旧 IP，访问直接失败
 
-### 21.3 systemd 服务
+### 21.3 pm2 进程管理
 
-```ini
-# /etc/systemd/system/weekly.service
-[Unit]
-Description=weekly API service
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/weekly/server
-ExecStart=/usr/bin/node dist/index.js
-Restart=always
-RestartSec=5
-EnvironmentFile=/var/www/weekly/.env
-
-[Install]
-WantedBy=multi-user.target
+```js
+// /var/www/weekly/deploy/ecosystem.config.cjs
+module.exports = {
+  apps: [{
+    name: 'weekly',
+    script: 'dist/index.js',
+    cwd: '/var/www/weekly/server',
+    instances: 1,                 // SQLite 是单写者，只能单实例
+    exec_mode: 'fork',
+    env: { NODE_ENV: 'production' },
+    autorestart: true,
+    max_restarts: 10,
+    restart_delay: 3000,
+  }],
+};
 ```
 
-**要点**：`Restart=always`（崩溃自动重启）、`EnvironmentFile` 指向 `.env`、`WorkingDirectory` 必须是 `server/`（否则 `DB_PATH` 相对路径会解析错）。
+**四个要点：**
+
+1. **`cwd` 固定为 `server/`**，与线上目录结构一致（`DB_PATH` 是相对路径，但 `config.ts` 用 `dist/../..` 推导到 `/var/www/weekly`，因此与 cwd 无关，不要试图靠 cwd 改数据库位置）
+2. **环境变量不在 pm2 里集中维护**：`config.ts` 会自行读取 `/var/www/weekly/.env`，配置只写 `NODE_ENV`
+3. **`instances: 1` 不可改**——SQLite 单写者，多实例会互相锁库；因此 `reload` 等价于重启，发布有约 1 秒不可用
+4. **发布统一走 `pm2 startOrReload <配置文件> --update-env`**：进程不存在则创建、已存在则重载，首次部署与后续发布共用一条命令
 
 常用命令：
 
 ```bash
-sudo systemctl daemon-reload      # 改完 service 文件必须执行
-sudo systemctl restart weekly
-sudo systemctl status weekly
-sudo journalctl -u weekly -f      # 看实时日志
+pm2 status weekly                                              # 进程状态与重启次数
+pm2 logs weekly                                                # 看实时日志
+pm2 startOrReload /var/www/weekly/deploy/ecosystem.config.cjs --update-env
+pm2 save                                                       # 持久化进程列表，开机自启读它
+pm2 startup systemd                                            # 生成开机自启单元，只需执行一次
 ```
+
+**⚠️ 开机自启**：`pm2 startup` 只做一次，且**必须紧跟 `pm2 save`**；少了它，机器重启后服务不会自己起来。若 pm2 由 nvm 安装，自启单元里会写死当时的 node 路径，升级 node 后要重跑这两条命令。
 
 ### 21.4 发布流程
 
@@ -1260,27 +1271,28 @@ rsync -av --delete server/dist/ server:/var/www/weekly/server/dist/
 # 3. 服务器上安装生产依赖（仅首次或依赖变更时）
 ssh server "cd /var/www/weekly/server && npm ci --omit=dev"
 
-# 4. 重启服务
-ssh server "sudo systemctl restart weekly"
+# 4. 重载服务（CI 中由 deploy/release.sh 完成这几步）
+ssh server "pm2 startOrReload /var/www/weekly/deploy/ecosystem.config.cjs --update-env && pm2 save"
 
 # 5. 验证
 curl -I http://weekly.gouxinjie.com          # 应返回 200
 curl http://weekly.gouxinjie.com/api/health  # 应返回 JSON
 ```
 
-**发布前必做**：`VACUUM INTO` 备份数据库（见 §19）。
+**发布前必做**：备份数据库——`release.sh` 会自动调用 `deploy/backup.sh` 完成（见 §19）；若日志里出现「发布前备份失败」的警告，必须人工补一次。
 
 **发布顺序注意**：如果这次改动包含**表结构变更**，必须**先重启服务跑迁移，再验证**；不要在迁移未执行时就让新代码对外服务。
 
 ### 21.5 备份
 
-**cron 定时执行**，必须在服务运行时用 `VACUUM INTO`：
+**cron 定时执行**，走部署脚本（内部由 better-sqlite3 执行 `VACUUM INTO`，不受系统 sqlite3 版本限制）：
 
 ```bash
-# crontab -e，每天凌晨 3 点
-0 3 * * * cd /var/www/weekly && sqlite3 data/weekly.db \
-  "VACUUM INTO 'backup/weekly-$(date +\%F).db'"
+# crontab -e（root），每天凌晨 3 点
+0 3 * * * /var/www/weekly/deploy/backup.sh
 ```
+
+备份文件命名为 `backup/weekly-YYYY-MM-DD.db`：每天一份，当天重复执行会覆盖；默认保留 30 天，超期自动清理。
 
 配合 **ECS 磁盘快照**（控制台手动或自动策略）。
 
@@ -1292,8 +1304,23 @@ curl http://weekly.gouxinjie.com/api/health  # 应返回 JSON
 
 - **不要在服务器上 `git pull` 后直接跑源码**——上传构建产物，服务器不装 devDependencies
 - **不要把 `.env` 提交进仓库或打进产物**
-- **不要开 3000 端口到公网**——Node 只在 127.0.0.1 后面
+- **不要开 3701 端口到公网**——Node 只在 127.0.0.1 后面
 - **不要在 Nginx 里配 CORS 头**——前后端同源，不需要
+
+### 21.7 自动发布（GitHub Actions）
+
+日常发布走 `.github/workflows/deploy.yml`：推送到 `main`（或手动触发）后，CI 构建前后端产物 → 打包（只含 `web/dist`、`server/dist`、两份 `package*.json`）→ scp 上传到 `/var/www/weekly/releases/<短SHA>.tar.gz` → SSH 执行 `deploy/release.sh` → 从公网验证首页与 `/api/health`。
+
+需配置的 Secrets：`ECS_HOST`、`ECS_SSH_KEY`（必填）；`ECS_USER`（默认 `root`）、`ECS_PORT`（默认 `22`）、`ECS_KNOWN_HOSTS`（可选）。
+
+**四条约束：**
+
+1. **发布包不含源码 / `node_modules` / `.env` / `data/`**——源码不上服务器，依赖在服务器上 `npm ci --omit=dev`（原生模块必须在目标机器装），配置与数据只存在于服务器
+2. **Nginx 配置不由 CI 覆盖**——改了 `deploy/server_weekly.conf` 需手动同步到 `/etc/nginx/conf.d/` 再 `nginx -t && systemctl reload nginx`
+3. **CI 的 `NODE_VERSION` 必须与线上一致（20）**，理由见 §21.1
+4. **`ECS_USER` 必须与持有 pm2 的用户一致**（这台机器上是 `root`），否则 `pm2` 读不到进程列表，会把「进程不存在」当成首次部署
+
+§21.4 的手动流程保留作为兜底（CI 不可用、或需要单文件热修时使用）。
 
 ---
 

@@ -15,8 +15,8 @@ const ROOT_DIR = path.resolve(__dirname, '..', '..');
 /** 根目录 .env（与前端共用同一份，两端端口配置因此不会各说各话） */
 const ENV_FILE = path.join(ROOT_DIR, '.env');
 
-// 本地开发从根目录 .env 读取配置；生产环境由 systemd 的 EnvironmentFile 注入，
-// 且已存在的环境变量优先，因此这里不会覆盖线上配置。
+// 本地开发从根目录 .env 读取配置；生产环境由 pm2 注入 NODE_ENV，
+// 且已存在的环境变量优先（loadEnvFile 不覆盖已有变量），因此这里不会覆盖线上配置。
 try {
   process.loadEnvFile(ENV_FILE);
 } catch {
@@ -85,7 +85,7 @@ export interface ServerConfig {
  * @throws 配置非法时抛错
  */
 const buildConfig = (): ServerConfig => ({
-  port: readIntEnv('PORT', 3000, 1),
+  port: readIntEnv('PORT', 3701, 1),
   host: readEnv('HOST', '127.0.0.1'),
   dbPath: resolveDbPath(readEnv('DB_PATH', 'data/weekly.db')),
   sessionDays: readIntEnv('SESSION_DAYS', 30, 1),

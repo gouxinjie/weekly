@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    /* 运行时为 Node.js 22，输出 CommonJS 便于原生模块与 systemd 直接启动 */
+    /* 运行时为 Node.js 20（线上 ECS 版本），输出 CommonJS 便于原生模块与 pm2 直接启动 */
     "target": "ES2022",
     "module": "node16",
     "moduleResolution": "node16",

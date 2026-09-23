@@ -53,7 +53,7 @@
 
 | | 选型 |
 |---|---|
-| 运行时 | Node.js 22 LTS + TypeScript |
+| 运行时 | Node.js 20 LTS + TypeScript |
 | Web 框架 | Fastify |
 | 数据库 | SQLite（`better-sqlite3`，WAL 模式）+ 手写 SQL |
 | 密码与会话 | argon2 哈希；自建 token + `session` 表（HttpOnly + SameSite=Strict Cookie，30 天） |
@@ -90,7 +90,7 @@ weekly/
 │       ├── api/            # fetch 薄封装
 │       ├── utils/          # ISO 周次计算与格式化
 │       └── styles/         # variables.scss 设计变量
-├── deploy/                 # 部署材料（systemd / Nginx / 备份脚本）
+├── deploy/                 # 部署材料（pm2 / Nginx / 备份脚本）
 ├── doc/weekly-PRD.md       # 需求文档
 ├── data/weekly.db          # SQLite 数据库文件
 ├── start.ps1               # Windows 开发环境一键启动
@@ -101,7 +101,7 @@ weekly/
 
 ## 本地运行
 
-前置：Node.js 22 LTS、npm。
+前置：Node.js 20 LTS 及以上（≥ 20.12，代码用到 `process.loadEnvFile`）、npm。
 
 ### 一键启动（Windows）
 
@@ -127,7 +127,7 @@ npm run dev
 ```
 
 - 前端固定跑在 <http://127.0.0.1:3700>，开发态把 `/api` 代理到后端，前后端同源，因此不需要 CORS。
-- 后端端口由根目录 `.env` 的 `PORT` 决定（`.env.example` 默认 3000）。**改端口只需改这一处**，前端的代理目标会自动跟随。
+- 后端端口由根目录 `.env` 的 `PORT` 决定（`.env.example` 默认 3701，与线上一致）。**改端口只需改这一处**，前端的代理目标会自动跟随。
 
 ### 测试
 
@@ -146,7 +146,7 @@ npm test
 
 | 变量 | 说明 | 默认 |
 |---|---|---|
-| `PORT` | 后端监听端口，同时决定前端开发代理的转发目标 | `3000` |
+| `PORT` | 后端监听端口，同时决定前端开发代理的转发目标 | `3701` |
 | `HOST` | 监听地址，保持 `127.0.0.1`，改成 `0.0.0.0` 会让 Node 直接暴露公网 | `127.0.0.1` |
 | `DB_PATH` | 数据库文件路径，相对路径以仓库根目录为基准 | `data/weekly.db` |
 | `NODE_ENV` | 生产环境必须为 `production` | `development` |
@@ -159,20 +159,51 @@ npm test
 
 ## 部署
 
-`deploy/` 下是三份部署材料：
+`deploy/` 下是部署材料（`backup.cjs` 是 `backup.sh` 的实现，成对存在）：
 
 | 文件 | 说明 |
 |---|---|
-| `weekly.service` | systemd 单元。`WorkingDirectory` 必须是 `server/`，否则相对路径形式的 `DB_PATH` 会解析错；改完执行 `systemctl daemon-reload && systemctl restart weekly` |
-| `nginx.conf` | 托管 `web/dist` 并回退 SPA 路由，`/api` 反代到内网端口。必须透传 `X-Real-IP`，否则后端限流拿到的是 `127.0.0.1`，所有用户共用一个额度 |
-| `backup.sh` | 用 `VACUUM INTO` 生成一致性快照（WAL 模式下不能直接 `cp` 数据库文件），并清理超期备份 |
+| `ecosystem.config.cjs` | pm2 进程配置：`name=weekly`、`cwd=/var/www/weekly/server`、单实例 fork（SQLite 是单写者，不能开多实例）。由 `pm2 startOrReload` 加载 |
+| `server_weekly.conf` | Nginx 站点配置，放到 `/etc/nginx/conf.d/server_weekly.conf`（Debian / Ubuntu 放 `sites-available/` 再软链）。托管 `web/dist` 并回退 SPA 路由，`/api` 反代到内网端口。必须透传 `X-Real-IP`，否则后端限流拿到的是 `127.0.0.1`，所有用户共用一个额度 |
+| `release.sh` | 服务器端发布脚本：备份数据库 → 解包产物 → 按需 `npm ci --omit=dev` → `pm2 startOrReload` → 健康检查，失败自动回滚。CI 每次发布都会同步该脚本并调用 |
+| `backup.sh` / `backup.cjs` | 一致性备份入口。`backup.sh` 探测 node 路径后调用 `backup.cjs`，由 better-sqlite3 执行 `VACUUM INTO`（**不用系统 sqlite3 CLI**：线上 3.26 不支持该语句），并清理超期备份。cron 与 `release.sh` 都走它 |
 
 构建：
 
 ```bash
-cd server && npm run build     # 产出 dist/，systemd 用 node dist/index.js 启动
+cd server && npm run build     # 产出 dist/，由 pm2 以 node dist/index.js 启动
 cd web && npm run build        # 产出 web/dist/，由 Nginx 托管
 ```
+
+### 自动部署（GitHub Actions）
+
+`.github/workflows/deploy.yml`：推送 `main` 或手动触发后，CI 构建前后端产物 → 打包（只含 `web/dist`、`server/dist` 与两份 `package*.json`）→ scp 上传 → SSH 执行 `deploy/release.sh` → 从公网验证首页与 `/api/health`。
+
+**服务器只需初始化一次**（机器上已有 Node 20 / pm2 / Nginx / sqlite3，只需建好 `/var/www/weekly` 目录并放上 `.env` 与 `server_weekly.conf`），之后所有发布由 CI 完成。CI 不传源码、不传 `node_modules`、不传 `.env`，也不改 Nginx 配置。
+
+Node 版本刻意与这台 ECS 保持一致（**不升级 node**：该机器上的 node 由多个应用共用，升级会连带重启它们），CI 的构建版本随之为 20——详见 `AGENTS.md` §21.1。
+
+**pm2 的开机自启只需配一次**（`release.sh` 每次发布会自动 `pm2 save`）：
+
+```bash
+systemctl status pm2-root --no-pager   # 已 active 说明这台机器早配过，跳过下面两步
+pm2 startup systemd                    # 按提示执行它输出的那条 sudo 命令
+pm2 save                               # 持久化进程列表（首次部署成功后再执行）
+```
+
+注意：`weekly` 进程由 CI 首次部署时自动创建（`release.sh` 里的 `pm2 startOrReload`）。**首次部署之前不要手动 `pm2 start`**——那时 `server/dist` 还不存在，进程会立刻退出并进入重启循环。
+
+少了 `pm2 startup` + `pm2 save`，机器重启后服务不会自己起来。若 pm2 由 nvm 安装，自启单元里会写死当时的 node 路径，之后升级 node 需重跑这两条命令。
+
+仓库需配置的 Secrets（`Settings → Secrets and variables → Actions`）：
+
+| Secret | 必填 | 说明 |
+|---|---|---|
+| `ECS_HOST` | 是 | ECS 公网 IP，如 `47.101.33.206` |
+| `ECS_SSH_KEY` | 是 | 部署私钥全文，**必须通过 `env:` 传入再写入文件**，直接内嵌 `run:` 会破坏多行格式 |
+| `ECS_USER` | 否 | 默认 `root`，须与持有 pm2 进程的用户一致 |
+| `ECS_PORT` | 否 | 默认 `22` |
+| `ECS_KNOWN_HOSTS` | 否 | 服务器 host key；不填则部署时现场 `ssh-keyscan` |
 
 ---
 

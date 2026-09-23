@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
 
   // 代理目标与后端共用同一份 .env：改后端端口时不必再手工同步这里，
   // 否则很容易出现「后端换了端口、代理还指向旧端口」，表现为接口返回异常格式的响应
-  const apiPort = Number(env.PORT ?? 3000);
+  const apiPort = Number(env.PORT ?? 3701);
   const apiHost = env.HOST === undefined || env.HOST === '0.0.0.0' ? '127.0.0.1' : env.HOST;
   const apiTarget = `http://${apiHost}:${apiPort}`;
 
