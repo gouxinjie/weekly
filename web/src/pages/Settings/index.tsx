@@ -1,7 +1,7 @@
 /**
  * @component 设置页
- * @description 应用骨架内的单列居中布局：外观（主题切换）、账号信息、
- * 账号安全（修改密码 / 退出所有设备）、系统信息与通栏退出登录按钮；
+ * @description 应用骨架内的单列居中布局：外观（主题切换）、账号（账号信息 +
+ * 修改密码 / 退出所有设备）、系统信息与通栏退出登录按钮；
  * 修改密码以弹窗收集原密码与新密码，修改密码、退出登录与退出所有设备均为敏感操作，统一走二次确认弹窗
  * @author gouxinjie
  * @created 2026-09-18
@@ -19,6 +19,7 @@ import { CONTACT_PHONE } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { maskPhone } from '@/utils/format';
+import { navigateWithTransition } from '@/utils/routeTransition';
 import styles from './index.module.scss';
 
 /** 应用版本号：与 package.json 保持一致 */
@@ -171,7 +172,8 @@ const Settings = () => {
     } finally {
       setConfirmPending(false);
       setConfirmTarget(null);
-      navigate(
+      navigateWithTransition(
+        navigate,
         '/login',
         notice === '' ? { replace: true } : { replace: true, state: { message: notice } },
       );
@@ -194,7 +196,7 @@ const Settings = () => {
     } finally {
       setConfirmPending(false);
       setConfirmTarget(null);
-      navigate('/login', { replace: true, state: { message: notice } });
+      navigateWithTransition(navigate, '/login', { replace: true, state: { message: notice } });
     }
   };
 
@@ -235,9 +237,10 @@ const Settings = () => {
             <ThemePicker value={theme} onChange={setTheme} />
           </section>
 
-          {/* 账号信息 */}
+          {/* 账号：账号信息与安全操作合并为一张卡，顶部展示身份、下方是操作行 */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>账号信息</h2>
+            <h2 className={styles.cardTitle}>账号</h2>
+
             <div className={styles.profile}>
               <span className={styles.avatar} aria-hidden>
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -253,12 +256,11 @@ const Settings = () => {
               {/* 用户信息尚未就绪时不显示角标，避免出现「空手机号 + 已登录」的矛盾状态 */}
               {user !== null ? <span className={styles.profileState}>已登录</span> : null}
             </div>
-          </section>
 
-          {/* 账号安全：修改密码与退出所有设备均为敏感操作，点击后二次确认 */}
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>账号安全</h2>
+            {/* 身份区与操作区之间用分隔线拉开两个层次 */}
+            <div className={styles.divider} aria-hidden />
 
+            {/* 修改密码与退出所有设备均为敏感操作，点击后二次确认 */}
             <button
               type="button"
               className={styles.actionRow}

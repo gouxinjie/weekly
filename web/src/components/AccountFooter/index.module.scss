@@ -11,7 +11,8 @@
   flex: 0 0 auto;
   /* 待办 / 设置态左栏没有内容区撑高，用 auto 外边距把账号区顶到最底部 */
   margin-top: auto;
-  padding: var(--space-3);
+  /* 左右 16px：与品牌名、页签文字同在一条左对齐线上 */
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border);
 }
 
@@ -23,23 +24,24 @@
   min-width: 0;
 }
 
-/* 圆形头像：浅色底 + 剪影图标 */
+/* 圆形头像：主色浅底 + 主色剪影，比灰色底更有品牌感，三套主题下都不发灰。
+   32px 比原先的 40px 更贴合 200px 的栏宽，也给右侧两行文字留出更多空间 */
 .avatar {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: var(--color-bg-active);
+  background-color: var(--color-accent-soft);
   color: var(--color-accent);
 }
 
 .avatar svg {
-  /* 图标随头像等比放大（0.6 倍） */
-  width: 24px;
-  height: 24px;
+  /* 图标随头像等比放大（32 × 0.56 ≈ 18） */
+  width: 18px;
+  height: 18px;
 }
 
 /* 账号名 + 手机号 */

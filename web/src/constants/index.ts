@@ -13,6 +13,23 @@ export const MAX_WEEK: number = __MAX_WEEK__;
 /** 自动保存延迟（毫秒）：输入停止后落库 */
 export const AUTOSAVE_DELAY = 800;
 
+/**
+ * 路由切换过渡时长（毫秒）
+ * 说明：200ms 是「看得见过渡」与「不拖慢操作」的平衡点；再长会让人觉得页面迟钝。
+ * View Transitions 与降级淡入共用这一节奏，global.scss 里的动画时长与其保持一致。
+ */
+export const ROUTE_TRANSITION_MS = 200;
+
+/**
+ * 路由切换过渡缓动：末段放缓，落位更稳
+ * 说明：只动 opacity 与 transform 两个合成属性，动画跑在合成线程，不触发布局。
+ * View Transitions 与降级淡入共用这一曲线，global.scss 里的 timing-function 与其保持一致。
+ */
+export const ROUTE_TRANSITION_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+
+/** 路由切换降级淡入的起始位移（px）：只给 4px，再大就成了整块内容在滑动 */
+export const ROUTE_TRANSITION_SHIFT_PX = 4;
+
 /** 受保护页面的最小视口宽度（低于此宽度提示使用桌面端） */
 export const MIN_DESKTOP_WIDTH = 1024;
 

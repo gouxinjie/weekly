@@ -46,51 +46,80 @@
   flex-direction: column;
   flex: 0 0 var(--rail-width);
   width: var(--rail-width);
+  /* 右边界一条线把页签栏与内容区分开；左列不再自己画左边框，
+     否则周报态会出现「页签栏右线 + 左列左线」两条并排的线 */
+  border-right: 1px solid var(--color-border);
   background-color: var(--color-bg-subtle);
 }
 
-/* 品牌 logo */
+/* 品牌区：主色实底的叶片块 + 品牌名；顶部多留一档，视觉上先呼吸再进入导航 */
 .brand {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
   flex: 0 0 auto;
-  padding: var(--space-4) var(--space-4) var(--space-4);
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  padding: var(--space-6) var(--space-4) var(--space-4);
 }
 
-/* 品牌名后的叶片标记 */
+/* 品牌标记：与选中页签同一套「主色实底 + 反白」语言，三套主题下都足够醒目 */
+.brandMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* 品牌块内的叶片图形 */
 .brandLeaf {
   width: 15px;
   height: 15px;
-  color: var(--color-accent);
+}
+
+.brandText {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
 }
 
 /* 纵向页签 */
 .tabs {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   flex: 0 0 auto;
-  padding: 0 var(--space-3);
+  /*
+   * 左右各 8px：与页签自身的 8px 内边距相加正好 16px，
+   * 让页签的内容（图标）左边缘与上方品牌标记的左边缘对齐
+   * （此前 12 + 10 = 22px，明显偏右一截）；
+   * 同时页签的悬停底块也更宽，更像一条完整的导航。
+   */
+  padding: var(--space-2);
 }
 
 .tab,
 .tabActive {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border: none;
   /* 页签是小体量控件，圆角取小号，避免过于圆润 */
   border-radius: var(--radius-sm);
   background-color: transparent;
   color: var(--color-text-muted);
   font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
   text-align: left;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 /* 未选中悬停：页签栏底色本身就是 --color-bg-subtle，这里必须用更深的 active 底才有反馈 */
@@ -99,11 +128,19 @@
   color: var(--color-text);
 }
 
-/* 选中页签：主色实底 + 反白文字。页签栏本身是浅灰底，深绿实底一眼可辨 */
+/* 选中页签：主色实底 + 反白文字。页签栏本身是浅灰底，深绿实底一眼可辨；
+   加一层卡片阴影把它从栏底托起，切换标签时位置不动但层次更清楚。
+   字重与未选中一致（500）：加粗会让文字变宽、切换瞬间微跳，
+   主色实底 + 反白的对比已经足够，不再叠一层字重变化 */
 .tabActive {
   background-color: var(--color-accent);
   color: var(--color-on-accent);
-  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+
+/* 深色下阴影变量是纯黑，叠在偏亮的主色实底上会发脏；反白文字已足够区分，不再加阴影 */
+:global([data-theme='dark']) .tabActive {
+  box-shadow: none;
 }
 
 .tabActive:hover {
@@ -116,6 +153,12 @@
   width: 16px;
   height: 16px;
   color: var(--color-text-faint);
+  transition: color 0.15s ease;
+}
+
+/* 悬停时图标跟着描主色，和文字一起给出反馈，不再只是背景变深 */
+.tab:hover .tabIcon {
+  color: var(--color-accent);
 }
 
 /* 选中页签的图标跟随反白文字，不再单独指定主色 */
@@ -170,8 +213,8 @@
 /* ===== 左列（周报态为时间轴，待办态为筛选） ===== */
 
 /*
- * 页签栏与中栏之间的一列，左侧一条分隔线与页签栏区分开。
- * 两态同宽（--left-column-width）：切换标签页时列本身不位移，只有列内内容换。
+ * 页签栏与中栏之间的一列，两态同宽（--left-column-width）：切换标签页时列本身不位移，只有列内内容换。
+ * 分隔线由页签栏的右边界统一提供，这里不再画左边框——否则两态的线宽不一致。
  */
 .leftColumn {
   display: flex;
@@ -179,7 +222,6 @@
   flex: 0 0 var(--left-column-width);
   width: var(--left-column-width);
   min-width: 0;
-  border-left: 1px solid var(--color-border);
   background-color: var(--color-bg);
 }
 
@@ -206,6 +248,16 @@
   background-color: var(--color-bg);
 }
 
+/*
+ * 内容行：左列 + 中栏 + 右栏。
+ * 支持 View Transitions 的浏览器由浏览器自己做整页交叉淡化，这里无需参与；
+ * 不支持时由 index.tsx 给这一层播一段淡入兜底（参数取自 constants）。
+ * 顶栏始终不参与：跨模块切换时顶栏是整条被替换的，跟着淡化会让年份下拉与搜索框闪一下。
+ *
+ * 这里刻意不加 view-transition-name 与 will-change: transform：两者都会让本元素变成
+ * fixed 后代的包含块，而 Toast 是 position: fixed 且渲染在内容行内部，
+ * 加了会把它从屏幕居中拽到内容行里居中（左偏一个页签栏的宽度）。
+ */
 .contentRow {
   display: flex;
   flex: 1 1 auto;

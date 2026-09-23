@@ -323,17 +323,19 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
 /*
  * 就地编辑框：多行文本域，高度由 JS 按内容写入（见 TodoItem 的自动撑高 effect）。
  * 待办最长 500 字，单行 input 只能露出一小段、看不清在改什么。
- * 描边：主色 1px，一眼能看出「正在编辑的是这一条」。
- *   用内阴影而不是 border —— scrollHeight 不含 border，用真实边框会多出 2px 并触发滚动条。
- *   只描边、不加外圈光晕：1px 实框叠上 3px 光晕才是「边框感太重」的来源，单描边不会。
+ * 编辑态的标识改为「主色浅底」，不画描边：
+ *   1px 实框在整屏条目里始终像一根线把这一条圈出来，无论压到多淡都嫌重；
+ *   底色是面不是线，边界由圆角块自己形成，视觉重量低得多，同时仍保留主色倾向。
+ *   底色取 --color-accent-soft 而不是 --color-bg-subtle：后者与整行悬停色同色，看不出「正在编辑」。
+ * 横向内边距收到 8px：没有描边后不再需要给线留位置，也让文本起点更贴近展示态、减少点击编辑时的横向跳动；
+ * 纵向保持 8px 不动——.mainEditing 里勾选框与标签的对齐是按这个值算的。
  * max-height 兜底，超出后转为框内滚动，不会把清单顶下去。
  */
 .textInput {
   display: block;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
+  background-color: var(--color-accent-soft);
   max-height: 40vh;
   resize: none;
   overflow-y: auto;

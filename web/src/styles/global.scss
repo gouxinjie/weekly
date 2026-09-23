@@ -121,6 +121,21 @@ select {
 }
 
 /**
+ * 路由切换的视图过渡（View Transitions API）
+ * 说明：过渡由 utils/routeTransition 触发，浏览器拿整页的新旧两张快照做交叉淡化，
+ * 因此真实的 DOM 切换（列数变化、内容重排、编辑器重建）都被冻结在过渡里，不会表现为布局跳动。
+ * 时长与缓动和 constants 的 ROUTE_TRANSITION_MS / ROUTE_TRANSITION_EASING 保持一致，
+ * 让支持与不支持 View Transitions 的浏览器节奏相同。
+ * 「减少动态效果」在 JS 侧判断（不开启过渡），这里刻意不放 animation: none 的兜底：
+ * 新旧快照层带 plus-lighter 混合，双不透明叠加会过曝发白。
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/**
  * 所见即所得编辑器内容排版
  * 说明：.weekly-editor 是 TipTap 可编辑区域（ProseMirror）的稳定类名，
  * 该区域的 DOM 由 ProseMirror 在运行时生成，无法用 CSS Modules 作用域覆盖，

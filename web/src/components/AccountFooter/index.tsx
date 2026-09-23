@@ -4,7 +4,7 @@
  * 两态位置一致不跳动
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-09-23
  */
 import { useAuth } from '@/contexts/AuthContext';
 import { maskPhone } from '@/utils/format';

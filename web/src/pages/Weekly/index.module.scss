@@ -431,6 +431,26 @@
   font-size: 13px;
 }
 
+/*
+ * 编辑框内的加载占位：撑满编辑框剩余高度并居中。
+ * 否则切周时编辑区会先从满屏塌成一行「加载中…」、数据到达后再撑回来，
+ * 高度来回跳一次，看起来就是切换瞬间抖了一下。
+ */
+.editorBox .hint {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 加载失败同样撑满编辑框并居中：失败信息需要完整空间，也避免塌成一行再撑开 */
+.editorBox .error {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+}
+
 .error,
 .saveError {
   flex: 0 0 auto;

@@ -33,20 +33,36 @@
   font-weight: 700;
 }
 
-/* 「＋ 新建」：浅底主色字胶囊。
-   不用实心主按钮——窄栏里一块实心主色太重，也会与页面主按钮「发布」抢主次 */
+/* 「＋ 新建」：描边式次按钮，静息为白底浅描边，hover 才填浅主色底并转主色描边。
+   不用实心主按钮——窄栏里一块实心主色太重，也会与页面主按钮「发布」抢主次；
+   静息不加底色是为了让 hover 有「填色」这一级明确变化：原先常驻浅绿底、
+   hover 只换文字色，两个状态几乎看不出差别，等于没有反馈；
+   line-height 收到 1.4 并另给上下内边距，胶囊高度不再被 body 继承的 1.6 行高撑开 */
 .create {
   flex: 0 0 auto;
-  padding: 3px var(--space-2);
-  border: none;
+  padding: 4px var(--space-2);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background-color: var(--color-accent-soft);
+  background-color: var(--color-bg);
   color: var(--color-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.4;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .create:hover {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+}
+
+/* 按下态只再压深一档，不改尺寸——避免胶囊在窄栏里跳动 */
+.create:active {
+  border-color: var(--color-accent-hover);
   color: var(--color-accent-hover);
 }
 

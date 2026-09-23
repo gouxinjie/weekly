@@ -5,13 +5,20 @@
  * 左栏与左列宽度两态一致、切换不跳动；「待办」页签带未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-09-23
  */
+import { useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AccountFooter from '@/components/AccountFooter';
+import {
+  ROUTE_TRANSITION_EASING,
+  ROUTE_TRANSITION_MS,
+  ROUTE_TRANSITION_SHIFT_PX,
+} from '@/constants';
 import { useTodoCount } from '@/contexts/TodoCountContext';
 import { getCurrentWeek } from '@/utils/week';
+import { isViewTransitionActive, navigateWithTransition } from '@/utils/routeTransition';
 import styles from './index.module.scss';
 
 /** 左栏标签页标识 */
@@ -92,7 +99,45 @@ const AppLayout = ({
   onToggleDrawer,
 }: AppLayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { undoneCount } = useTodoCount();
+
+  /** 内容区节点：路由切换时给它播入场动画 */
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * 路由切换过渡的降级路径
+   * @remarks 支持 View Transitions 的浏览器走 utils/routeTransition 的交叉淡化，这里直接跳过；
+   * 不支持时才由本段接手，给内容区播一段淡入。选 WAAPI（element.animate）而不是 CSS 动画：
+   * 1. CSS 动画重播必须「置空 → 强制回流 → 还原」，那一次强制同步布局在周报这种大文档上会掉帧；
+   *    WAAPI 每次调用都是一段新动画，天然可重播。
+   * 2. 挂在 useLayoutEffect 而不是 useEffect：useEffect 在浏览器绘制之后才跑，
+   *    新内容会先以完全不透明的状态闪一帧再淡入；useLayoutEffect 在绘制前跑，首帧即动画起点。
+   * 3. 只动 opacity 与 transform：两者都能交给合成线程，不触发重排；且不重建子树，
+   *    周报换周时编辑器实例与滚动位置都保留。
+   * @returns 取消动画的清理函数
+   */
+  useLayoutEffect(() => {
+    // 这次切换已由视图过渡负责（新旧快照交叉淡化），不要再叠一层淡入
+    if (isViewTransitionActive()) return undefined;
+
+    const element = contentRef.current;
+    if (element === null) return undefined;
+    // 系统开启「减少动态效果」时直接落位
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const animation = element.animate(
+      [
+        { opacity: 0, transform: `translateY(${ROUTE_TRANSITION_SHIFT_PX}px)` },
+        { opacity: 1, transform: 'none' },
+      ],
+      { duration: ROUTE_TRANSITION_MS, easing: ROUTE_TRANSITION_EASING },
+    );
+
+    return () => {
+      animation.cancel();
+    };
+  }, [location.pathname]);
 
   /**
    * 跳转到指定标签页
@@ -102,10 +147,10 @@ const AppLayout = ({
   const goTab = (tab: AppTab): void => {
     if (tab === 'weekly') {
       const current = getCurrentWeek();
-      navigate(`/weekly/${current.year}/${current.week}`);
+      navigateWithTransition(navigate, `/weekly/${current.year}/${current.week}`);
       return;
     }
-    navigate(`/${tab}`);
+    navigateWithTransition(navigate, `/${tab}`);
   };
 
   const hasDrawer = drawer !== undefined;
@@ -119,11 +164,13 @@ const AppLayout = ({
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <div className={styles.brand}>
-            weekly
-            {/* 叶片标记：与登录页同一图形 */}
-            <svg className={styles.brandLeaf} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M20 4c-9 0-14 3.6-14 10.2 0 1.2.3 2.3.8 3.2l-3.1 2.9 1.4 1.5 3.1-2.9c1 .6 2.1.9 3.3.9C18.2 19.8 20 14 20 4Zm-2.2 2.3c-.3 5.5-1.6 9-4.6 10.5-1.2.6-2 1-2.9 1.1l7.5-11.6Z" />
-            </svg>
+            {/* 品牌标记：叶片图形放进主色实底圆角块，与选中页签同一套「主色实底」语言 */}
+            <span className={styles.brandMark} aria-hidden>
+              <svg className={styles.brandLeaf} viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4c-9 0-14 3.6-14 10.2 0 1.2.3 2.3.8 3.2l-3.1 2.9 1.4 1.5 3.1-2.9c1 .6 2.1.9 3.3.9C18.2 19.8 20 14 20 4Zm-2.2 2.3c-.3 5.5-1.6 9-4.6 10.5-1.2.6-2 1-2.9 1.1l7.5-11.6Z" />
+              </svg>
+            </span>
+            <span className={styles.brandText}>weekly</span>
           </div>
 
           <nav className={styles.tabs}>
@@ -156,7 +203,7 @@ const AppLayout = ({
         <div className={styles.main}>
           {topbar !== undefined ? <header className={styles.topbar}>{topbar}</header> : null}
 
-          <div className={styles.contentRow}>
+          <div className={styles.contentRow} ref={contentRef}>
             {/* 左列：周报态为时间轴，待办态为筛选；周报态的年份切换正好压在它上方 */}
             {leftColumn !== undefined ? (
               <aside className={styles.leftColumn}>{leftColumn}</aside>

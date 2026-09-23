@@ -4,7 +4,7 @@
  * 右上角品牌口号，右侧悬浮白色登录卡片；登录 / 注册两页签切换，支持记住账号
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-09-23
  */
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
@@ -12,6 +12,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import loginBg from '@/assets/login-bg.jpg';
 import { CONTACT_PHONE, REMEMBER_PHONE_KEY } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigateWithTransition } from '@/utils/routeTransition';
 import styles from './index.module.scss';
 
 /** 两种表单模式 */
@@ -207,7 +208,7 @@ const Login = () => {
         // 隐私模式下写入失败不影响登录流程
       }
 
-      navigate(from, { replace: true });
+      navigateWithTransition(navigate, from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '操作失败，请稍后重试');
     } finally {

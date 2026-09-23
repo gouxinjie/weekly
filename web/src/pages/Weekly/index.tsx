@@ -4,7 +4,7 @@
  * 右栏抽屉（展示态为本周待办，编辑态为模板 / 插入 / 导出面板）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-20
+ * @updated 2026-09-23
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -32,6 +32,7 @@ import {
   formatWeekRangeShort,
 } from '@/utils/format';
 import { getCurrentWeek, getWeekCount, getWeekRange, isValidWeek } from '@/utils/week';
+import { navigateWithTransition } from '@/utils/routeTransition';
 import type { EditorMode, SaveState } from '@/types/models';
 import styles from './index.module.scss';
 
@@ -229,7 +230,7 @@ const Weekly = () => {
       if (dirty) {
         await persist();
       }
-      navigate(`/weekly/${targetYear}/${targetWeek}`);
+      navigateWithTransition(navigate, `/weekly/${targetYear}/${targetWeek}`);
     },
     [year, week, content, persist, navigate],
   );
@@ -278,6 +279,18 @@ const Weekly = () => {
     },
     [mode],
   );
+
+  // 切换周次后把内容区滚回顶部：新一周的内容从头看起，
+  // 否则会停在上一周的滚动位置，看上去像「内容突然跳到了中间」。
+  // 顺带清掉模式切换遗留的滚动恢复值，避免它在这之后把位置又设回去。
+  // 编辑态时编辑器多半因 loading 卸载、ref 为空，setScrollTop 不生效——
+  // 没关系，数据到达后编辑器重建，天然从顶部开始
+  useEffect(() => {
+    pendingScrollRef.current = null;
+    const preview = previewRef.current;
+    if (preview !== null) preview.scrollTop = 0;
+    editorRef.current?.setScrollTop(0);
+  }, [year, week]);
 
   // 模式切换后恢复滚动位置
   useEffect(() => {
@@ -471,7 +484,7 @@ const Weekly = () => {
           <WeeklyReference
             year={year}
             week={week}
-            onGoTodo={() => navigate(`/todo?year=${year}&week=${week}`)}
+            onGoTodo={() => navigateWithTransition(navigate, `/todo?year=${year}&week=${week}`)}
           />
         )
       }
