@@ -1,7 +1,8 @@
 /**
  * 底部账号区样式
  * 说明：固定在左栏底部，圆形头像 + 账号名 / 脱敏手机号两行，
- * 两态共用，位置不因切换标签页而跳动。
+ * 两态共用，位置不因切换标签页而跳动；
+ * 头像同时是账号菜单入口，菜单向上弹出（portal 到 body 后按 fixed 定位）。
  */
 
 .footer {
@@ -25,20 +26,42 @@
 }
 
 /* 圆形头像：主色浅底 + 主色剪影，比灰色底更有品牌感，三套主题下都不发灰。
-   32px 比原先的 40px 更贴合 200px 的栏宽，也给右侧两行文字留出更多空间 */
-.avatar {
+   32px 比原先的 40px 更贴合 200px 的栏宽，也给右侧两行文字留出更多空间。
+   它同时是账号菜单的入口按钮，因此先抹掉浏览器默认的按钮边框与内边距 */
+.avatar,
+.avatarOpen {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
   width: 32px;
   height: 32px;
+  padding: 0;
+  border: none;
   border-radius: 50%;
   background-color: var(--color-accent-soft);
   color: var(--color-accent);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.avatar svg {
+/* 悬停：浅底换主色实底，与选中页签同一套「主色实底 + 反白」语言 */
+.avatar:hover {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* 菜单展开态：常驻实底，外加一圈浅主色光晕把入口与浮层关联起来 */
+.avatarOpen {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.avatar svg,
+.avatarOpen svg {
   /* 图标随头像等比放大（32 × 0.56 ≈ 18） */
   width: 18px;
   height: 18px;
@@ -69,4 +92,52 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ===== 账号菜单（portal 到 body，fixed 定位，向上弹出） ===== */
+
+/* 宽度必须与 index.tsx 的 MENU_WIDTH 一致，否则贴边时的横向收拢会算错 */
+.menu {
+  position: fixed;
+  z-index: var(--z-pop);
+  width: 172px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-pop);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 6px var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  /* 退出是危险操作，文字直接取危险色，与二次确认弹窗的语气一致 */
+  color: var(--color-danger);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menuItem:hover {
+  background-color: var(--color-bg-active);
+}
+
+.menuIcon {
+  display: flex;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.menuIcon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
