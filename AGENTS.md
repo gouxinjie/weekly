@@ -1173,6 +1173,8 @@ server: {
 
 部署环境：阿里云 ECS + Nginx + pm2。域名 `weekly.gouxinjie.com`，HTTP。
 
+> 逐步操作手册见 `doc/weekly-deploy.md`（首次部署、日常发布、回滚、备份恢复、排障）；本节记录的是**不可违反的约束与原理**。
+
 ### 21.1 部署拓扑
 
 ```
@@ -1183,7 +1185,7 @@ server: {
 
 **Node 只监听 `127.0.0.1`**，不直接暴露公网。安全组只开放 80（以及 22）。
 
-**Node 版本约束（重要）**：这台 ECS 上的 node 由多个应用共用（`archive` / `flow-calendar` / `prompt-gallery`，当前 v20.20.2），**不要为了 weekly 单独升级 node**——升级会连带重启这几个应用。CI 的 `NODE_VERSION` 必须与线上一致（20），否则会出现「用 22 构建、用 20 运行」的隐性差异。
+**Node 版本约束（重要）**：这台 ECS 上的 node 由同机多个其他应用共用（当前 v20.20.2），**不要为了 weekly 单独升级 node**——升级会连带重启它们。CI 的 `NODE_VERSION` 必须与线上一致（20），否则会出现「用 22 构建、用 20 运行」的隐性差异。决策来龙去脉见 `doc/weekly-deploy.md` §2.3。
 
 weekly 的依赖都支持 Node 20：`better-sqlite3@12` 要求 `20.x || 22.x || ...`、`argon2@0.45` 要求 `>= 16.17`；代码里唯一有下限的 API 是 `config.ts` 的 `process.loadEnvFile`（Node ≥ 20.12）。`server/package.json` 的 `engines.node` 已声明 `>=20.12.0`。
 
@@ -1304,6 +1306,7 @@ curl http://weekly.gouxinjie.com/api/health  # 应返回 JSON
 
 - **不要在服务器上 `git pull` 后直接跑源码**——上传构建产物，服务器不装 devDependencies
 - **不要把 `.env` 提交进仓库或打进产物**
+- **不要把服务器公网 IP、同机其他应用的名称写进仓库**——文档统一用占位符（见 `doc/weekly-deploy.md` 的脱敏约定）
 - **不要开 3701 端口到公网**——Node 只在 127.0.0.1 后面
 - **不要在 Nginx 里配 CORS 头**——前后端同源，不需要
 

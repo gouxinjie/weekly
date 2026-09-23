@@ -8,7 +8,7 @@
 #   - .env 与 data/ 只存在于服务器，不进仓库、不进发布包。
 #
 # 需要在仓库 Settings → Secrets and variables → Actions 中配置：
-#   ECS_HOST        ECS 公网 IP，如 47.101.33.206
+#   ECS_HOST        ECS 公网 IP（示例 203.0.113.10）
 #   ECS_SSH_KEY     部署私钥全文（PEM / OpenSSH 均可）
 #   ECS_USER        可选，默认 root
 #   ECS_PORT        可选，默认 22
@@ -32,8 +32,8 @@ permissions:
   contents: read
 
 env:
-  # 与线上 ECS 的 node 版本保持一致：该机器上 node 由 archive / flow-calendar /
-  # prompt-gallery 等多个应用共用（当前 v20.20.2），不单独为 weekly 升级。
+  # 与线上 ECS 的 node 版本保持一致：该机器上 node 由同机多个其他应用共用
+  # （当前 v20.20.2），不单独为 weekly 升级。
   # 若这里写 22，会出现「用 22 构建、用 20 运行」的隐性差异。
   NODE_VERSION: '20'
   APP_DIR: /var/www/weekly
