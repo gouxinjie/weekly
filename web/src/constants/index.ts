@@ -25,6 +25,32 @@ export const EXPANDED_MONTHS_KEY = 'weekly:expanded-months';
 /** 「记住账号」在 localStorage 中的键名 */
 export const REMEMBER_PHONE_KEY = 'weekly:remember-phone';
 
+/** 主题在 localStorage 中的键名（未记录时使用默认主题） */
+export const THEME_KEY = 'weekly:theme';
+
+/** 主题标识：亮色 / 暖纸 / 深色，与 variables.scss 的 [data-theme='xxx'] 一一对应 */
+export type ThemeName = 'light' | 'paper' | 'dark';
+
+/** 主题选项定义 */
+export interface ThemeOption {
+  /** 主题标识，同时作为根元素的 data-theme 取值 */
+  value: ThemeName;
+  /** 展示名称 */
+  label: string;
+  /** 一句话说明，帮助判断该在什么场景下选它 */
+  description: string;
+}
+
+/** 可选主题，顺序即设置页中的排列顺序 */
+export const THEMES: ThemeOption[] = [
+  { value: 'light', label: '浅色', description: '暖白底 + 深墨绿主色，默认主题' },
+  { value: 'paper', label: '暖纸', description: '米黄护眼底，长时间读写更柔和' },
+  { value: 'dark', label: '深色', description: '深墨底，适合夜间或暗光环境' },
+];
+
+/** 默认主题：首次访问（本地无记录）时使用 */
+export const DEFAULT_THEME: ThemeName = 'light';
+
 /** 周报内容字数上限（编辑区底部计数用） */
 export const MAX_CONTENT_CHARS = 2000;
 

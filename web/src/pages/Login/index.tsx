@@ -20,8 +20,8 @@ type FormMode = 'login' | 'register';
 /** 手机号格式：中国大陆 11 位 */
 const PHONE_PATTERN = /^1[3-9]\d{9}$/;
 
-/** 密码强度：必须同时含数字与字母，长度不少于 8 位 */
-const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
+/** 密码强度：必须同时含数字与字母，长度不少于 6 位 */
+const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-zA-Z]).{6,}$/;
 
 /** 品牌叶片：与左栏 logo 同款图形 */
 const LeafIcon = () => (
@@ -176,7 +176,7 @@ const Login = () => {
 
     if (mode === 'register') {
       if (!PASSWORD_PATTERN.test(password)) {
-        setError('密码需包含数字与字母，且长度不少于 8 位');
+        setError('密码需包含数字与字母，且长度不少于 6 位');
         return;
       }
       if (password !== confirm) {
@@ -346,7 +346,7 @@ const Login = () => {
                     onChange={(event) => setConfirm(event.target.value)}
                   />
                 </label>
-                <p className={styles.hint}>密码需包含数字与字母，长度不少于 8 位</p>
+                <p className={styles.hint}>密码需包含数字与字母，长度不少于 6 位</p>
               </>
             ) : null}
 

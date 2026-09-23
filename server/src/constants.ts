@@ -45,4 +45,4 @@ export const SESSION_COOKIE = {
 export const PHONE_PATTERN = '^1[3-9]\\d{9}$';
 
 /** 密码最短长度，与前端校验保持一致 */
-export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MIN_LENGTH = 6;

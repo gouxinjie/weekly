@@ -1,0 +1,173 @@
+/**
+ * 主题选择样式
+ * 说明：三列等宽网格，每张卡为「缩略预览 + 名称 + 说明 + 对勾」。
+ * 预览区内的颜色全部取自变量，靠预览元素上的 data-theme 切到对应主题的取值。
+ * 单选按钮视觉隐藏但保留可聚焦，选中态与聚焦环都画在紧随其后的卡片上。
+ */
+
+.group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* 定位上下文：视觉隐藏的单选按钮以此为基准 */
+.option {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+/* 视觉隐藏但不能 display:none——否则按钮会失去焦点能力 */
+.radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  /* 用页面底色盖在浅灰信息卡之上，层级比卡片高一级 */
+  background-color: var(--color-bg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.option:hover .card {
+  border-color: var(--color-border-strong);
+}
+
+/* 选中态：主色描边 + 主色光晕，与输入框聚焦环同一语言 */
+.radio:checked + .card {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.radio:focus-visible + .card {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ===== 缩略预览 ===== */
+
+.preview {
+  display: flex;
+  height: 54px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+}
+
+/* 左侧页签栏：底色用 active 灰，顶部一块主色代表选中页签 */
+.previewRail {
+  flex: 0 0 auto;
+  width: 16px;
+  background-color: var(--color-bg-active);
+  box-shadow: inset 3px 0 0 0 var(--color-accent);
+}
+
+.previewBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-2);
+  background-color: var(--color-bg-subtle);
+}
+
+.previewTitle,
+.previewLine {
+  height: 4px;
+  border-radius: 999px;
+  background-color: var(--color-border-strong);
+}
+
+.previewTitle {
+  width: 70%;
+  /* 标题行用主色，一眼看出这套配色的主色倾向 */
+  background-color: var(--color-accent);
+}
+
+.previewLine {
+  width: 45%;
+}
+
+/* 底部色块：代表状态色（已保存 / 分类标签） */
+.previewChip {
+  width: 22px;
+  height: 4px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background-color: var(--color-saved);
+}
+
+/* ===== 文案与对勾：同一行，文案吃掉剩余宽度 ===== */
+
+.meta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.texts {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px;
+}
+
+.name {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.desc {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ===== 对勾：仅选中态显示 ===== */
+
+.check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  /* 与首行名称视觉对齐：名称行高 13×1.4≈18，圆点比它小一点，往下压 1px 居中 */
+  margin-top: 1px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.check svg {
+  width: 11px;
+  height: 11px;
+}
+
+.radio:checked + .card .check {
+  opacity: 1;
+}

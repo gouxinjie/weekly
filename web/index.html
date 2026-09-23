@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>weekly</title>
+    <script>
+      // 首屏防闪：样式表先于 JS 生效，因此在这里把主题写到根元素，
+      // 避免深色 / 暖纸主题下先闪一帧默认的亮色。
+      // 键名必须与 src/constants/index.ts 的 THEME_KEY 保持一致；
+      // 取值只排除默认的 light，不做白名单——非法值匹配不到任何变量块，
+      // 视觉上等同默认主题，因此新增主题时这里不必改动。
+      try {
+        var stored = localStorage.getItem('weekly:theme');
+        if (stored !== null && stored !== 'light') {
+          document.documentElement.dataset.theme = stored;
+          if (stored === 'dark') document.documentElement.style.colorScheme = 'dark';
+        }
+      } catch (e) {
+        // 隐私模式下读取存储会抛错，保持默认主题即可
+      }
+    </script>
   </head>
   <body>
     <!-- React 应用挂载点 -->

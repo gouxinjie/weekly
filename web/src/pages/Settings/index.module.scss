@@ -1,7 +1,7 @@
 /**
  * 设置页样式
  * 说明：骨架中栏内的单列居中布局（宽 --settings-max-width）。
- * 结构为「页头 + 三张浅色信息卡 + 通栏退出按钮」：
+ * 结构为「页头 + 四张浅色信息卡（外观 / 账号信息 / 账号安全 / 系统信息）+ 通栏退出按钮」：
  * 卡片标题带主色短竖条做锚点，卡内敏感操作为「图标 + 文案 + 说明 + 箭头」的行式按钮，
  * 悬停整行浅底高亮；修改密码表单展开后是一块白底内嵌面板，与灰色卡片拉开层级。
  */
@@ -46,7 +46,7 @@
   margin-bottom: var(--space-4);
   padding: var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background-color: var(--color-bg-subtle);
 }
 
@@ -69,6 +69,13 @@
   height: 12px;
   border-radius: 999px;
   background-color: var(--color-accent);
+}
+
+/* 卡片副标题：补充说明该组设置的作用范围，比标题再弱一级 */
+.cardDesc {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 /* ===== 账号信息 ===== */
@@ -143,7 +150,7 @@
   margin: 0 calc(-1 * var(--space-2));
   padding: var(--space-3) var(--space-2);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: transparent;
   text-align: left;
   transition: background-color 0.15s ease;
@@ -197,90 +204,25 @@
   line-height: 1.5;
 }
 
-/* 右箭头：SVG 折线，展开时旋转 90 度指向下。
-   尺寸由 width/height 决定，不再依赖字符的字号与基线 */
-.chevron,
-.chevronOpen {
+/* 右箭头：SVG 折线，尺寸由 width/height 决定，不再依赖字符的字号与基线 */
+.chevron {
   flex: 0 0 auto;
   margin-left: auto;
   width: 12px;
   height: 12px;
   color: var(--color-text-faint);
-  transition:
-    transform 0.18s ease,
-    color 0.15s ease;
+  transition: color 0.15s ease;
 }
 
-.chevronOpen {
-  transform: rotate(90deg);
-}
-
-.actionRow:hover .chevron,
-.actionRow:hover .chevronOpen {
+.actionRow:hover .chevron {
   color: var(--color-accent);
 }
 
-/* ===== 修改密码表单：白底内嵌面板 ===== */
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.label {
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-bg-subtle);
-  color: var(--color-text);
-  font-size: 13px;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background-color 0.15s ease;
-}
-
-.input::placeholder {
-  color: var(--color-text-faint);
-}
-
-.input:hover {
-  border-color: var(--color-text-faint);
-}
-
-/* 聚焦环用主色浅底光晕替代默认 outline，与下拉选择控件保持一致 */
-.input:focus {
-  border-color: var(--color-accent);
-  background-color: var(--color-bg);
-  outline: none;
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-}
-
-.hint {
-  color: var(--color-text-faint);
-  font-size: 12px;
-}
-
-/* 表单反馈条：错误与成功各取状态色浅底，比纯文字更醒目 */
+/* ===== 改密结果反馈条：弹窗关闭后显示在账号安全卡底部 ===== */
+/* 错误与成功各取状态色浅底，比纯文字更醒目 */
 .bannerError,
 .bannerSuccess {
+  margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   font-size: 12px;
@@ -295,22 +237,6 @@
 .bannerSuccess {
   background-color: var(--color-saved-soft);
   color: var(--color-saved);
-}
-
-.primary {
-  width: 100%;
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-sm);
-  background-color: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: 13px;
-  font-weight: 600;
-  transition: background-color 0.15s ease;
-}
-
-.primary:hover {
-  background-color: var(--color-accent-hover);
 }
 
 /* ===== 系统信息 ===== */
@@ -364,7 +290,7 @@
   margin-top: var(--space-2);
   padding: var(--space-3);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: var(--color-danger-soft);
   color: var(--color-danger);
   font-size: 13px;

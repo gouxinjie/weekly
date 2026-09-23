@@ -1,0 +1,180 @@
+/**
+ * 修改密码弹窗样式
+ * 布局要点：半透明遮罩铺满视口并居中弹窗卡片；卡片为「标题 + 说明 + 三段密码表单 + 双按钮」的纵向结构，
+ * 表单为纵向堆叠的字段组（标签在上、输入框在下），底部按钮等宽两列、取消在左确认在右。
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgb(34 48 43 / 42%);
+  animation: overlayIn 0.15s ease;
+}
+
+/* 弹窗卡片：宽度固定，避免文案长短导致跳动；内容左对齐，与表单的输入节奏一致 */
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  max-width: 100%;
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-float);
+  animation: panelIn 0.18s ease;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.description {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* ===== 表单 ===== */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text);
+  font-size: 13px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.input:hover {
+  border-color: var(--color-text-faint);
+}
+
+/* 聚焦环用主色浅底光晕替代默认 outline，与下拉选择控件保持一致 */
+.input:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.hint {
+  color: var(--color-text-faint);
+  font-size: 12px;
+}
+
+/* 校验失败提示：危险色浅底，比纯文字更醒目 */
+.bannerError {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ===== 底部按钮：等宽两列，取消在左确认在右 ===== */
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.cancel,
+.primary {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cancel {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.cancel:hover {
+  border-color: var(--color-text-faint);
+  background-color: var(--color-bg-subtle);
+}
+
+.primary {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* 遮罩淡入 + 卡片轻微上浮，弱动画不影响可访问性 */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}

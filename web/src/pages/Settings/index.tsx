@@ -1,24 +1,25 @@
 /**
  * @component 设置页
- * @description 应用骨架内的单列居中布局：账号信息、账号安全（修改密码 / 退出所有设备）、
- * 系统信息与通栏退出登录按钮；修改密码、退出登录与退出所有设备均为敏感操作，统一走二次确认弹窗
+ * @description 应用骨架内的单列居中布局：外观（主题切换）、账号信息、
+ * 账号安全（修改密码 / 退出所有设备）、系统信息与通栏退出登录按钮；
+ * 修改密码以弹窗收集原密码与新密码，修改密码、退出登录与退出所有设备均为敏感操作，统一走二次确认弹窗
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-09-23
  */
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/AppLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { ConfirmTone } from '@/components/ConfirmDialog';
+import PasswordDialog from '@/components/PasswordDialog';
+import type { PasswordFormValue } from '@/components/PasswordDialog';
+import ThemePicker from '@/components/ThemePicker';
 import { CONTACT_PHONE } from '@/constants';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { maskPhone } from '@/utils/format';
 import styles from './index.module.scss';
-
-/** 密码强度：必须同时含数字与字母，长度不少于 8 位 */
-const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
 
 /** 应用版本号：与 package.json 保持一致 */
 const APP_VERSION = 'v1.0.0';
@@ -97,58 +98,54 @@ const ChevronIcon = ({ className }: ChevronIconProps) => (
  */
 const Settings = () => {
   const { user, signOut, signOutAll, updatePassword } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordDraft, setPasswordDraft] = useState<PasswordFormValue | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null);
   const [confirmPending, setConfirmPending] = useState(false);
 
-  /** 展开 / 收起修改密码表单 */
-  const togglePasswordForm = (): void => {
-    setPasswordOpen((prev) => !prev);
+  /** 打开修改密码弹窗，同时清掉上一次的反馈 */
+  const openPasswordDialog = (): void => {
     setError('');
     setSuccess('');
+    setPasswordOpen(true);
+  };
+
+  /** 关闭修改密码弹窗：主动关闭时丢弃暂存内容，下次打开是干净的空表单 */
+  const closePasswordDialog = (): void => {
+    setPasswordDraft(null);
+    setPasswordOpen(false);
   };
 
   /**
-   * 提交修改密码表单：先做本地校验，通过后才拉起二次确认
-   * @param event - 表单提交事件
+   * 弹窗内校验通过后：暂存填写内容并拉起二次确认
+   * @param value - 弹窗回填的三个密码字段
    * @returns 无
+   * @remarks 弹窗此时关闭，内容暂存到 passwordDraft；
+   *          二次确认被取消时重新打开弹窗并用它回填，用户不必重新输入
    */
-  const handleSubmitPassword = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const handlePasswordSubmit = (value: PasswordFormValue): void => {
     setError('');
     setSuccess('');
-
-    if (oldPassword === '') {
-      setError('请输入原密码');
-      return;
-    }
-    if (!PASSWORD_PATTERN.test(newPassword)) {
-      setError('新密码需包含数字与字母，且长度不少于 8 位');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('两次输入的新密码不一致');
-      return;
-    }
-
+    setPasswordDraft(value);
+    setPasswordOpen(false);
     setConfirmTarget('password');
   };
 
   /** 确认后真正提交修改密码 */
   const submitPasswordChange = async (): Promise<void> => {
+    // 二次确认只可能由弹窗提交产生，这里理论上有值；取不到时直接结束，避免空提交
+    if (passwordDraft === null) return;
+
+    const { oldPassword, newPassword } = passwordDraft;
     setConfirmPending(true);
     try {
       await updatePassword({ oldPassword, newPassword });
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setPasswordDraft(null);
       setSuccess('密码已更新，其他设备的登录已失效');
     } catch (err) {
       setError(err instanceof Error ? err.message : '修改密码失败，请稍后重试');
@@ -217,6 +214,8 @@ const Settings = () => {
   /** 关闭二次确认弹窗；处理中不允许关闭 */
   const handleCancelConfirm = (): void => {
     if (confirmPending) return;
+    // 取消改密确认时回到填写弹窗，passwordDraft 会作为初值回填
+    if (confirmTarget === 'password') setPasswordOpen(true);
     setConfirmTarget(null);
   };
 
@@ -226,8 +225,15 @@ const Settings = () => {
         <div className={styles.panel}>
           <header className={styles.header}>
             <h1 className={styles.title}>设置</h1>
-            <p className={styles.subtitle}>管理账号安全与查看数据存储信息</p>
+            <p className={styles.subtitle}>管理外观主题、账号安全与查看数据存储信息</p>
           </header>
+
+          {/* 外观：主题只存本机，切换后立即生效，不走服务端 */}
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>外观</h2>
+            <p className={styles.cardDesc}>主题保存在本机浏览器，换设备或换浏览器需重新选择</p>
+            <ThemePicker value={theme} onChange={setTheme} />
+          </section>
 
           {/* 账号信息 */}
           <section className={styles.card}>
@@ -256,8 +262,8 @@ const Settings = () => {
             <button
               type="button"
               className={styles.actionRow}
-              onClick={togglePasswordForm}
-              aria-expanded={passwordOpen}
+              onClick={openPasswordDialog}
+              aria-haspopup="dialog"
             >
               <span className={styles.actionIcon} aria-hidden>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
@@ -270,65 +276,8 @@ const Settings = () => {
                 <span className={styles.actionLabel}>修改密码</span>
                 <span className={styles.actionDesc}>需验证原密码，修改后其他设备会退出登录</span>
               </span>
-              <ChevronIcon className={passwordOpen ? styles.chevronOpen : styles.chevron} />
+              <ChevronIcon className={styles.chevron} />
             </button>
-
-            {passwordOpen ? (
-              <form className={styles.form} onSubmit={handleSubmitPassword}>
-                <label className={styles.field}>
-                  <span className={styles.label}>原密码</span>
-                  <input
-                    className={styles.input}
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="请输入当前使用的密码"
-                    value={oldPassword}
-                    onChange={(event) => setOldPassword(event.target.value)}
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.label}>新密码</span>
-                  <input
-                    className={styles.input}
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="数字 + 字母，不少于 8 位"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                  />
-                </label>
-
-                <label className={styles.field}>
-                  <span className={styles.label}>确认新密码</span>
-                  <input
-                    className={styles.input}
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="请再次输入新密码"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                  />
-                </label>
-
-                <p className={styles.hint}>密码需包含数字与字母，长度不少于 8 位</p>
-                {/* role 让读屏即时播报结果：失败为 alert、成功为 status */}
-                {error !== '' ? (
-                  <p className={styles.bannerError} role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                {success !== '' ? (
-                  <p className={styles.bannerSuccess} role="status">
-                    {success}
-                  </p>
-                ) : null}
-
-                <button type="submit" className={styles.primary}>
-                  更新密码
-                </button>
-              </form>
-            ) : null}
 
             <button
               type="button"
@@ -348,6 +297,18 @@ const Settings = () => {
               </span>
               <ChevronIcon className={styles.chevron} />
             </button>
+
+            {/* 改密结果反馈：弹窗关闭后在此提示，失败为 alert、成功为 status */}
+            {error !== '' ? (
+              <p className={styles.bannerError} role="alert">
+                {error}
+              </p>
+            ) : null}
+            {success !== '' ? (
+              <p className={styles.bannerSuccess} role="status">
+                {success}
+              </p>
+            ) : null}
           </section>
 
           {/* 系统信息 */}
@@ -383,6 +344,16 @@ const Settings = () => {
           </button>
         </div>
       </div>
+
+      {/* 修改密码：弹窗收集密码，校验通过后再交给二次确认，两者不同时出现 */}
+      {passwordOpen ? (
+        <PasswordDialog
+          open
+          initialValue={passwordDraft ?? undefined}
+          onSubmit={handlePasswordSubmit}
+          onCancel={closePasswordDialog}
+        />
+      ) : null}
 
       {/* 敏感操作的二次确认：同一时刻只会有一个 */}
       {confirmTarget !== null ? (

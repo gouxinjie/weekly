@@ -374,6 +374,18 @@ interface TreeProps {
 - 骨架宽度只改 `variables.scss` 一处，组件里不得写死列宽
 - 字体字号目前全项目统一直接写字面值，不纳入变量体系（如需调整请先统一约定）
 
+### 5.4 主题机制
+
+三套配色：`light`（默认）/ `paper`（暖纸护眼）/ `dark`（深色），切换入口在设置页「外观」卡片（G-13 的切换入口已实现）。
+
+- 落地方式：`ThemeContext` 给根元素写 `data-theme`，`variables.scss` 里同名的 `[data-theme='xxx']` 块命中变量
+- 亮色变量**同时**挂在 `:root` 与 `[data-theme='light']` 上——后者不能省：主题选择卡的缩略预览会局部挂 `data-theme` 借用该套配色，只写 `:root` 会让深色主题下的「浅色预览」继承成深色
+- 覆盖块必须**写全用到的变量**，否则未声明的部分会继承父级主题，出现配色混杂
+- 主题是纯本地偏好：只存 `localStorage`（键 `weekly:theme`），不进服务端、不随账号同步；多标签页靠 `storage` 事件联动（只改内存、不回写，否则互相触发）
+- `index.html` 的首屏防闪脚本**不做取值白名单**，只排除默认的 `light`——非法值匹配不到任何变量块、视觉等同默认，因此新增主题不必改 HTML
+- 新增主题要做三件事：`variables.scss` 加覆盖块、`constants/index.ts` 的 `THEMES` 加选项、`ThemeName` 联合类型加字面量
+- 每套主题的状态色与分类色都要按 WCAG AA 校准（正文 / 状态 / 分类标签 ≥ 4.5:1），深色下 hover 必须比基色**更亮**
+
 ---
 
 ## 6. 界面骨架
@@ -597,12 +609,12 @@ export const verifyPassword = (hash: string, plain: string): Promise<boolean> =>
 
 ```ts
 /**
- * 校验密码强度：必须同时含数字与字母，长度 ≥ 8
+ * 校验密码强度：必须同时含数字与字母，长度 ≥ PASSWORD_MIN_LENGTH（当前 6）
  * @param plain - 明文密码
  * @returns 是否通过
  */
 export const isStrongPassword = (plain: string): boolean =>
-  plain.length >= 8 && /[0-9]/.test(plain) && /[a-zA-Z]/.test(plain);
+  plain.length >= PASSWORD_MIN_LENGTH && /[0-9]/.test(plain) && /[a-zA-Z]/.test(plain);
 ```
 
 ### 7.5 限流

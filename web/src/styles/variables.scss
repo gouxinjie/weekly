@@ -3,9 +3,17 @@
  * 说明：所有颜色、尺寸、间距只能取自本文件，组件样式里禁止写魔法值。
  * 尺寸变量与界面骨架规格一一对应，改宽度只改这里一处。
  * 配色对齐 ui 设计稿：主色为深墨绿，待办分类各有专属色相。
+ *
+ * 主题机制：三套配色写在 [data-theme] 选择器下，由 ThemeContext 给根元素设置该属性。
+ * 亮色同时挂在 :root 与 [data-theme='light'] 上——后者不可省：
+ * 主题选择卡片里的缩略预览会局部挂 data-theme 来借用对应主题的配色，
+ * 只写 :root 的话，深色主题下的「浅色预览」会继承到深色变量。
+ * 因此两套覆盖块都必须把用到的变量写全，否则会与继承值混杂。
  */
 
-:root {
+/* ===== 亮色（默认）===== */
+:root,
+[data-theme='light'] {
   /* 背景：页面底色为暖白 #fefefd（对齐设计稿），卡片沿用同一变量 */
   --color-bg: #fefefd;
   --color-bg-subtle: #f6f7f6;
@@ -70,7 +78,7 @@
   --left-column-width: 220px;
   --drawer-width: 220px;
   --center-min-width: 480px;
-  --settings-max-width: 600px;
+  --settings-max-width: 760px;
   --topbar-height: 56px;
 
   /* 登录页：悬浮卡片尺寸与品牌区定位 */
@@ -107,11 +115,7 @@
   --z-toast: 100;
 }
 
-/**
- * 深色模式变量预留（Q16：成本极低但 MVP 不暴露切换入口）
- * 启用方式：给根元素加上 data-theme="dark" 即可，当前代码不设置该属性，
- * 因此默认始终使用上面的亮色变量。
- */
+/* ===== 深色 ===== */
 [data-theme='dark'] {
   --color-bg: #1b211e;
   --color-bg-subtle: #232a26;
@@ -129,11 +133,89 @@
   --color-saved: #6fae5c;
   /* 深色底上需要更亮的绿才能满足小号文字的对比度（约 8:1） */
   --color-saved-strong: #8cc47a;
-  --color-danger: #d2645a;
-  --color-danger-hover: #b8534a;
+  /* 状态浅底必须换成深色：沿用亮色的浅绿底会和偏亮的绿字糊在一起 */
+  --color-saved-soft: #26332a;
+  /* 危险色按 AA 校准：#d2645a 在深色底上只有 4.45:1、在 danger-soft 上更低到 3.71:1，
+     提亮到 #dd7d74 后分别为 5.66:1 与 4.71:1 */
+  --color-danger: #dd7d74;
+  /* 深色下 hover 必须比基色更亮才叫「hover 反馈」，沿用亮色那套「加深」会越点越暗 */
+  --color-danger-hover: #e69087;
+  --color-danger-soft: #3a2a27;
   /* 深色下危险色同样偏亮，实底上的前景改用深色才够对比 */
   --color-on-danger: #1b211e;
+
+  /* 分类色在深底上要提亮才能拉开对比，浅底同步压暗 */
+  --color-cat-product: #7aa9e0;
+  --color-cat-product-bg: #253240;
+  --color-cat-dev: #d8a45a;
+  --color-cat-dev-bg: #3a2f1f;
+  --color-cat-test: #e08078;
+  --color-cat-test-bg: #3b2624;
+  --color-cat-doc: #a894e6;
+  --color-cat-doc-bg: #2e2b3c;
+  --color-cat-life: #6fae5c;
+  --color-cat-life-bg: #273526;
+
   --color-quote-from: #253430;
   --color-quote-to: #232e31;
   --color-quote-glow: rgb(111 165 144 / 20%);
+
+  /* 深底上的阴影用纯黑并加重，否则几乎看不出层次 */
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 30%);
+  --shadow-pop: 0 6px 24px rgb(0 0 0 / 45%);
+  --shadow-float: 0 20px 60px rgb(0 0 0 / 55%);
+}
+
+/**
+ * ===== 暖纸（护眼）=====
+ * 米黄纸张底 + 墨绿主色：整体降饱和、提亮度下限，长时间读写比纯白更柔和。
+ * 对比度按 WCAG AA 校准：正文、状态色与分类标签一律 ≥ 4.5:1；
+ * 弱化文字取 4.8:1（在 --color-bg-active 上约 4.0:1），比亮色主题的 2.6:1 明显收紧。
+ */
+[data-theme='paper'] {
+  --color-bg: #f9f4e9;
+  --color-bg-subtle: #f3ecdd;
+  --color-bg-active: #ecdfc9;
+  --color-text: #362f24;
+  --color-text-muted: #6d6555;
+  --color-text-faint: #736b59;
+  --color-border: #e6dcc7;
+  --color-border-strong: #d5c9ae;
+
+  /* 主色沿用品牌墨绿，浅底侧偏暖以贴合纸感 */
+  --color-accent: #2e5245;
+  --color-accent-hover: #27463b;
+  --color-accent-soft: #e7ebdc;
+  --color-on-accent: #ffffff;
+
+  /* 已保存绿：#457c33 落在 saved-soft 上只有 4.37:1，压到 #3f7530 后为 4.81:1 */
+  --color-saved: #3f7530;
+  --color-saved-strong: #3a6d2c;
+  --color-saved-soft: #edf1e2;
+  --color-danger: #b03a2e;
+  --color-danger-hover: #9b3227;
+  --color-danger-soft: #f6e8e2;
+  --color-on-danger: #ffffff;
+
+  /* 分类色在米黄底上比亮色底略深，标签「前景 on 浅底」也要够 4.5:1 */
+  --color-cat-product: #3369a8;
+  --color-cat-product-bg: #e8eff7;
+  --color-cat-dev: #8f5c1d;
+  --color-cat-dev-bg: #f7eddc;
+  --color-cat-test: #b0433c;
+  --color-cat-test-bg: #f7e5e2;
+  --color-cat-doc: #6b4fb0;
+  --color-cat-doc-bg: #eee9f8;
+  /* 生活与已保存同色，与亮色主题（两者同为 #4a8b3c）保持一致 */
+  --color-cat-life: #3f7530;
+  --color-cat-life-bg: #ebf1e3;
+
+  --color-quote-from: #efe7d5;
+  --color-quote-to: #e9e4d5;
+  --color-quote-glow: rgb(184 166 126 / 40%);
+
+  /* 阴影取暖调深褐，避免冷灰阴影在米黄底上发脏 */
+  --shadow-card: 0 1px 3px rgb(54 47 34 / 8%);
+  --shadow-pop: 0 6px 24px rgb(54 47 34 / 16%);
+  --shadow-float: 0 20px 60px rgb(54 47 34 / 26%);
 }

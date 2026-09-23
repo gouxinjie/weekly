@@ -74,7 +74,7 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           recordAttempt('register', 'ip', ip, false);
           return reply
             .code(400)
-            .send(fail(ERROR_CODES.WEAK_PASSWORD, '密码需包含数字与字母，且长度不少于 8 位'));
+            .send(fail(ERROR_CODES.WEAK_PASSWORD, '密码需包含数字与字母，且长度不少于 6 位'));
         }
 
         if (findUserByPhone(phone)) {
@@ -196,7 +196,7 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         if (!isStrongPassword(newPassword)) {
           return reply
             .code(400)
-            .send(fail(ERROR_CODES.WEAK_PASSWORD, '新密码需包含数字与字母，且长度不少于 8 位'));
+            .send(fail(ERROR_CODES.WEAK_PASSWORD, '新密码需包含数字与字母，且长度不少于 6 位'));
         }
 
         if (!(await verifyPassword(request.currentUser.password_hash, oldPassword))) {
