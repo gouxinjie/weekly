@@ -8,7 +8,7 @@
  */
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
 import { NOTE_COLORS, NOTE_MAX_CHARS } from '@/constants';
-import { formatTimeShort } from '@/utils/format';
+import { formatDateShort } from '@/utils/format';
 import type { UpdateNoteBody } from '@/types/api';
 import type { Note, NoteColor, SaveState } from '@/types/models';
 import styles from './index.module.scss';
@@ -26,17 +26,13 @@ const CARD_COLOR_CLASS: Record<NoteColor, string> = {
   '': styles.colorDefault,
   yellow: styles.colorYellow,
   green: styles.colorGreen,
-  blue: styles.colorBlue,
-  pink: styles.colorPink,
 };
 
-/** 便签纸颜色 → 颜色圆点样式类名映射 */
-const DOT_COLOR_CLASS: Record<NoteColor, string> = {
-  '': styles.dotDefault,
-  yellow: styles.dotYellow,
-  green: styles.dotGreen,
-  blue: styles.dotBlue,
-  pink: styles.dotPink,
+/** 便签纸颜色 → 纸色色块样式类名映射 */
+const SWATCH_COLOR_CLASS: Record<NoteColor, string> = {
+  '': styles.swatchDefault,
+  yellow: styles.swatchYellow,
+  green: styles.swatchGreen,
 };
 
 /**
@@ -103,13 +99,13 @@ const NoteCard = ({
 
   const colorClass = CARD_COLOR_CLASS[note.color];
   const saveText = SAVE_TEXT[saveState];
-  const updatedLabel = formatTimeShort(note.updatedAt);
+  const updatedLabel = formatDateShort(note.updatedAt);
   /** 接近字数上限：把计数显示出来，避免输入被 maxLength 静默拦掉时不明原因 */
   const nearLimit = note.content.length >= NOTE_MAX_CHARS * LIMIT_WARN_RATIO;
 
   return (
     <article
-      className={`${styles.card} ${colorClass}`}
+      className={`${styles.card} ${colorClass} ${note.pinned ? styles.cardPinned : ''}`}
       // 焦点离开整张卡片时才判定丢弃：点击卡内的颜色 / 置顶 / 删除不应触发
       onBlur={(event) => {
         const next = event.relatedTarget;
@@ -145,7 +141,7 @@ const NoteCard = ({
         ) : null}
 
         <div className={styles.actions}>
-          {/* 便签纸颜色：5 个圆点，当前色带一圈主色环 */}
+          {/* 便签纸颜色：3 个色块，当前色内置对勾 + 主色描边 */}
           <div className={styles.colors}>
             {NOTE_COLORS.map((option) => {
               const value = option.value;
@@ -154,14 +150,28 @@ const NoteCard = ({
                 <button
                   key={option.value === '' ? 'default' : option.value}
                   type="button"
-                  className={`${styles.dot} ${DOT_COLOR_CLASS[value]} ${
-                    active ? styles.dotActive : ''
+                  className={`${styles.swatch} ${SWATCH_COLOR_CLASS[value]} ${
+                    active ? styles.swatchActive : ''
                   }`}
                   aria-label={option.label}
                   aria-pressed={active}
                   title={option.label}
                   onClick={() => onChange(note, { color: value })}
-                />
+                >
+                  {/* 当前色内置对勾：一行只有 3 个色块时，对勾比单靠描边更好认 */}
+                  {active ? (
+                    <svg
+                      className={styles.swatchCheck}
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                      aria-hidden
+                    >
+                      <path d="m3.4 8.6 3 3 6.2-6.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : null}
+                </button>
               );
             })}
           </div>

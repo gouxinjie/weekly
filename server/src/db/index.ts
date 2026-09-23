@@ -142,5 +142,15 @@ export const migrate = (): number => {
     db.pragma('user_version = 5');
   }
 
+  // v6：便签纸色由五种收敛为三种（默认底 / 黄 / 绿）。
+  // 收敛后白名单只剩这三种，历史行里若还留着 blue / pink，那些便签每次全量提交都会被
+  // JSON Schema 的 enum 打回 400（界面上表现为一直「保存失败」，且改内容也存不下），
+  // 因此把白名单外的取值一律刷成默认底色。取值列表与 routes/note.ts 的 NOTE_COLORS 一致，
+  // 但这里刻意写死字面量：迁移是历史快照，不该随白名单常量一起变。
+  if (current < 6) {
+    db.exec("UPDATE note SET color = '' WHERE color NOT IN ('', 'yellow', 'green');");
+    db.pragma('user_version = 6');
+  }
+
   return db.pragma('user_version', { simple: true }) as number;
 };

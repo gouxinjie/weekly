@@ -98,13 +98,11 @@ export interface NoteColorOption {
   label: string;
 }
 
-/** 便签纸颜色可选项，顺序固定；样式类名映射见 components/NoteCard */
+/** 便签纸颜色可选项（默认底 / 黄 / 绿），顺序固定；样式类名映射见 components/NoteCard */
 export const NOTE_COLORS: NoteColorOption[] = [
   { value: '', label: '默认底色' },
   { value: 'yellow', label: '黄色便签' },
   { value: 'green', label: '绿色便签' },
-  { value: 'blue', label: '蓝色便签' },
-  { value: 'pink', label: '粉色便签' },
 ];
 
 /**

@@ -68,3 +68,16 @@ export const formatTimeShort = (isoText: string): string => {
   const time = dayjs(isoText);
   return time.isValid() ? time.format('MM/DD HH:mm') : '';
 };
+
+/**
+ * 格式化时间戳为年月日
+ * @param isoText - ISO 8601 时间字符串
+ * @returns 形如「2026/09/23」的字符串，无法解析时返回空串
+ * @remarks 便签卡片的更新时间只用到「哪一天」这一层信息：便签是长期留存的碎片，
+ *          跨天后 MM/DD 会丢掉年份，而具体到分钟的精度对便签没有意义，因此只留年月日。
+ */
+export const formatDateShort = (isoText: string): string => {
+  if (isoText === '') return '';
+  const date = dayjs(isoText);
+  return date.isValid() ? date.format('YYYY/MM/DD') : '';
+};

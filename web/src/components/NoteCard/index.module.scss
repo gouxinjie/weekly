@@ -1,8 +1,11 @@
 /**
  * 便签卡片样式
- * 说明：整卡底色即便签纸色，五套色由 NOTE_COLORS 映射的类名决定，取值来自 variables.scss
- * 的 --note-bg-* 变量（三套主题各有一组）。内容区是无边框的 textarea，随输入自撑高度。
+ * 说明：整卡底色即便签纸色，三种纸色（默认底 / 黄 / 绿）由 NOTE_COLORS 映射的类名决定，
+ * 取值来自 variables.scss 的 --note-bg-* 变量（三套主题各有一组）。
+ * 内容区是无边框的 textarea，随输入自撑高度。
  * 卡片自身不参与多列拆分（break-inside: avoid），否则会被拦腰截到下一列。
+ * 尾部操作区（纸色色块 + 置顶 + 删除）平时淡出，悬停或卡内有焦点时显形——一面墙几十张便签，
+ * 若每张都挂着 3 个色块和 2 个图标，便签纸色反而被这些控件压住；已置顶的便签例外，常驻显示。
  */
 
 .card {
@@ -20,10 +23,18 @@
     box-shadow 0.15s ease;
 }
 
-/* 卡内有焦点（正在写这张便签）：描主色边 + 一圈浅主色光晕，与其它输入控件同一套反馈 */
+/* 鼠标掠过：描边压深一档，提示「这张可以点进去写」 */
+.card:hover {
+  border-color: var(--color-border-strong);
+}
+
+/* 卡内有焦点（正在写这张便签）：描主色边 + 一圈浅主色光晕，与其它输入控件同一套反馈。
+   底层阴影一并保留，否则聚焦时卡片会像被抽掉厚度一样往下塌 */
 .card:focus-within {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 3px var(--color-accent-soft);
 }
 
 /* ===== 便签纸颜色：与 constants 的 NOTE_COLORS 一一对应 ===== */
@@ -39,26 +50,18 @@
   background-color: var(--note-bg-green);
 }
 
-.colorBlue {
-  background-color: var(--note-bg-blue);
-}
-
-.colorPink {
-  background-color: var(--note-bg-pink);
-}
-
 /* ===== 内容区 ===== */
 .text {
   width: 100%;
-  /* 空白便签也留出可写的余地，不至于只有一行高 */
-  min-height: 84px;
+  /* 空白便签也留出可写的余地，不至于只有一行高（14px × 1.7 行高下约四行的书写区） */
+  min-height: 96px;
   max-height: 320px;
   padding: 0;
   border: none;
   background-color: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
   /* 换行与连续空格原样保留：便签常用来记对齐过的短清单 */
   white-space: pre-wrap;
@@ -79,6 +82,9 @@
 .footer {
   display: flex;
   align-items: center;
+  /* 允许换行：字号与图标放大后，窄列（列宽 240px 起）里「时间 + 保存态 + 操作区」
+     可能一行放不下，换行比撑破卡片右边界更体面 */
+  flex-wrap: wrap;
   gap: var(--space-2);
   flex: 0 0 auto;
   margin-top: var(--space-2);
@@ -86,101 +92,135 @@
 
 /*
  * 更新时间：用 --color-text-muted 而不是 --color-text-faint。
- * 便签底色比页面底色浅/深不一（五套便签纸色横跨亮暗），
+ * 便签底色比页面底色浅/深不一（三种便签纸色横跨亮暗），
  * --color-text-faint 在浅色便签上只有约 2.6:1、深色主题下约 3.8:1，达不到 WCAG AA 的 4.5:1；
- * --color-text-muted 在五种底色与三套主题下均 ≥ 4.5:1。
+ * --color-text-muted 在三种底色与三套主题下均 ≥ 4.5:1。
  */
 .time {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 14px;
   white-space: nowrap;
 }
 
 .state {
   color: var(--color-saved-strong);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .stateError {
   color: var(--color-danger);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
-/* 接近字数上限时的计数：等宽数字，与更新时间同一档字号，不去抢保存态的视线 */
+/* 接近字数上限时的计数：等宽数字，与保存态同档（比更新时间小一号），不去抢保存态的视线 */
 .limit {
   color: var(--color-text-muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
-/* 操作区推到行尾 */
+/* 操作区推到行尾；平时淡出，让便签纸色与文字占满视线 */
 .actions {
   display: flex;
   align-items: center;
   gap: var(--space-1);
   margin-left: auto;
   flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* 悬停显形；:focus-within 覆盖键盘路径——Tab 进卡内按钮时同样显形，
+   否则透明度为 0 的按钮虽然可聚焦，用户却看不见焦点落在哪 */
+.card:hover .actions,
+.card:focus-within .actions {
+  opacity: 1;
+}
+
+/* 已置顶的便签常驻显示：置顶是这张便签的状态，收起来就看不出它在置顶区 */
+.cardPinned .actions {
+  opacity: 1;
+}
+
+/* 触屏没有悬停这回事，操作区必须常显，否则根本点不到 */
+@media (hover: none) {
+  .actions {
+    opacity: 1;
+  }
 }
 
 .colors {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   margin-right: var(--space-1);
 }
 
-/* 颜色圆点：12px 的小圆，底色即该便签纸色 */
-.dot {
-  width: 12px;
-  height: 12px;
+/*
+ * 纸色色块：14px 的圆角小方块，底色即该便签纸色。
+ * 与卡片用同一套圆角语言（--radius-xs），比小圆点更像「选颜色」而不是「状态灯」。
+ * 尺寸沿用 14px：底部一行本来就在宽度边缘，色块再大一点就会把操作区挤到第二行。
+ */
+.swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
   padding: 0;
   border: 1px solid var(--color-border-strong);
-  border-radius: 50%;
-  transition: transform 0.15s ease;
+  border-radius: var(--radius-xs);
+  /* 内置对勾取 currentColor，这里给足对比的底色上的文字色 */
+  color: var(--color-text);
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
-.dot:hover {
-  transform: scale(1.15);
+/* 悬停：描边压深一档 + 轻微放大，提示可点 */
+.swatch:hover {
+  border-color: var(--color-text-faint);
+  transform: scale(1.12);
 }
 
-/* 当前颜色：外扩一圈主色环，靠两层阴影画出来，不占布局空间 */
-.dotActive {
-  box-shadow:
-    0 0 0 2px var(--color-bg),
-    0 0 0 3.5px var(--color-accent);
+/*
+ * 当前纸色：描边转主色 + 内置对勾（见 .swatchCheck）。
+ * 不额外画外扩的主色环：色块本身只有 14px，环 + 描边叠在一起时外圈比色块还抢眼，边框感过重；
+ * 对勾已经足够标明「当前色」这一项状态，选中态因此只保留一圈 1px 主色描边。
+ */
+.swatchActive {
+  border-color: var(--color-accent);
 }
 
-.dotDefault {
+/* 当前色的对勾：描边走 --color-text，三种纸色 × 三套主题下对比度都足够 */
+.swatchCheck {
+  width: 10px;
+  height: 10px;
+}
+
+.swatchDefault {
   background-color: var(--note-bg-default);
 }
 
-.dotYellow {
+.swatchYellow {
   background-color: var(--note-bg-yellow);
 }
 
-.dotGreen {
+.swatchGreen {
   background-color: var(--note-bg-green);
 }
 
-.dotBlue {
-  background-color: var(--note-bg-blue);
-}
-
-.dotPink {
-  background-color: var(--note-bg-pink);
-}
-
-/* 置顶 / 删除：24px 的图标按钮 */
+/* 置顶 / 删除：28px 的图标按钮 */
 .action {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: var(--radius-xs);
@@ -192,8 +232,8 @@
 }
 
 .action svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 
 .action:hover {

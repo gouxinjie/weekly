@@ -61,12 +61,10 @@
   --color-cat-life: #4a8b3c;
   --color-cat-life-bg: #eaf3e6;
 
-  /* 便签纸色：便签卡片的整卡底色（正文一律用 --color-text，五套底色均满足 AA 对比度） */
+  /* 便签纸色：便签卡片的整卡底色（正文一律用 --color-text，三种底色均满足 AA 对比度） */
   --note-bg-default: #ffffff;
   --note-bg-yellow: #fdf5d9;
   --note-bg-green: #e9f3e3;
-  --note-bg-blue: #e6f0fa;
-  --note-bg-pink: #fbe9e8;
 
   /* 悬停提示气泡：深底反白（工具条按钮的自定义 tooltip） */
   --tooltip-bg: #33383b;
@@ -174,8 +172,6 @@
   --note-bg-default: #232a26;
   --note-bg-yellow: #332e1c;
   --note-bg-green: #22301f;
-  --note-bg-blue: #1f2a33;
-  --note-bg-pink: #33221f;
 
   /* 深色下气泡底比页面底更亮一档，才能从深底上浮出来 */
   --tooltip-bg: #454f49;
@@ -235,12 +231,10 @@
   --color-cat-life: #3f7530;
   --color-cat-life-bg: #ebf1e3;
 
-  /* 便签纸色：米黄纸上再压一档暖色，五套底色彼此可辨又不跳出纸感 */
+  /* 便签纸色：米黄纸上再压一档暖色，三种底色彼此可辨又不跳出纸感 */
   --note-bg-default: #fffdf6;
   --note-bg-yellow: #fbf0cd;
   --note-bg-green: #e9efdc;
-  --note-bg-blue: #e6edf3;
-  --note-bg-pink: #f7e6de;
 
   /* 气泡底取暖调深褐，与米黄纸感协调 */
   --tooltip-bg: #4a4334;

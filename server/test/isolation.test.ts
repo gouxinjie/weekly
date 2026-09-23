@@ -1,7 +1,7 @@
 /**
  * db 层跨用户数据隔离测试
  * 说明：这是红线 1（每条 SQL 必须带 user_id）的自动化保障，用 Node 内置 node --test，不引入测试框架。
- * 覆盖范围刻意只包含归属校验与红线 3 的周次边界，不做完整测试体系。
+ * 覆盖范围刻意只包含归属校验、红线 3 的周次边界与便签纸色白名单契约，不做完整测试体系。
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -236,14 +236,14 @@ test('便签计数只统计自己的：B 新增的便签不计入 A 的张数', 
 
 test('A 改 B 的便签：失败，且 B 的内容与颜色不变', async () => {
   const m = await modulesPromise;
-  const bNote = m.insertNote(bId, 'B 的另一张便签', 'blue');
+  const bNote = m.insertNote(bId, 'B 的另一张便签', 'green');
 
-  const changed = m.updateNote(aId, bNote.id, '被篡改', 'pink', true);
+  const changed = m.updateNote(aId, bNote.id, '被篡改', 'yellow', true);
 
   assert.equal(changed, false, '改别人的便签必须返回 false');
   const after = m.findNote(bId, bNote.id);
   assert.equal(after?.content, 'B 的另一张便签');
-  assert.equal(after?.color, 'blue');
+  assert.equal(after?.color, 'green');
   assert.equal(after?.pinned, 0, '置顶状态也不应被他人改动');
 });
 
@@ -266,4 +266,22 @@ test('本人改自己的便签：成功，且置顶项排在列表最前', async
   const list = m.listNotes(aId);
   assert.equal(list[0]?.id, note.id, '置顶的便签应排在最前');
   assert.equal(list[0]?.content, 'A 改过的便签');
+});
+
+test('便签纸色白名单只有三种：白名单外的历史取值归一为默认底色', async () => {
+  // 延迟加载路由模块：它内部会连库，必须等 DB_PATH 指向临时库之后再导入
+  const noteRoute = await import('../src/routes/note.js');
+
+  assert.deepEqual(
+    [...noteRoute.NOTE_COLORS],
+    ['', 'yellow', 'green'],
+    '白名单应只有 默认底 / 黄 / 绿，改动需同步前端 constants、三套主题变量与文档',
+  );
+
+  // 收敛前写入的 blue / pink 仍可能在库里，出参必须归一，不能原样透给前端：
+  // 否则前端取不到样式类名，且该便签每次全量提交都会被 enum 打回 400
+  assert.equal(noteRoute.normalizeNoteColor('blue'), '', 'blue 应归一为默认底色');
+  assert.equal(noteRoute.normalizeNoteColor('pink'), '', 'pink 应归一为默认底色');
+  assert.equal(noteRoute.normalizeNoteColor('yellow'), 'yellow', '白名单内的取值应原样保留');
+  assert.equal(noteRoute.normalizeNoteColor(''), '', '空串即默认底色，应原样保留');
 });

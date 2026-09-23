@@ -142,7 +142,11 @@ export interface NoteDto {
   id: number;
   /** 纯文本内容，新建后未写时为空串 */
   content: string;
-  /** 便签纸颜色标识，空串表示默认底色 */
+  /**
+   * 便签纸颜色标识，空串表示默认底色
+   * @remarks 取值一定落在 routes/note.ts 的 NOTE_COLORS 白名单内：
+   * 出参经 normalizeNoteColor 归一化，白名单收敛前写入的历史取值不会透给前端
+   */
   color: string;
   /** 是否置顶 */
   pinned: boolean;

@@ -7,7 +7,22 @@ import type { CreateNoteBody, NoteDto, UpdateNoteBody } from '../types/api';
 import type { NoteRow } from '../types/models';
 
 /** 便签纸颜色的合法取值：空串表示默认底色。前端 constants 的 NOTE_COLORS 与此一一对应 */
-export const NOTE_COLORS = ['', 'yellow', 'green', 'blue', 'pink'] as const;
+export const NOTE_COLORS = ['', 'yellow', 'green'] as const;
+
+/** 便签纸颜色标识：即白名单的取值类型 */
+export type NoteColorValue = (typeof NOTE_COLORS)[number];
+
+/**
+ * 归一化便签纸颜色
+ * @param color - 数据库中存着的颜色标识
+ * @returns 白名单内的取值；不在白名单内时退回默认底色（空串）
+ * @remarks 白名单由五种收敛为三种后，历史行可能仍留着 blue / pink。
+ * 这类取值若原样回给出参，前端拿不到样式类名（卡片失去纸色、色块无一高亮），
+ * 且该便签每次全量提交都会带上它并被 JSON Schema 的 enum 打回 400，
+ * 表现为一直「保存失败」。数据库侧另有 v6 迁移把历史行刷成默认底色，这里是第二道保险。
+ */
+export const normalizeNoteColor = (color: string): NoteColorValue =>
+  (NOTE_COLORS as readonly string[]).includes(color) ? (color as NoteColorValue) : '';
 
 /** 便签纸颜色 JSON Schema 片段 */
 const colorSchema = (): Record<string, unknown> => ({
@@ -79,7 +94,7 @@ const noteIdSchema = (): FastifySchema => ({
 const toNoteDto = (row: NoteRow): NoteDto => ({
   id: row.id,
   content: row.content,
-  color: row.color,
+  color: normalizeNoteColor(row.color),
   pinned: row.pinned === 1,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
