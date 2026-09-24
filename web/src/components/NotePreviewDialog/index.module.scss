@@ -182,3 +182,33 @@
     animation: none;
   }
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：预览弹窗在窄屏改为「整屏一张纸」：
+ * 1. 遮罩内边距收一档，卡片吃满可用宽度——900px 的舒适档在手机上只能靠 max-width 收窄，
+ *    正文会被挤成细条
+ * 2. 高度上限改用 dvh：地址栏伸缩时 vh 不变，弹窗底部会被压到地址栏后面
+ * 3. 头部内边距与关闭按钮按触屏尺寸调整
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .overlay {
+    padding: var(--space-3);
+  }
+
+  .panel {
+    width: 100%;
+    max-height: 88dvh;
+  }
+
+  .header {
+    padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4);
+  }
+
+  /* 关闭按钮是这张弹窗唯一的出口，触屏上要够大 */
+  .close {
+    width: 34px;
+    height: 34px;
+  }
+}

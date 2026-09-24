@@ -428,3 +428,53 @@
 .actionActive:hover {
   color: var(--color-accent-hover);
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：便签墙在窄屏是一列铺满，底部那一行的宽度账（见 .time 的注释）反而更宽松；
+ * 这里只做触屏可用性：
+ * 1. 操作区常显——部分触屏设备的 `hover` 查询仍报 hover，不能只依赖 `@media (hover: none)`
+ * 2. 纸色色块 14px 太小，放大到 18px 并把热区补到 28×28（相邻间距 4px，扩 3px 仍留 2px）
+ * 3. 预览 / 置顶 / 删除保持 28px 的视觉尺寸，另加一圈透明热区
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .actions {
+    opacity: 1;
+  }
+
+  .swatch {
+    width: 18px;
+    height: 18px;
+  }
+
+  .swatch::before {
+    /* 左右各扩 3px：与 4px 的间距算下来，两枚热区之间还剩 2px，不会点错隔壁 */
+    inset: -5px -3px;
+  }
+
+  .swatchCheck {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* 热区需要定位上下文（.swatch 自带 relative，这两个按钮没有） */
+  .previewButton,
+  .action {
+    position: relative;
+  }
+
+  .previewButton::before,
+  .action::before {
+    content: '';
+    position: absolute;
+    /* 上下没有邻居，可以多扩一点；左右各留 2px，热区之间不重叠 */
+    inset: -4px -2px;
+  }
+
+  /* 触屏没有 hover，用按下反馈替代 */
+  .previewButton:active:not(:disabled),
+  .action:active {
+    background-color: var(--color-bg-active);
+  }
+}

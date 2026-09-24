@@ -308,11 +308,32 @@
     right: 0;
     left: 0;
     justify-content: center;
-    padding: var(--space-6);
+    padding: var(--space-6) var(--mobile-gutter);
   }
 
   .card {
     width: 100%;
     max-width: var(--login-card-width);
+  }
+}
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：登录页不属于应用骨架，是整屏背景 + 悬浮卡片，窄屏要处理的是：
+ * 1. 高度用 dvh 而不是 vh——移动端地址栏伸缩时 vh 不变，卡片底部会被压到地址栏后面
+ * 2. 卡片内边距收一档，把宽度让给输入框（输入框字号由 global.scss 统一抬到 16px 防聚焦缩放）
+ * 3. 输入框落在键盘上方时页面可整体滚动，因此外层保留纵向滚动而不是锁死
+ */
+@media (max-width: 1023px) {
+  .page {
+    height: 100dvh;
+  }
+
+  .card {
+    padding: var(--space-6) var(--space-4) var(--space-4);
+  }
+
+  .panel {
+    padding: var(--space-4) var(--mobile-gutter);
   }
 }

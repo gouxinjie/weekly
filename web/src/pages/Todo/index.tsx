@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toErrorMessage } from '@/api/client';
 import { createTodo, deleteTodo, fetchTodos, reorderTodos, updateTodo } from '@/api/todo';
-import AppLayout from '@/components/AppLayout';
+import AppLayout, { MobileDrawerEntry } from '@/components/AppLayout';
 import TodoFilter from '@/components/TodoFilter';
 import TodoList from '@/components/TodoList';
 import Select from '@/components/Select';
@@ -355,6 +355,12 @@ const Todo = () => {
         <h1 className={styles.title}>待办</h1>
 
         <div className={styles.headerRight}>
+          {/*
+            移动端筛选入口：待办态没有顶栏，由页面把入口放进自己的标题行，
+            免得骨架为了一枚按钮单起一条工具条。桌面端不渲染可见内容。
+          */}
+          <MobileDrawerEntry side="left" />
+
           {/* 搜索框：仅在已加载的待办里做前端过滤，不额外请求接口 */}
           <label className={styles.searchField}>
             <svg

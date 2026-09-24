@@ -78,3 +78,30 @@
 .rowButton:hover:not(:disabled) .rowIcon {
   color: var(--color-accent);
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：这一栏在移动端住进右栏抽屉，布局不变，只把内边距与页面留白对齐，
+ * 并把主按钮 / 行式按钮抬到 44px 左右的行高，触屏上才点得准。
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .panel {
+    padding: var(--space-3) var(--mobile-gutter) var(--space-4);
+  }
+
+  .primaryButton {
+    padding: var(--space-3) 0;
+    font-size: 13px;
+  }
+
+  .rowButton {
+    padding: var(--space-3) var(--space-2);
+    font-size: 13px;
+  }
+
+  .rowButton:active:not(:disabled) {
+    background-color: var(--color-bg-active);
+    color: var(--color-accent);
+  }
+}

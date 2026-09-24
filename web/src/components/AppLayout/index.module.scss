@@ -14,21 +14,14 @@
   overflow: hidden;
 }
 
-/* 窄屏提示：仅在小视口出现，不做移动端布局 */
-.narrowNotice {
+/*
+ * 移动端专属元素：桌面端一律不显示。
+ * 两者分别是「抽屉入口按钮」（顶栏或页面标题行里的那一枚）与「抽屉遮罩」，
+ * 在文件末尾的移动端块里各自被覆盖为可见。
+ */
+.mobileNavButton,
+.backdrop {
   display: none;
-  flex: 0 0 auto;
-  padding: var(--space-2) var(--space-4);
-  background-color: var(--color-accent-soft);
-  color: var(--color-accent);
-  text-align: center;
-  font-size: 12px;
-}
-
-@media (max-width: 1023px) {
-  .narrowNotice {
-    display: block;
-  }
 }
 
 .layout {
@@ -215,14 +208,24 @@
 /*
  * 页签栏与中栏之间的一列，两态同宽（--left-column-width）：切换标签页时列本身不位移，只有列内内容换。
  * 分隔线由页签栏的右边界统一提供，这里不再画左边框——否则两态的线宽不一致。
+ *
+ * 共有样式必须同时挂 .leftColumn 与 .leftColumnOpen：
+ * 这两个类名是二选一的——桌面端与移动端收起态带 .leftColumn，移动端展开态换成 .leftColumnOpen，
+ * 元素身上永远只有其中一个。共有样式只写在 .leftColumn 里的话，展开后的抽屉会丢掉底色与 flex 布局，
+ * 表现为「时间轴浮在周报上方、背景透明」，而且页面不报任何错，只能靠比对计算样式才发现。
  */
-.leftColumn {
+.leftColumn,
+.leftColumnOpen {
   display: flex;
   flex-direction: column;
-  flex: 0 0 var(--left-column-width);
-  width: var(--left-column-width);
   min-width: 0;
   background-color: var(--color-bg);
+}
+
+/* 桌面端的列宽：移动端的抽屉规则会把它覆盖为绝对定位与固定抽屉宽度 */
+.leftColumn {
+  flex: 0 0 var(--left-column-width);
+  width: var(--left-column-width);
 }
 
 /* ===== 右侧区域：可选顶栏 + 内容行 ===== */
@@ -344,4 +347,232 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow-y: auto;
+}
+
+/**
+ * ===== 移动端骨架（≤ 1023px）=====
+ * 说明：DOM 与桌面端完全一致，只在这里换排布——
+ * 1. 页签栏从左侧竖排落到屏幕底部，变成等宽等高的横向页签；品牌区收起，账号区只剩一枚头像
+ * 2. 左列与右栏脱离文档流，成为覆盖在内容之上的抽屉（左列自左滑入、右栏自右滑入），
+ *    由 .mobileNavButton 唤起、点遮罩收起；两者同时只开一个，开第二个时先关掉第一个。
+ *    入口按钮的落点跟着页面走：有顶栏的页面在顶栏（见 index.tsx），无顶栏的页面在页面标题行
+ * 3. 中栏不再有最小宽度，也不再出现横向滚动条——桌面端的 480px 下限正是窄屏溢出感的来源
+ * 桌面端不读本块任何一条规则，因此改动移动端不会波及 PC。
+ */
+@media (max-width: 1023px) {
+  .root {
+    /* 移动浏览器地址栏会伸缩，100vh 会把底部页签顶到屏幕外，dvh 跟随可视高度 */
+    height: 100dvh;
+  }
+
+  .layout {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ===== 页签栏 → 底部页签 ===== */
+
+  .sidebar {
+    /* DOM 中仍在 main 之前，靠 order 把它压到屏幕底部 */
+    order: 2;
+    flex: 0 0 auto;
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+    /* 全面屏底部有一条 Home 指示条，页签内容要避开它 */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 品牌区在底部页签栏里没有位置（logo 在登录页仍然出现） */
+  .brand {
+    display: none;
+  }
+
+  .tabs {
+    flex: 1 1 auto;
+    flex-direction: row;
+    gap: 0;
+    padding: 0;
+  }
+
+  .tab,
+  .tabActive {
+    position: relative;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: var(--mobile-tabbar-height);
+    padding: 0;
+    /* 底部页签是整块可点区域，圆角与实底在窄屏上显得零碎 */
+    border-radius: 0;
+    font-size: 11px;
+  }
+
+  .tabIcon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /*
+   * 选中态改为「主色文字 + 主色图标」：桌面端的主色实底在底部栏里是一大块深色，
+   * 会把其余三个页签压下去；文字与图标转主色已经足够指明当前位置。
+   */
+  .tabActive {
+    background-color: transparent;
+    color: var(--color-accent);
+    box-shadow: none;
+  }
+
+  .tabActive:hover {
+    background-color: transparent;
+  }
+
+  /* 角标改骑在图标右上角：横排页签里已经没有「行尾」可以推 */
+  .tabBadge {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    margin-left: 2px;
+    min-width: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
+  }
+
+  .tabActive .tabBadge {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+
+  /* ===== 主区 ===== */
+
+  .main {
+    order: 1;
+  }
+
+  /*
+   * 顶栏在窄屏改为「靠左排列 + 右侧收尾」：
+   * 抽屉入口与年份切换依次靠左，页面自己的右侧内容由 .topbarRight 的 margin-left: auto 顶到行尾，
+   * 不用 space-between——那会把四个子项平均撒开，年份切换漂在中间。
+   */
+  .topbar {
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+  }
+
+  .contentRow {
+    /* 定位上下文：左列与右栏的抽屉、遮罩都相对它铺开 */
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 中栏吃满整宽：桌面端的 480px 最小宽度会让 375px 屏直接横向滚动 */
+  .center {
+    min-width: 0;
+  }
+
+  /* ===== 顶栏上的抽屉入口 ===== */
+
+  .mobileNavButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    flex: 0 0 auto;
+    height: var(--mobile-nav-button);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* 触屏没有 hover，按下就要给反馈 */
+  .mobileNavButton:active {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .mobileNavIcon {
+    display: flex;
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--color-text-faint);
+  }
+
+  .mobileNavIcon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ===== 左列 / 右栏 → 覆盖式抽屉 ===== */
+
+  .leftColumn,
+  .leftColumnOpen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-drawer);
+    /* 脱离 flex 行：不再参与中栏的宽度分配 */
+    flex: none;
+    width: min(82vw, var(--mobile-drawer-width));
+    box-shadow: var(--shadow-pop);
+    /* 收起态用位移移出屏幕：位移不触发重排，比来回改宽度省得多 */
+    transform: translateX(-100%);
+    /*
+     * 光移出屏幕还不够：屏幕外的树仍会被键盘 Tab 聚焦、读屏也会念到它。
+     * visibility 与 transform 一起过渡，并把「变隐藏」延后到滑出结束——
+     * 收起时因此能看到完整的滑出动画，展开时立刻可见。
+     */
+    visibility: hidden;
+    transition:
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  .leftColumnOpen {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 0.2s ease,
+      visibility 0s;
+  }
+
+  .drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-drawer);
+    flex: none;
+    width: min(86vw, var(--mobile-side-width));
+    box-shadow: var(--shadow-pop);
+  }
+
+  /* 移动端不用「窄条把手」这套桌面交互：收起时整栏不占位，展开靠 .mobileNavButton */
+  .drawerCollapsed {
+    display: none;
+  }
+
+  /* 抽屉内的收起把手同理多余：点遮罩即可关闭 */
+  .drawer .drawerToggle {
+    display: none;
+  }
+
+  .backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-drawer) - 1);
+    background-color: var(--mobile-backdrop);
+  }
 }

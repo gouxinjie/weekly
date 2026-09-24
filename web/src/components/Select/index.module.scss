@@ -154,3 +154,27 @@
   flex: 0 0 auto;
   font-size: 12px;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：下拉本身是「按钮 + portal 面板」，逻辑与桌面完全一致，窄屏只放大点击目标：
+ * 1. 两档尺寸的内边距都抬到 36px 以上的行高
+ * 2. 选项行抬到 44px 左右——选项是触屏上最容易点错的地方
+ * 3. 触屏没有 hover，用 :active 给按下反馈
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .sizeSm,
+  .sizeMd {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .option {
+    padding: var(--space-3) var(--space-2);
+    font-size: 14px;
+  }
+
+  .option:active {
+    background-color: var(--color-bg-active);
+  }
+}

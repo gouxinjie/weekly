@@ -141,3 +141,51 @@
   width: 100%;
   height: 100%;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：账号区在桌面端是左栏底部的一块；移动端左栏变成底部页签栏，
+ * 这里把它压成一枚贴在最右侧的头像（账号名与手机号在设置页仍可查看），
+ * 菜单依旧在头像正上方弹出，定位计算与桌面端共用一套逻辑。
+ */
+@media (max-width: 1023px) {
+  .footer {
+    flex-direction: row;
+    align-items: center;
+    /* row 方向下 margin-top: auto 会把头像压到底部，必须重置 */
+    margin-top: 0;
+    padding: 0 var(--space-2);
+    border-top: none;
+    /* 左侧一条分隔线，把账号入口与四个页签分开 */
+    border-left: 1px solid var(--color-border);
+  }
+
+  /* 栏宽只够放头像：账号名与脱敏手机号移到设置页展示 */
+  .texts {
+    display: none;
+  }
+
+  /* 触屏点击目标比桌面略放大一档 */
+  .avatar,
+  .avatarOpen {
+    width: 36px;
+    height: 36px;
+  }
+
+  .avatar svg,
+  .avatarOpen svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* 触屏没有 hover，用按下反馈表明头像可点 */
+  .avatar:active {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  /* 菜单项在触屏上是主要点击目标，撑到一行 44px 左右的舒适高度 */
+  .menuItem {
+    padding: var(--space-3) var(--space-2);
+  }
+}

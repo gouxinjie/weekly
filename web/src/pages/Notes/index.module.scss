@@ -14,9 +14,16 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/*
+ * 标题不参与压缩，也不换行：
+ * 窄屏下右侧搜索框会抢宽度，而 h1 默认 flex-shrink: 1，「便签」两个字就会被挤成两行。
+ * 固定宽度后压缩全部交给右侧（.searchInput 可收窄且已设 min-width: 0）。
+ */
 .title {
+  flex: 0 0 auto;
   font-size: 19px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 /* 标题行右侧：搜索框 + 新建按钮 */
@@ -179,4 +186,59 @@
   flex: 0 0 auto;
   width: 12px;
   height: 12px;
+}
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：便签态本来就只有「页签栏 + 中栏」，窄屏要处理的只有两件事：
+ * 1. 标题行与搜索框的挤压（与待办页同一套做法）
+ * 2. 便签墙的列宽——列宽固定 280px，在 320px 的小屏上会把网格撑破
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .header {
+    gap: var(--space-2);
+    padding: var(--space-3) var(--mobile-gutter) var(--space-2);
+  }
+
+  .headerRight {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: var(--space-2);
+  }
+
+  .searchField {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .searchInput {
+    width: 100%;
+    /*
+     * 字号被 global.scss 统一抬到 16px（防 iOS 聚焦缩放）后行高跟着涨，
+     * 输入框会比同排 12px 的「＋ 新建」高出一截；行高收到 1.2 让两者回到同一档（≈33px）。
+     */
+    line-height: 1.2;
+  }
+
+  .error {
+    padding: var(--space-2) var(--mobile-gutter) 0;
+  }
+
+  .body {
+    padding: var(--space-3) var(--mobile-gutter) 0;
+  }
+
+  /*
+   * 窄屏一列铺满：min(100%, 280px) 让最小列宽不超过可用宽度，
+   * 320px 的小屏上不会因为「最小列宽 > 容器宽」把网格撑破。
+   */
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--note-column-width)), 1fr));
+  }
+
+  /* 空态本来就靠左留白，窄屏不需要再叠一层 24px 内边距 */
+  .empty {
+    padding: var(--space-4) 0;
+  }
 }

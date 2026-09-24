@@ -118,6 +118,26 @@
   /* 卡片距屏幕右侧的距离 */
   --login-card-inset-x: 92px;
 
+  /*
+   * ===== 移动端（≤ 1023px）=====
+   * 断点约定：CSS 变量不能参与媒体查询条件，因此断点值在各样式文件里以字面量
+   *   max-width: 1023px
+   * 出现（与 PRD 的「≥ 1024px 为桌面端」互为补集），这里只放断点内用到的尺寸。
+   * 桌面端样式完全不读这些变量，因此调整它们不会影响 PC。
+   */
+  /* 底部页签栏高度（图标 + 文字），安全区高度由 env(safe-area-inset-bottom) 另外补在下面 */
+  --mobile-tabbar-height: 52px;
+  /* 移动端抽屉入口按钮的高度（放在顶栏或页面标题行里的那一枚） */
+  --mobile-nav-button: 32px;
+  /* 左列抽屉宽度上限（实际取 min(82vw, 该值)） */
+  --mobile-drawer-width: 300px;
+  /* 右栏浮层宽度上限（实际取 min(86vw, 该值)） */
+  --mobile-side-width: 340px;
+  /* 移动端页面横向留白，对应桌面端的 --space-6 */
+  --mobile-gutter: 16px;
+  /* 移动端抽屉遮罩：浅黑一层，点它关闭抽屉 */
+  --mobile-backdrop: rgb(0 0 0 / 38%);
+
   /* 间距 */
   --space-1: 4px;
   --space-2: 8px;

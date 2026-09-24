@@ -352,3 +352,46 @@ $track-x: $track-gutter + math.div($dot-col, 2);
   line-height: 1.4;
   white-space: nowrap;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：时间轴在移动端渲染于左列抽屉里，块级布局不变，只做触屏适配：
+ * 1. 内边距与页面留白对齐，并把滚动约束在抽屉内部
+ * 2. 年 / 月两级是纯文字行，举到 40px 上下才够手指点；
+ *    周节点本身已接近 60px 高，刻意不动——改它的纵向内边距会让圆点相对文字的
+ *    锚点偏离设计稿位置
+ * 3. 触屏没有 hover，改用 :active 反馈
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .header {
+    padding: var(--space-3) var(--mobile-gutter) var(--space-2);
+  }
+
+  .years {
+    padding: var(--space-2) var(--mobile-gutter) var(--space-4);
+    /* 抽屉内滚到底后不要穿透成页面级滚动 */
+    overscroll-behavior: contain;
+  }
+
+  .yearHeader {
+    padding: var(--space-2);
+  }
+
+  .monthHeader,
+  .monthHeaderEmpty {
+    padding: var(--space-2);
+  }
+
+  .yearHeader:active,
+  .monthHeader:active,
+  .monthHeaderEmpty:active,
+  .week:active {
+    background-color: var(--color-bg-active);
+  }
+
+  /* 标题右侧的「展开全部 / 收起全部」是 11px 纯文字，触屏上需要更宽的热区 */
+  .action {
+    padding: var(--space-1) var(--space-2);
+  }
+}

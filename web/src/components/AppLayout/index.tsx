@@ -1,13 +1,16 @@
 /**
  * @component 应用骨架
- * @description 登录后的统一骨架：左栏（logo + 纵向页签 + 内容 + 账号区），右侧可选顶栏、左列与右栏抽屉；
- * 周报态为「左栏 + 左列（时间轴）+ 中栏 + 右栏」，待办态为「左栏 + 左列（筛选）+ 中栏」，
- * 左栏与左列宽度两态一致、切换不跳动；「待办」页签带未完成计数角标（M-09）
+ * @description 登录后的统一骨架，同一套 DOM 承载两种骨架：
+ * 桌面端（> 1023px）为左栏（logo + 纵向页签 + 账号区）+ 可选顶栏 + 左列 + 中栏 + 右栏；
+ * 移动端（≤ 1023px）左栏落到底部变成横向页签栏，左列与右栏各自变成覆盖式抽屉，
+ * 入口按钮由顶栏承担；没有顶栏的页面用导出的 MobileDrawerEntry 把它放进自己的标题行。
+ * 周报态为「左列（时间轴）+ 中栏 + 右栏」，待办态为「左列（筛选）+ 中栏」，
+ * 「待办」页签带未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-23
+ * @updated 2026-09-24
  */
-import { useLayoutEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AccountFooter from '@/components/AccountFooter';
@@ -17,6 +20,7 @@ import {
   ROUTE_TRANSITION_SHIFT_PX,
 } from '@/constants';
 import { useTodoCount } from '@/contexts/TodoCountContext';
+import useIsMobile from '@/hooks/useIsMobile';
 import { getCurrentWeek } from '@/utils/week';
 import { isViewTransitionActive, navigateWithTransition } from '@/utils/routeTransition';
 import styles from './index.module.scss';
@@ -88,11 +92,52 @@ interface AppLayoutProps {
   children: ReactNode;
   /** 右栏内容；待办态不传，此栏整栏移除而不是收起 */
   drawer?: ReactNode;
-  /** 右栏是否收起，仅在传入 drawer 时生效，默认 false */
+  /** 右栏是否收起，仅在传入 drawer 时生效，默认 false；移动端不看这个值，改由内部的抽屉状态接管 */
   drawerCollapsed?: boolean;
-  /** 切换右栏收起状态的回调 */
+  /** 切换右栏收起状态的回调（移动端不调用，抽屉的开合由骨架内部管理） */
   onToggleDrawer?: () => void;
+  /** 移动端左列抽屉的入口文案，默认「筛选」；周报态传「时间轴」 */
+  leftColumnLabel?: string;
+  /** 移动端右栏抽屉的入口文案，默认「详情」；文案要短，窄屏顶栏只放得下两个字 */
+  drawerLabel?: string;
 }
+
+/** 抽屉入口上下文：两枚渲染好的入口按钮，供页面取用 */
+interface MobileDrawerEntries {
+  /** 左列抽屉入口；页面没有左列时为 null */
+  leftEntry: ReactNode;
+  /** 右栏抽屉入口；页面没有右栏时为 null */
+  rightEntry: ReactNode;
+}
+
+/**
+ * 抽屉入口上下文
+ * @remarks 默认值是两枚 null：页面若在 AppLayout 之外使用 MobileDrawerEntry，静默渲染为空，
+ * 而不是抛错——入口按钮属于锦上添花，不该因为没套骨架就让整页崩掉。
+ */
+const MobileDrawerContext = createContext<MobileDrawerEntries>({
+  leftEntry: null,
+  rightEntry: null,
+});
+
+/** MobileDrawerEntry 属性 */
+interface MobileDrawerEntryProps {
+  /** 打开哪一侧的抽屉：left 为左列（时间轴 / 筛选），right 为右栏（本周待办 / 插入面板） */
+  side: 'left' | 'right';
+}
+
+/**
+ * 移动端抽屉入口按钮
+ * @param props - 见 MobileDrawerEntryProps
+ * @returns 入口按钮节点；该侧没有抽屉时为空
+ * @remarks 有顶栏的页面（周报）由骨架直接把入口放进顶栏；没有顶栏的页面（待办）用它把入口
+ * 放进自己的标题行——否则骨架得单起一条只装一枚按钮的工具条，白占一行高度。
+ * 按钮在桌面端由样式隐藏（display: none），两种骨架因此共用同一份 DOM。
+ */
+export const MobileDrawerEntry = ({ side }: MobileDrawerEntryProps) => {
+  const { leftEntry, rightEntry } = useContext(MobileDrawerContext);
+  return <>{side === 'left' ? leftEntry : rightEntry}</>;
+};
 
 /**
  * 应用骨架
@@ -107,10 +152,21 @@ const AppLayout = ({
   drawer,
   drawerCollapsed = false,
   onToggleDrawer,
+  leftColumnLabel = '筛选',
+  drawerLabel = '详情',
 }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { undoneCount } = useTodoCount();
+  const isMobile = useIsMobile();
+
+  /*
+   * 移动端两个覆盖式抽屉的开合状态。
+   * 桌面端完全不读它们；页面传入的 drawerCollapsed 在移动端也不生效——
+   * 桌面端习惯把右栏常驻展开，而手机上右栏必须先是收起的，否则一进周报就被一层浮层盖住。
+   */
+  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   /** 内容区节点：路由切换时给它播入场动画 */
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -163,14 +219,98 @@ const AppLayout = ({
     navigateWithTransition(navigate, `/${tab}`);
   };
 
+  /*
+   * 移动端抽屉在路由切换时收起：换周、切标签页都会改 pathname，
+   * 抽屉若留在打开状态，新页面会顶着一层遮罩登场，看上去像「点不动」。
+   */
+  useEffect(() => {
+    setMobileLeftOpen(false);
+    setMobileDrawerOpen(false);
+  }, [location.pathname]);
+
   const hasDrawer = drawer !== undefined;
-  const drawerVisible = hasDrawer && !drawerCollapsed;
+  const hasLeftColumn = leftColumn !== undefined;
+  // 桌面端沿用页面传入的收起状态；移动端改由内部抽屉状态接管
+  const drawerVisible = hasDrawer && (isMobile ? mobileDrawerOpen : !drawerCollapsed);
+
+  /** 移动端左列抽屉是否展开（桌面端恒为 false，左列按常规列渲染） */
+  const leftColumnExpanded = isMobile && mobileLeftOpen;
+
+  /** 移动端是否有抽屉盖在内容之上：决定遮罩是否出现 */
+  const backdropVisible = isMobile && (mobileLeftOpen || (hasDrawer && mobileDrawerOpen));
+
+  /** 收起移动端的两个抽屉（点遮罩时调用） */
+  const closeMobilePanes = (): void => {
+    setMobileLeftOpen(false);
+    setMobileDrawerOpen(false);
+  };
+
+  /*
+   * 移动端的两枚抽屉入口按钮。
+   * 有顶栏的页面（周报）由骨架把它们摆进顶栏；没有顶栏的页面（待办）通过
+   * MobileDrawerEntry 取走放进自己的标题行——入口跟着页面标题走，比骨架单起一条
+   * 只装一枚按钮的工具条更省一行高度，也不会在视觉上多切出一块。
+   * 图标只是点缀，真正的语义由文案与 aria-label 承担；文案取两个字的短词，
+   * 窄屏顶栏还要腾出位置给年份切换。桌面端由样式整体隐藏（display: none），
+   * 因此两种骨架共用同一份节点。
+   */
+  const drawerEntries = useMemo<MobileDrawerEntries>(() => {
+    /*
+     * 两个入口都是开关而不是单向的「打开」：
+     * 抽屉铺开时按钮仍露在遮罩之外（遮罩只盖内容行），用户很自然会再点一次想收起它；
+     * 那时若什么都不发生，看起来就是按钮失灵。同时开另一侧前会先把这一侧关掉，保证一次只开一个。
+     */
+    const toggleLeft = (): void => {
+      setMobileDrawerOpen(false);
+      setMobileLeftOpen((prev) => !prev);
+    };
+
+    const toggleRight = (): void => {
+      setMobileLeftOpen(false);
+      setMobileDrawerOpen((prev) => !prev);
+    };
+
+    return {
+      leftEntry: !hasLeftColumn ? null : (
+        <button
+          type="button"
+          className={styles.mobileNavButton}
+          onClick={toggleLeft}
+          aria-label={mobileLeftOpen ? `收起${leftColumnLabel}` : `打开${leftColumnLabel}`}
+          aria-expanded={mobileLeftOpen}
+        >
+          <span className={styles.mobileNavIcon} aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <path d="M4 6.5h16M4 12h11M4 17.5h16" strokeLinecap="round" />
+            </svg>
+          </span>
+          {leftColumnLabel}
+        </button>
+      ),
+      rightEntry: !hasDrawer ? null : (
+        <button
+          type="button"
+          className={styles.mobileNavButton}
+          onClick={toggleRight}
+          aria-label={mobileDrawerOpen ? `收起${drawerLabel}` : `打开${drawerLabel}`}
+          aria-expanded={mobileDrawerOpen}
+        >
+          <span className={styles.mobileNavIcon} aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+              <path d="M14.5 4.5v15" />
+            </svg>
+          </span>
+          {drawerLabel}
+        </button>
+      ),
+    };
+    // 依赖只取布尔量、文案与开合状态：leftColumn / drawer 是每次渲染都可能换引用的节点，
+    // 放进依赖数组会让这两枚按钮跟着页面内容一起重建
+  }, [hasLeftColumn, hasDrawer, leftColumnLabel, drawerLabel, mobileLeftOpen, mobileDrawerOpen]);
 
   return (
     <div className={styles.root}>
-      {/* 窄屏降级提示：只保证桌面端，不做移动端布局 */}
-      <div className={styles.narrowNotice}>请在桌面端使用（建议视口宽度不少于 1024px）</div>
-
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
           <div className={styles.brand}>
@@ -211,15 +351,38 @@ const AppLayout = ({
         </aside>
 
         <div className={styles.main}>
-          {topbar !== undefined ? <header className={styles.topbar}>{topbar}</header> : null}
+          {topbar !== undefined ? (
+            <header className={styles.topbar}>
+              {/* 有顶栏的页面（周报）：入口由骨架摆在顶栏最前面，靠左与年份切换连成一排 */}
+              {drawerEntries.leftEntry}
+              {drawerEntries.rightEntry}
+              {topbar}
+            </header>
+          ) : null}
 
           <div className={styles.contentRow} ref={contentRef}>
-            {/* 左列：周报态为时间轴，待办态为筛选；周报态的年份切换正好压在它上方 */}
-            {leftColumn !== undefined ? (
-              <aside className={styles.leftColumn}>{leftColumn}</aside>
+            {/* 移动端遮罩：左列 / 右栏以覆盖层出现时点它收起 */}
+            {backdropVisible ? (
+              <div className={styles.backdrop} onClick={closeMobilePanes} role="presentation" />
             ) : null}
 
-            <main className={styles.center}>{children}</main>
+            {/* 左列：周报态为时间轴，待办态为筛选；桌面端是常驻一列，移动端是同名的覆盖式抽屉 */}
+            {leftColumn !== undefined ? (
+              <aside className={leftColumnExpanded ? styles.leftColumnOpen : styles.leftColumn}>
+                {leftColumn}
+              </aside>
+            ) : null}
+
+            <main className={styles.center}>
+              {/*
+                Provider 只包页面内容：顶栏那两枚入口由骨架自己渲染，而页面（待办）
+                通过 MobileDrawerEntry 从内容里取用左列入口。它不产生 DOM，
+                因此不影响 .center 的 flex 布局。
+              */}
+              <MobileDrawerContext.Provider value={drawerEntries}>
+                {children}
+              </MobileDrawerContext.Provider>
+            </main>
 
             {hasDrawer ? (
               drawerVisible ? (

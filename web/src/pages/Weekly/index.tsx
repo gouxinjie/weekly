@@ -420,6 +420,9 @@ const Weekly = () => {
   return (
     <AppLayout
       activeTab="weekly"
+      // 移动端顶栏的两个抽屉入口文案：左列固定是时间轴，右栏随编辑 / 展示态变化
+      leftColumnLabel="时间轴"
+      drawerLabel={isEditing ? '插入' : '待办'}
       leftColumn={
         <Tree
           year={year}

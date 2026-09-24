@@ -119,6 +119,14 @@ interface TodoItemProps {
   onToggleMenu: () => void;
   /** 拖拽排序绑定（M-05） */
   drag: TodoDragBinding;
+  /**
+   * 在同段内上移一位；已是该段第一条时传 undefined（菜单项置灰）
+   * @remarks 触摸设备上 HTML5 拖拽不生效（iOS Safari 不会触发 dragstart），
+   *          菜单里的上移 / 下移是移动端唯一的排序入口，桌面端也可以用它做精确调整
+   */
+  onMoveUp?: () => void;
+  /** 在同段内下移一位；已是该段最后一条时传 undefined（菜单项置灰） */
+  onMoveDown?: () => void;
 }
 
 /** 分类标识 → 样式类名映射（CSS Modules 不便动态拼接，显式映射） */
@@ -167,6 +175,8 @@ const TodoItem = ({
   menuOpen,
   onToggleMenu,
   drag,
+  onMoveUp,
+  onMoveDown,
 }: TodoItemProps) => {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(todo.text);
@@ -408,6 +418,26 @@ const TodoItem = ({
                   onClick={() => runMenuAction(() => onUpdate(todo, { pinned: !todo.pinned }))}
                 >
                   {todo.pinned ? '取消置顶' : '置顶'}
+                </button>
+                {/*
+                  上移 / 下移：触摸设备上整行拖拽不生效（HTML5 拖拽在 iOS Safari 不触发），
+                  这两项是移动端唯一的排序入口；已到该段两端时置灰。
+                */}
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  disabled={onMoveUp === undefined}
+                  onClick={() => runMenuAction(() => onMoveUp?.())}
+                >
+                  上移
+                </button>
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  disabled={onMoveDown === undefined}
+                  onClick={() => runMenuAction(() => onMoveDown?.())}
+                >
+                  下移
                 </button>
                 <div className={styles.menuCategories}>
                   {TODO_CATEGORIES.map((option) => (
@@ -736,24 +766,62 @@ const TodoList = ({
   });
 
   /**
+   * 取某条待办在同段内的上下邻居
+   * @param group - 所属周分组
+   * @param segment - 所属状态段
+   * @param id - 目标待办 ID
+   * @returns 上一条与下一条；位于该段两端时为 undefined
+   */
+  const segmentNeighbors = (
+    group: WeekGroup,
+    segment: TodoSegment,
+    id: number,
+  ): { prev: Todo | undefined; next: Todo | undefined } => {
+    const items =
+      segment === 'pinned'
+        ? group.pinnedItems
+        : segment === 'done'
+          ? group.doneItems
+          : group.undoneItems;
+
+    const index = items.findIndex((item) => item.id === id);
+    return {
+      prev: index > 0 ? items[index - 1] : undefined,
+      next: index >= 0 && index < items.length - 1 ? items[index + 1] : undefined,
+    };
+  };
+
+  /**
    * 渲染单条待办
-   * @param groupKey - 所属周分组键
+   * @param group - 所属周分组
    * @param segment - 所属状态段
    * @param todo - 待办
    * @returns 条目节点
+   * @remarks 上移 / 下移都翻译成已有的「移到某条之前」：下移一位等价于「把下一条移到本条之前」，
+   *          两者是同一个相邻交换，因此不必为「移到最后」再开一条接口。
    */
-  const renderItem = (groupKey: string, segment: TodoSegment, todo: Todo) => (
-    <TodoItem
-      key={todo.id}
-      todo={todo}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      yearOptions={yearOptions}
-      menuOpen={openMenuId === todo.id}
-      onToggleMenu={() => setOpenMenuId(openMenuId === todo.id ? null : todo.id)}
-      drag={buildDrag(groupKey, segment, todo)}
-    />
-  );
+  const renderItem = (group: WeekGroup, segment: TodoSegment, todo: Todo) => {
+    const { prev, next } = segmentNeighbors(group, segment, todo.id);
+
+    return (
+      <TodoItem
+        key={todo.id}
+        todo={todo}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+        yearOptions={yearOptions}
+        menuOpen={openMenuId === todo.id}
+        onToggleMenu={() => setOpenMenuId(openMenuId === todo.id ? null : todo.id)}
+        drag={buildDrag(group.key, segment, todo)}
+        onMoveUp={
+          prev === undefined ? undefined : () => onReorder(todo.id, prev.id, group.key, segment)
+        }
+        onMoveDown={
+          next === undefined ? undefined : () => onReorder(next.id, todo.id, group.key, segment)
+        }
+      />
+    );
+  };
 
   if (loading) {
     // 套用空态容器，让加载提示与清单保持同一段左内边距
@@ -792,13 +860,13 @@ const TodoList = ({
             {group.pinnedItems.length > 0 ? (
               <>
                 <p className={styles.segmentTitle}>置顶</p>
-                <ul>{group.pinnedItems.map((todo) => renderItem(group.key, 'pinned', todo))}</ul>
+                <ul>{group.pinnedItems.map((todo) => renderItem(group, 'pinned', todo))}</ul>
               </>
             ) : null}
 
             {/* 未完成段：清单主体，不加段标题，避免每个分组都挂一行说明 */}
             {group.undoneItems.length > 0 ? (
-              <ul>{group.undoneItems.map((todo) => renderItem(group.key, 'undone', todo))}</ul>
+              <ul>{group.undoneItems.map((todo) => renderItem(group, 'undone', todo))}</ul>
             ) : null}
 
             {/* 已完成段：永久保留，默认折叠，标题可点开（M-02 / Q4） */}
@@ -836,7 +904,7 @@ const TodoList = ({
                 </button>
 
                 {doneExpanded ? (
-                  <ul>{group.doneItems.map((todo) => renderItem(group.key, 'done', todo))}</ul>
+                  <ul>{group.doneItems.map((todo) => renderItem(group, 'done', todo))}</ul>
                 ) : null}
               </>
             ) : null}

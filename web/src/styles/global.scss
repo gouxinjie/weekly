@@ -310,3 +310,56 @@ select {
   color: var(--color-text-faint);
   text-decoration: line-through;
 }
+
+/**
+ * ===== 移动端全局（≤ 1023px）=====
+ * 说明：以下规则全部包在断点内，桌面端一个字都不改。只解决三类触屏通病：
+ * 1. 点按反馈：去掉系统给可点元素叠的灰色高亮块，并抬高小号输入框的字号——
+ *    iOS Safari 对字号 < 16px 的表单控件会在聚焦瞬间把整页放大，且不会自动缩回来。
+ *    这条 16px 是硬约束，不能为了「看起来小」而调低；所以占位文字另按紧凑尺寸收敛
+ *    （占位符是静态展示、聚焦后就被真实输入取代，不参与缩放判定）。
+ *    字体用 `:root input`（特异性 0-1-1）压过组件里的单类选择器（0-1-0），
+ *    不必逐个组件改字号，也不必动用 !important。
+ * 2. 文字缩放：横竖屏切换时系统不得擅自调整字号。
+ * 3. 内部滚动：编辑器与长清单滚到底后不要穿透成整个页面的滚动，否则移动端地址栏反复伸缩。
+ */
+@media (max-width: 1023px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root input,
+  :root textarea {
+    font-size: 16px;
+  }
+
+  /*
+   * 占位文字单独收回到紧凑控件的设计尺寸。
+   * 输入框自身必须留在 16px（见上），但占位符是静态展示、聚焦后就被真实输入取代，
+   * 它跟着一起放大只会让空搜索框在 12px 的紧凑行里比周围文字大出一圈。
+   * 特异性取 0-1-2（:root + 元素 + 伪元素），稳过组件里的 `.xxx::placeholder`（0-1-1），
+   * 不必关心两份样式表的先后顺序；这里只管字号，颜色等仍由各组件自己决定。
+   */
+  :root input::placeholder,
+  :root textarea::placeholder {
+    font-size: 13px;
+  }
+
+  /*
+   * 编辑器正文（contenteditable）不受上面 16px 的约束——iOS 只缩放 <input> / <textarea>，
+   * 对可编辑 div 不做处理。这里给 15px：比桌面的 14px 大一号，窄栏里读长文更省眼。
+   */
+  .weekly-editor {
+    font-size: 15px;
+  }
+
+  .weekly-editor pre,
+  .weekly-editor table {
+    /* 宽代码块与宽表格在窄屏只能横向滚动，滚到底不要把页面一起带着走 */
+    overscroll-behavior-x: contain;
+  }
+}

@@ -486,3 +486,128 @@
   color: var(--color-danger);
   font-size: 12px;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：桌面端「左列 + 中栏 + 右栏」在窄屏只剩中栏（左列与右栏成了覆盖式抽屉），
+ * 因此这里做四件事：
+ * 1. 顶栏减负——搜索框、通知铃铛、头像收起（跳周交给时间轴抽屉，账号入口已在底部页签栏）
+ * 2. 编辑态标题行由「左右两端」改成纵向堆叠，长标题与操作按钮不再互相挤
+ * 3. 封面高度与卡片内边距收小，把宽度让给正文
+ * 4. 编辑器容器改为贴边，尽量多留出可写面积
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  /* ===== 顶栏 ===== */
+
+  .topbarRight {
+    gap: var(--space-2);
+    /* 顶栏左半是抽屉入口按钮，这里靠右收尾 */
+    margin-left: auto;
+  }
+
+  /* 窄屏顶栏放不下跳周输入框；跳周改走左列的时间轴抽屉，功能不缺失 */
+  .search {
+    display: none;
+  }
+
+  /* 通知暂无可看内容；头像入口与底部页签栏的账号区重复，一并收起 */
+  .bell,
+  .avatar {
+    display: none;
+  }
+
+  .todayButton {
+    padding: 5px var(--space-2);
+  }
+
+  /*
+   * 顶栏一行要放下「时间轴 / 待办 / 年份切换 / 定位本周」四件东西，
+   * 窄于 360px 时（如 320px 的小屏）合计宽度会超出可用宽度，此时收起「定位本周」——
+   * 跳周仍可由左列的时间轴抽屉完成，编辑态另有「上一周 / 下一周」两个按钮。
+   */
+  @media (max-width: 360px) {
+    .todayButton {
+      display: none;
+    }
+  }
+
+  /* ===== 编辑态头部 ===== */
+
+  .editHeader {
+    gap: var(--space-3);
+    /* 桌面端左侧 16 / 右侧 24 的不对称内边距在这里统一成 16 */
+    padding: var(--space-3) var(--mobile-gutter);
+  }
+
+  .editHeaderTop {
+    gap: var(--space-2);
+  }
+
+  /* 标题行改纵向：标题一行、保存态与预览 / 发布一行，避免长标题把按钮挤出屏幕 */
+  .editHeaderMain {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .editTitle {
+    font-size: 16px;
+    /* 换行后不再需要省略号：整行都是它自己的 */
+    white-space: normal;
+  }
+
+  .editHeaderRight {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* ===== 展示态卡片 ===== */
+
+  .displayBody {
+    padding: var(--space-2);
+  }
+
+  .cover {
+    height: 96px;
+  }
+
+  .cardHead {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) 0;
+  }
+
+  .cardTitle {
+    font-size: 19px;
+  }
+
+  /* 占位块只服务于「把已写徽标推到最右」，换行布局下改由条目自然排列 */
+  .cardSpacer {
+    display: none;
+  }
+
+  .cardBody {
+    padding: var(--space-2) var(--space-4) 0;
+  }
+
+  .cardMeta {
+    padding: var(--space-2) var(--space-4);
+  }
+
+  /* ===== 编辑态容器 ===== */
+
+  .editorBox {
+    margin: var(--space-3) var(--space-2);
+  }
+
+  .statusBar {
+    padding: 0 var(--mobile-gutter) var(--space-2);
+  }
+
+  .hint,
+  .error,
+  .saveError {
+    padding: var(--space-2) var(--mobile-gutter);
+  }
+}

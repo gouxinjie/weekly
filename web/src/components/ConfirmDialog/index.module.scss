@@ -153,3 +153,34 @@
     animation: none;
   }
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：弹窗结构不变，窄屏只需两件事：
+ * 1. 卡片吃满可用宽度——320px 固定宽在 320px 的小屏上会顶到遮罩边缘
+ * 2. 两个按钮抬到 44px 左右的行高，并在触屏上给出按下反馈
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .panel {
+    width: 100%;
+    padding: var(--space-4);
+  }
+
+  .cancel,
+  .confirm {
+    padding: var(--space-3) var(--space-3);
+  }
+
+  .cancel:active:not(:disabled) {
+    background-color: var(--color-bg-active);
+  }
+
+  .confirm:active:not(:disabled) {
+    background-color: var(--color-accent-hover);
+  }
+
+  .confirmDanger:active:not(:disabled) {
+    background-color: var(--color-danger-hover);
+  }
+}

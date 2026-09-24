@@ -472,6 +472,17 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
   color: var(--color-text);
 }
 
+/* 已到所在段两端时的「上移 / 下移」：置灰不可点 */
+.menuItem:disabled {
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
+.menuItem:disabled:hover {
+  background-color: transparent;
+  color: var(--color-text-faint);
+}
+
 .menuItemDanger:hover {
   background-color: var(--color-danger-soft);
   color: var(--color-danger);
@@ -584,4 +595,109 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
 
 .link:hover {
   text-decoration: underline;
+}
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：清单在窄屏最容易出问题的是「一行里塞了拖拽手柄 + 勾选框 + 文本 + 一串标签」，
+ * 这里做四件事：
+ * 1. 条目主区允许换行：标签区落到第二行并与正文左对齐，不再把文本挤成一条竖线
+ * 2. 触屏补足点击区：勾选框加一圈透明热区、⋯ 菜单按钮放大、菜单项加高
+ * 3. 触屏没有 hover，拖拽手柄常显、按下给反馈
+ * 4. 改标记面板允许换行（两个下拉 + 保存 / 清除在窄屏放不下）
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .list {
+    padding: var(--space-2) var(--mobile-gutter) var(--space-6);
+  }
+
+  /* 主区换行：文本占满第一行剩余宽度，标签区另起一行 */
+  .main {
+    flex-wrap: wrap;
+  }
+
+  .meta {
+    flex: 1 1 100%;
+    /* 与正文左对齐：缩进量等于行首占位宽度（手柄 + 勾选框 + 行内间距） */
+    margin-left: $row-lead;
+    padding-top: var(--space-1);
+  }
+
+  /* 编辑态那份「标签下移」的对齐值是按桌面单行布局算的，换行后不再需要 */
+  .mainEditing .meta {
+    margin-top: 0;
+  }
+
+  /* 触屏没有 hover，拖拽手柄必须常显，否则看不出这一行能拖 */
+  .dragHandle {
+    opacity: 0.6;
+  }
+
+  /*
+   * 勾选框视觉尺寸保持 16px，用一圈透明热区把可点范围撑到 32×36。
+   * 左右各扩 8px 是算出来的：勾选框与拖拽手柄、与正文之间的行内间距恰好是 --space-2（8px），
+   * 扩满这个间距就与两侧相切——再往外就会盖住手柄或正文开头，
+   * 表现为「想点正文开头进编辑，却把这条勾上了」。
+   * 上下没有邻居（上方是 12px 的行内边距），所以可以放心扩到 10px。
+   */
+  .checkbox::before {
+    content: '';
+    position: absolute;
+    inset: -10px -8px;
+  }
+
+  /* 触屏没有 hover，用按下反馈替代 */
+  .item:active {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .text:active {
+    color: var(--color-accent);
+  }
+
+  /* ⋯ 菜单：按钮与菜单项都按触屏尺寸放大（按钮 32px 对应 top 也一起下移） */
+  .menuButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .menu {
+    top: 34px;
+    min-width: 168px;
+  }
+
+  .menuItem {
+    padding: var(--space-2) var(--space-3);
+    font-size: 13px;
+  }
+
+  .menuCat,
+  .menuCatActive {
+    padding: var(--space-1) var(--space-3);
+    line-height: 20px;
+  }
+
+  /* 改标记面板：年 / 周两个下拉 + 保存 / 清除在窄屏放不下，允许换行 */
+  .tagPanel {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .tagAction {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* 已完成段的折叠标题是整行可点的开关，行高抬一档 */
+  .doneToggle {
+    padding: var(--space-2);
+  }
+
+  .expandToggle {
+    padding: var(--space-1) 0;
+  }
+
+  .empty {
+    padding: var(--space-4) 0;
+  }
 }

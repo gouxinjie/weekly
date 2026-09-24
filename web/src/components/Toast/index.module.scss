@@ -16,3 +16,18 @@
   font-size: 13px;
   box-shadow: 0 2px 12px rgb(0 0 0 / 18%);
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：Toast 固定在视口顶部，窄屏要避开刘海并限制宽度——
+ * 文案最长的一句是「已退出当前设备，但未能通知服务端，建议稍后重新登录确认」，
+ * 不限宽会横向铺满整个屏幕。桌面端不读本块。
+ */
+@media (max-width: 1023px) {
+  .toast {
+    /* 刘海屏顶部有状态栏，往下让出安全区 */
+    top: calc(env(safe-area-inset-top) + var(--space-2));
+    max-width: calc(100vw - var(--space-8));
+    text-align: center;
+  }
+}

@@ -291,3 +291,61 @@
 .gradientSwatch:not(.swatchActive):hover {
   transform: scale(1.1);
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：工具条本身已经允许换行，窄屏要处理的是触屏可用性：
+ * 1. 按钮抬到 34px 见方，手指才点得准
+ * 2. 悬停提示气泡在触屏上没有意义（长按选词时还容易误触），直接不显示
+ * 3. 色板 20px 太小，改成 6 列 32px（总宽 232px，仍在 260px 的菜单宽度内），
+ *    列数变化不影响菜单坐标计算（坐标只看菜单外框宽度）
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .toolbar {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .button {
+    min-width: 34px;
+    height: 34px;
+  }
+
+  /* 触屏没有 hover，气泡只在长按取词时可能误触发，一并去掉 */
+  .button::after {
+    content: none;
+  }
+
+  .colorMenu {
+    /* 地址栏伸缩时 100vh 会把菜单底部推到屏幕外 */
+    max-height: calc(100dvh - 16px);
+  }
+
+  .palette {
+    grid-template-columns: repeat(6, 32px);
+    gap: var(--space-2);
+  }
+
+  .swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+  }
+
+  .defaultSwatch {
+    width: 32px;
+    height: 32px;
+  }
+
+  .gradientSwatch {
+    width: 48px;
+    height: 32px;
+  }
+
+  /* 悬停放大在触屏上不触发，改用按下反馈 */
+  .swatch:not(.swatchActive):active,
+  .gradientSwatch:not(.swatchActive):active {
+    transform: scale(1.1);
+  }
+}

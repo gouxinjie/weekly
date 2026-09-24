@@ -311,3 +311,40 @@
   background-color: var(--color-danger);
   color: var(--color-on-danger);
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：设置页本来就是单列居中，窄屏只需收边距、补触屏反馈：
+ * 1. 面板上下 32px 的内边距在手机上过于奢侈，收成 16px
+ * 2. 行式操作按钮与退出按钮在触屏上没有 hover，补 :active 反馈
+ * 3. 系统信息的「标签 + 值」改上下两行，长域名不再被压成两三个字折行
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .panel {
+    padding: var(--space-4) var(--mobile-gutter);
+  }
+
+  .title {
+    font-size: 19px;
+  }
+
+  .actionRow:active {
+    background-color: var(--color-bg-active);
+  }
+
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .infoValue {
+    text-align: left;
+  }
+
+  .logout:active {
+    background-color: var(--color-danger);
+    color: var(--color-on-danger);
+  }
+}

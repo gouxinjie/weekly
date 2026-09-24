@@ -164,3 +164,23 @@
 .preview img {
   max-width: 100%;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：预览排版在窄栏里保持与桌面一致的字号，只收内边距并约束滚动：
+ * 1. 内边距收一档，把宽度让给正文（预览在周报卡片与便签预览弹窗里都用）
+ * 2. 表格单元格的内边距收小——表格是 width: 100%，窄屏列多时内边距会先把文字挤成竖排
+ * 3. 滚动约束在预览区内，滚到底不要穿透成页面级滚动
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .preview {
+    padding: var(--space-3);
+    overscroll-behavior: contain;
+  }
+
+  .preview th,
+  .preview td {
+    padding: var(--space-1) var(--space-2);
+  }
+}

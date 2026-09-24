@@ -31,8 +31,16 @@ export const ROUTE_TRANSITION_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
 /** 路由切换降级淡入的起始位移（px）：只给 4px，再大就成了整块内容在滑动 */
 export const ROUTE_TRANSITION_SHIFT_PX = 4;
 
-/** 受保护页面的最小视口宽度（低于此宽度提示使用桌面端） */
-export const MIN_DESKTOP_WIDTH = 1024;
+/**
+ * 移动端布局断点（px）
+ * 说明：视口宽度 ≤ 该值时应用移动端骨架（底部页签栏 + 抽屉式左列 / 右栏），
+ * 必须与样式文件里的 `@media (max-width: 1023px)` 保持一致——
+ * 两处口径不同会出现「脚本以为在移动端、样式以为在桌面」的错位。
+ */
+export const MOBILE_MAX_WIDTH = 1023;
+
+/** 移动端断点的媒体查询串，供 matchMedia 统一取用 */
+export const MOBILE_MEDIA_QUERY = `(max-width: ${MOBILE_MAX_WIDTH}px)`;
 
 /** 已展开年份在 localStorage 中的键名（未记录的年份一律折叠） */
 export const EXPANDED_YEARS_KEY = 'weekly:expanded-years';

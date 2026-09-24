@@ -171,3 +171,24 @@
 .radio:checked + .card .check {
   opacity: 1;
 }
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：三列等宽在窄屏只剩约 100px 一列，「米黄护眼底，长时间读写更柔和」这类说明
+ * 会被折成四五行的窄条，反而看不清；窄屏改为单列纵向排列，缩略预览也跟着压扁一条。
+ * 桌面端不读本块任何一条规则。
+ */
+@media (max-width: 1023px) {
+  .group {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    height: 44px;
+  }
+
+  /* 整卡都是 label，点哪都能选中；触屏用按下反馈表明可点 */
+  .option:active .card {
+    border-color: var(--color-accent);
+  }
+}
