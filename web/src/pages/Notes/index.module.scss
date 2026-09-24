@@ -1,7 +1,7 @@
 /**
  * 工作台（便签）样式
  * 布局要点：便签态是「页签栏 + 中栏」两栏，没有左列与右栏（与待办态的区别就在这里）。
- * 中栏顶部标题行固定，下方是多列瀑布流的便签墙；列宽与墙宽取自 variables.scss。
+ * 中栏顶部标题行固定，下方是等宽多列网格的便签墙；列宽与墙宽取自 variables.scss。
  */
 
 .header {
@@ -105,14 +105,17 @@
 }
 
 /*
- * 便签墙：多列瀑布流。
- * 用 CSS 多列（column-width）而不是 grid：卡片高度随内容变化，
- * grid 会把同一行的卡片拉到等高、留下大片空白，多列则按列依次填充、自动平衡。
- * 列宽固定，列数随可用宽度自适应；墙本身限宽，超宽屏下不至于拉出一排过窄的列。
+ * 便签墙：等宽多列网格，按行从左到右排列。
+ * 不用 CSS 多列（column-count / column-width）：多列是「按列自上而下」填充，
+ * 卡片的先后顺序会变成竖着走的，与墙内「置顶优先、新的在前」的顺序对不上。
+ * grid 让顺序回到正常的行优先，列与行都对齐；同一行的卡片由行内最高的那张定高、等高铺满。
+ * 最小列宽固定（有富余时列内均分撑满），列数随可用宽度自适应；
+ * 墙本身限宽，超宽屏下不至于拉出一排过窄的列。
  */
 .grid {
-  columns: var(--note-column-width);
-  column-gap: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--note-column-width), 1fr));
+  gap: var(--space-4);
   max-width: var(--note-wall-max-width);
 }
 

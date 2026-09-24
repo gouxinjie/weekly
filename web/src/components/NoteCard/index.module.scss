@@ -3,7 +3,7 @@
  * 说明：整卡底色即便签纸色，三种纸色（默认底 / 黄 / 绿）由 NOTE_COLORS 映射的类名决定，
  * 取值来自 variables.scss 的 --note-bg-* 变量（三套主题各有一组）。
  * 内容区是无边框的 textarea，随输入自撑高度。
- * 卡片自身不参与多列拆分（break-inside: avoid），否则会被拦腰截到下一列。
+ * 卡片在便签墙的网格中由行内最高的那张定高、等高铺满，尾部时间与操作区因此沉到卡片底部。
  * 尾部操作区（纸色色块 + 置顶 + 删除）平时淡出，悬停或卡内有焦点时显形——一面墙几十张便签，
  * 若每张都挂着 3 个色块和 2 个图标，便签纸色反而被这些控件压住；已置顶的便签例外，常驻显示。
  */
@@ -11,9 +11,6 @@
 .card {
   display: flex;
   flex-direction: column;
-  /* 多列瀑布流中不被拆到两列去 */
-  break-inside: avoid;
-  margin-bottom: var(--space-4);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -87,7 +84,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   flex: 0 0 auto;
-  margin-top: var(--space-2);
+  /* margin-top: auto 把这一行压到卡片底部：网格里同行的卡片等高，
+     内容少的那张不至于让时间与操作区浮在半空；最小间距交给 padding-top 兜底 */
+  margin-top: auto;
+  padding-top: var(--space-2);
 }
 
 /*
