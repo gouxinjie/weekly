@@ -178,4 +178,8 @@ export interface UpdateNoteBody {
 export interface HealthDto {
   /** 服务存活标记 */
   ok: boolean;
+  /** 运行期的时间轴起点年份（来自 .env 的 START_YEAR） */
+  startYear: number;
+  /** 运行期的 ISO 周次上限（来自 .env 的 MAX_WEEK） */
+  maxWeek: number;
 }

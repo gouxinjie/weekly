@@ -60,7 +60,7 @@ export const getTodoWeek = (todo: Pick<Todo, 'year' | 'week' | 'createdAt'>): We
  * @param year - ISO 年
  * @param week - ISO 周次
  * @returns 是否合法
- * @remarks 红线 3：按「周」判断而不是按日期判断，2026 年第 1 周的周一是 2025-12-29。
+ * @remarks 红线 3：按「周」判断而不是按日期判断，起点年 2025 的第 1 周周一是 2024-12-30。
  */
 export const isValidWeek = (year: number, week: number): boolean => {
   if (!Number.isInteger(year) || !Number.isInteger(week)) return false;
@@ -103,7 +103,8 @@ export const getWeekCount = (year: number): number => {
  * @param week - ISO 周次
  * @returns 归属月份（1-12）
  * @remarks 按该周的周四归属：周四是 ISO 周的代表日，也是本周天数最多所在月份，
- *          因此 2026 年第 1 周（周一为 2025-12-29）归入 1 月，不会出现「1 月没有第 1 周」。
+ *          因此 2025 年第 1 周（周一为 2024-12-30、周四为 2025-01-02）归入 1 月，
+ *          不会出现「1 月没有第 1 周」。
  */
 export const getWeekMonth = (year: number, week: number): number => {
   const { start } = getWeekRange(year, week);
@@ -116,7 +117,7 @@ export const getWeekMonth = (year: number, week: number): number => {
  * @param week - ISO 周次（1-53）
  * @returns 该周是归属月份中的第几周（从 1 开始）
  * @remarks 周四决定整周归属哪个月，因此以「该月第一个周四所在周的周一」为基准算偏移。
- *          这样 2026 年第 1 周（周一为 2025-12-29、周四为 2026-01-01）返回 1，
+ *          这样 2025 年第 1 周（周一为 2024-12-30、周四为 2025-01-02）返回 1，
  *          不会因为周一落在上一年 12 月而算出 0 或负数。
  */
 export const getWeekIndexInMonth = (year: number, week: number): number => {

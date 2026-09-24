@@ -174,23 +174,42 @@ test('同一用户同一周重复写入：覆盖同一行，不产生第二条',
   assert.equal(second.content, '第二版');
 });
 
-test('红线 3：2026 年第 1 周的周一落在 2025 年，仍必须合法', async () => {
+test('红线 3：起点为 2025 年，跨年周不能被误拒', async () => {
   const m = await modulesPromise;
 
+  // 2025 年第 1 周的周一落在 2024-12-30：起点按「周」判定，不能按日期判定
   assert.deepEqual(
-    m.getWeekRange(2026, 1),
-    { start: '2025-12-29', end: '2026-01-04' },
-    '2026 年第 1 周应始于 2025-12-29',
+    m.getWeekRange(2025, 1),
+    { start: '2024-12-30', end: '2025-01-05' },
+    '2025 年第 1 周应始于 2024-12-30',
   );
-  assert.equal(m.isValidWeek(2026, 1), true, '合法的第 1 周不能被误拒');
-  assert.equal(m.isValidWeek(2025, 52), false, '早于起点的年份必须被拒绝');
-  assert.equal(m.isValidWeek(2025, 1), false, '早于起点的年份必须被拒绝');
+  assert.equal(m.isValidWeek(2025, 1), true, '起点年的第 1 周必须合法');
+  assert.equal(m.isValidWeek(2025, 52), true, '2025 年有 52 周，第 52 周必须合法');
+  assert.equal(m.isValidWeek(2024, 52), false, '早于起点的年份必须被拒绝');
+  assert.equal(m.isValidWeek(2024, 1), false, '早于起点的年份必须被拒绝');
+});
+
+test('红线 3：起点年的周次可写入并原样读回（2025 年第 1 周）', async () => {
+  const m = await modulesPromise;
+
+  // 起点校验通过不等于落库正确：这里把「起点周跨到上一年」的起止日期一起断言
+  const range = m.getWeekRange(2025, 1);
+  const saved = m.upsertWeekly(aId, 2025, 1, range.start, range.end, '起点年的第一篇');
+
+  assert.equal(saved.week_start, '2024-12-30', '周一起止日期应按 ISO 规则落到上一年');
+  assert.equal(saved.week_end, '2025-01-05');
+  assert.equal(m.findWeekly(aId, 2025, 1)?.content, '起点年的第一篇');
 });
 
 test('红线 3：周次上限是 53，2027-01-01 归属 2026 年第 53 周', async () => {
   const m = await modulesPromise;
 
   assert.equal(m.isValidWeek(2026, 53), true, '2026 年有 53 周，第 53 周必须合法');
+  assert.deepEqual(
+    m.getWeekRange(2026, 1),
+    { start: '2025-12-29', end: '2026-01-04' },
+    '2026 年第 1 周应始于 2025-12-29',
+  );
   assert.deepEqual(
     m.getWeekRange(2026, 53),
     { start: '2026-12-28', end: '2027-01-03' },

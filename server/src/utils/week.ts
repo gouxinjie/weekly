@@ -22,7 +22,7 @@ export interface WeekRange {
  * @param week - ISO 周次
  * @returns 是否合法
  * @remarks 红线 3：起点按「周」判断而不是按「日期」判断。
- * 2026 年第 1 周的周一是 2025-12-29，若写成 date >= '2026-01-01' 会误拒合法数据。
+ * 起点年 2025 的第 1 周周一是 2024-12-30，若写成 date >= '2025-01-01' 会误拒合法数据。
  */
 export const isValidWeek = (year: number, week: number): boolean => {
   if (!Number.isInteger(year) || !Number.isInteger(week)) return false;
@@ -36,7 +36,8 @@ export const isValidWeek = (year: number, week: number): boolean => {
  * @param week - ISO 周次（1-53）
  * @returns 该周的起止日期（ISO 8601 日期字符串）
  * @remarks 严格 ISO 8601：周一为一周起点，跨年周按 ISO 年归属、一周不拆分。
- * 例：2026 年第 1 周 → 2025-12-29 ~ 2026-01-04；2027-01-01 属于 2026 年第 53 周。
+ * 例：2025 年第 1 周 → 2024-12-30 ~ 2025-01-05（起点周跨到上一年）；
+ *     2027-01-01 属于 2026 年第 53 周。
  */
 export const getWeekRange = (year: number, week: number): WeekRange => {
   // ISO 8601 规定 1 月 4 日必定落在当年的第 1 周，以它为锚点可避免跨年周的歧义。

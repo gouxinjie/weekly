@@ -41,9 +41,19 @@ const start = async (): Promise<void> => {
 
   await app.register(cookie);
 
-  /** 健康检查：供部署后验证使用，固定返回 { ok: true } */
+  /**
+   * 健康检查：供部署后验证使用
+   * 除存活标记外还回显时间轴起点与周次上限：前端产物里的起点是**构建期**注入的，
+   * 后端是**运行期**读 .env，发布包又不含 .env，两者因此可能不同步。
+   * 回显出来，发布后 `curl /api/health` 比对一次即可发现
+   * （漏改服务器 .env 的症状是界面能点开某周、保存却报「周次超出有效范围」）。
+   */
   app.get('/api/health', async (_request, reply) => {
-    const data: HealthDto = { ok: true };
+    const data: HealthDto = {
+      ok: true,
+      startYear: config.startYear,
+      maxWeek: config.maxWeek,
+    };
     return reply.send(data);
   });
 

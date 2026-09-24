@@ -154,7 +154,7 @@
   color: var(--color-accent);
 }
 
-/* 已到时间轴两端（2026 年第 1 周之前、当前年之后）时置灰不可点 */
+/* 已到时间轴两端（2025 年第 1 周之前、当前年之后）时置灰不可点 */
 .weekNavButton:disabled {
   opacity: 0.45;
   cursor: not-allowed;

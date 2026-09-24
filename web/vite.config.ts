@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   const envDir = path.resolve(WEB_DIR, '..');
   const env = loadEnv(mode, envDir, '');
 
-  const startYear = Number(env.START_YEAR ?? 2026);
+  const startYear = Number(env.START_YEAR ?? 2025);
   const maxWeek = Number(env.MAX_WEEK ?? 53);
 
   // 代理目标与后端共用同一份 .env：改后端端口时不必再手工同步这里，
@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
 
     define: {
       // 只注入数字字面量，避免把整张环境变量表暴露到浏览器
-      __START_YEAR__: JSON.stringify(Number.isFinite(startYear) ? startYear : 2026),
+      __START_YEAR__: JSON.stringify(Number.isFinite(startYear) ? startYear : 2025),
       __MAX_WEEK__: JSON.stringify(Number.isFinite(maxWeek) ? maxWeek : 53),
     },
 

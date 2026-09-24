@@ -68,7 +68,7 @@ jobs:
           NODE_ENV=production
           SESSION_DAYS=30
           MAX_WEEK=53
-          START_YEAR=2026
+          START_YEAR=2025
           REGISTER_LIMIT_PER_HOUR=10
           EOF
 
