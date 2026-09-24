@@ -39,6 +39,13 @@ env:
   APP_DIR: /var/www/weekly
   SITE_URL: http://weekly.gouxinjie.com
 
+  # 时间轴起点与周次上限的**唯一来源**：既注入前端产物（构建期），
+  # 也在发布时写进服务器 .env（运行期）。前端构建期注入、后端运行期读 .env，
+  # 两者不一致会出现「界面能打开某周、保存却报周次超出有效范围」，
+  # 所以不再依赖人工登录服务器改 .env，由「校准服务器 .env」步骤自动同步。
+  START_YEAR: '2025'
+  MAX_WEEK: '53'
+
 jobs:
   build:
     name: 构建产物
@@ -61,14 +68,17 @@ jobs:
       # 端口与线上一致（3701），避免出现「构建用一套、线上用另一套」的困惑
       - name: 生成构建用 .env
         run: |
-          cat > .env <<'EOF'
+          # 这里刻意用不带引号的 EOF：让 START_YEAR / MAX_WEEK 取自上面 workflow env，
+          # 与发布时写进服务器 .env 的值同源，避免 CI 内部再出现两套值。
+          # ⚠️ 因此下面各值里不能出现 $ 字符
+          cat > .env <<EOF
           PORT=3701
           HOST=127.0.0.1
           DB_PATH=data/weekly.db
           NODE_ENV=production
           SESSION_DAYS=30
-          MAX_WEEK=53
-          START_YEAR=2025
+          MAX_WEEK=${MAX_WEEK}
+          START_YEAR=${START_YEAR}
           REGISTER_LIMIT_PER_HOUR=10
           EOF
 
@@ -190,6 +200,54 @@ jobs:
 
           echo "PKG_NAME=${PKG_NAME}" >> "$GITHUB_ENV"
 
+      # 服务器 .env 只存在于服务器（不进仓库、不进发布包），起点改动最容易漏改这一处：
+      # 前端按新起点构建、后端仍按旧起点校验，症状是界面能打开某周、保存却报「周次超出有效范围」。
+      # 这里在发布前把这两个键校准为仓库里的值，让构建期与运行期同源；
+      # 只动这两个键，其余配置（PORT、HOST、DB_PATH 等）仍由服务器自己维护。
+      - name: 校准服务器 .env 的时间轴配置
+        env:
+          ECS_HOST: ${{ secrets.ECS_HOST }}
+          ECS_USER: ${{ secrets.ECS_USER }}
+          ECS_PORT: ${{ secrets.ECS_PORT }}
+        run: |
+          set -euo pipefail
+          SSH_USER="${ECS_USER:-root}"
+          SSH_PORT="${ECS_PORT:-22}"
+
+          # 用带引号的 heredoc 把脚本原样送到远端，参数通过 bash -s 传入：
+          # 远端脚本里的 ${...} 因此不会被本地 shell 展开
+          ssh -i "$HOME/.ssh/deploy_key" -p "${SSH_PORT}" \
+            -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "${SSH_USER}@${ECS_HOST}" \
+            "bash -s '${APP_DIR}' '${START_YEAR}' '${MAX_WEEK}'" <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="$1"
+          START_YEAR="$2"
+          MAX_WEEK="$3"
+          ENV_FILE="${APP_DIR}/.env"
+
+          # 幂等：键存在就改值，不存在就追加，重复执行结果一致
+          set_kv() {
+            if grep -qE "^[[:space:]]*${1}[[:space:]]*=" "${ENV_FILE}"; then
+              sed -i -E "s|^[[:space:]]*${1}[[:space:]]*=.*|${1}=${2}|" "${ENV_FILE}"
+            else
+              printf '%s=%s\n' "${1}" "${2}" >> "${ENV_FILE}"
+            fi
+          }
+
+          # 不新建 .env：首次部署必须先按部署文档把 .env 建好（含 PORT、DB_PATH 等），
+          # 这里若凭两条键造出一个残缺的 .env，反而会让服务起不来
+          if [[ ! -f "${ENV_FILE}" ]]; then
+            echo "[env][警告] ${ENV_FILE} 不存在，跳过校准；请先按部署文档创建 .env" >&2
+            exit 0
+          fi
+
+          set_kv START_YEAR "${START_YEAR}"
+          set_kv MAX_WEEK "${MAX_WEEK}"
+          echo "[env] 时间轴配置：$(grep -E '^(START_YEAR|MAX_WEEK)=' "${ENV_FILE}" | tr '\n' ' ')"
+          REMOTE
+
       - name: 在服务器上执行发布
         env:
           ECS_HOST: ${{ secrets.ECS_HOST }}
@@ -214,6 +272,13 @@ jobs:
           echo "首页状态码："
           curl -fsS -o /dev/null -w '  HTTP %{http_code}\n' --retry 5 --retry-delay 3 "${SITE_URL}/"
 
-          echo "健康检查："
-          curl -fsS --retry 5 --retry-delay 3 "${SITE_URL}/api/health"
-          echo
+          echo "健康检查（并核对时间轴起点）："
+          HEALTH="$(curl -fsS --retry 5 --retry-delay 3 "${SITE_URL}/api/health")"
+          echo "  ${HEALTH}"
+
+          # 起点/周次上限不一致时「界面能打开某周、保存却报周次超出有效范围」，
+          # 属于最难排查的一类问题，因此在这里直接让发布失败
+          echo "${HEALTH}" | grep -q "\"startYear\":${START_YEAR}" \
+            || { echo "  [错误] 线上 startYear 不是 ${START_YEAR}"; exit 1; }
+          echo "${HEALTH}" | grep -q "\"maxWeek\":${MAX_WEEK}" \
+            || { echo "  [错误] 线上 maxWeek 不是 ${MAX_WEEK}"; exit 1; }

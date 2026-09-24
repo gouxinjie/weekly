@@ -910,7 +910,7 @@ const w = dayjs(date).isoWeek();      // ISO 周次 1-53
 | 检查 | 预期 |
 |---|---|
 | `pm2 status weekly` | `online`，重启次数不持续增长 |
-| `curl -s http://127.0.0.1:3701/api/health` | 返回 `{"ok":true,"startYear":2025,"maxWeek":53}`；`startYear` 必须与前端产物一致（不一致说明服务器 `.env` 漏改） |
+| `curl -s http://127.0.0.1:3701/api/health` | 返回 `{"ok":true,"startYear":2025,"maxWeek":53}`；CI 发布时会自动校准并断言这两个值 |
 | 浏览器打开 `http://weekly.gouxinjie.com/login` | 登录页正常，**不是 Nginx 默认页** |
 | 刷新 `/weekly/2026/38` 这类深层路由 | 不 404（`try_files` 生效） |
 | 打开 `/weekly/2025/43` | 正常显示，起点已提前到 2025 年 |
@@ -1134,7 +1134,7 @@ curl -sI http://weekly.gouxinjie.com
 | `NODE_ENV` | 两端 | `development` | 生产环境必须为 `production` |
 | `SESSION_DAYS` | server | `30` | 会话有效期（天） |
 | `MAX_WEEK` | 两端 | `53` | ISO 周次上限 |
-| `START_YEAR` | 两端 | `2025` | 时间轴起点年份。前端产物的取值在**构建期**注入、后端在**运行期**读 `.env`，发布包又不含 `.env`，因此改动必须同时覆盖三处：源码常量、CI 构建 `.env`、服务器 `.env`；发布后用 `curl /api/health` 比对 `startYear` |
+| `START_YEAR` | 两端 | `2025` | 时间轴起点年份。前端在**构建期**注入、后端在**运行期**读 `.env`，发布包又不含 `.env`；因此起点以 CI 为唯一来源：改 `.github/workflows/deploy.yml` 顶层 `START_YEAR` + `server/src/constants.ts`，发布流程会自动校准服务器 `.env` 并断言 `/api/health` 的 `startYear` 一致 |
 | `REGISTER_LIMIT_PER_HOUR` | server | `10` | 同 IP 每小时注册上限 |
 
 **本项目没有 `SESSION_SECRET`**——会话不签名（不是 JWT），是随机 token 存表查库，因此不需要密钥。

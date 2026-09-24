@@ -45,7 +45,7 @@ const SAVE_TEXT: Record<SaveState, string> = {
 };
 
 /**
- * 解析顶栏搜索框输入，形如「2026 年第 15 周」「2026-15」
+ * 解析顶栏搜索框输入，形如「2025 年第 15 周」「2025-15」
  * @param input - 用户输入
  * @returns 解析出的周次；无法解析或越界时返回 null
  */
@@ -367,7 +367,7 @@ const Weekly = () => {
   const handleSearch = useCallback((): void => {
     const parsed = parseSearchInput(searchInput);
     if (parsed === null) {
-      setToast('未找到匹配的周次，试试「2026 年第 15 周」');
+      setToast(`未找到匹配的周次，试试「${START_YEAR} 年第 15 周」`);
       return;
     }
     setSearchInput('');

@@ -152,7 +152,7 @@ npm test
 | `NODE_ENV` | 生产环境必须为 `production` | `development` |
 | `SESSION_DAYS` | 会话有效期，必须与 `session` 表的 `expires_at` 保持一致 | `30` |
 | `MAX_WEEK` | ISO 周次上限，不可改 | `53` |
-| `START_YEAR` | 时间轴起点年份；前端在构建期注入、后端在运行期读取，改动需同时覆盖 CI 构建 `.env` 与服务器 `.env` | `2025` |
+| `START_YEAR` | 时间轴起点年份；以 CI 的 workflow env 为唯一来源，发布时自动同步到服务器 `.env` 并断言生效 | `2025` |
 | `REGISTER_LIMIT_PER_HOUR` | 同 IP 每小时注册上限，防批量灌水 | `10` |
 
 ---

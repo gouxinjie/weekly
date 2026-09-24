@@ -275,7 +275,9 @@ weekly 是一个**多用户**的周报管理工具，目标不是做一个简单
 
 **位置**：仓库根目录。
 
-构建（`build`）与发布（`deploy`）两个 job，后者 `needs` 前者。构建阶段生成一份**只用于构建**的临时 `.env`（前端需要 `START_YEAR` / `MAX_WEEK` 注入常量），随后打包、上传 artifact；发布阶段配好 SSH、补目录、scp、执行服务器脚本、公网验证。
+构建（`build`）与发布（`deploy`）两个 job，后者 `needs` 前者。构建阶段生成一份**只用于构建**的临时 `.env`（前端需要 `START_YEAR` / `MAX_WEEK` 注入常量），随后打包、上传 artifact；发布阶段配好 SSH、补目录、**校准服务器 `.env` 的时间轴配置**、scp、执行服务器脚本、公网验证。
+
+**时间轴起点与周次上限由 workflow 顶层的 `env.START_YEAR` / `env.MAX_WEEK` 统一提供**（构建期与运行期同源）：构建阶段用它们生成前端 `.env`，发布阶段用同一个值把服务器 `.env` 的这两个键校准（幂等 sed，其余键不动；`.env` 不存在时只告警不改）。发布最后一步会断言 `/api/health` 的 `startYear` / `maxWeek` 与之一致，不一致直接判定发布失败——把「界面能打开某周、保存却报周次超出有效范围」这类最难排查的问题挡在流水线上。
 
 ### 4.2 `deploy/ecosystem.config.cjs`（pm2 进程定义）
 
@@ -523,7 +525,7 @@ crontab -e                 # 加一行：0 3 * * * /var/www/weekly/deploy/backup
 8. **不要手工 `pm2 start dist/index.js`**，也不要在首次部署前手动起进程——两条都会造出抢端口的野进程
 9. **不要用 `pm2 update` / `pm2 kill` / `pm2 restart all`**——粒度是整个 daemon，会波及同机其他应用
 10. **不要把服务器 IP、同机其他应用名写进仓库**——统一用占位符
-11. **时间轴起点三处一致**：源码常量 `DEFAULT_START_YEAR`（新环境的兜底默认值）、CI 构建用 `.env`（决定前端产物）、服务器 `/var/www/weekly/.env`（决定后端校验）。发布包不含 `.env`，调整起点时必须单独登录服务器改这一处，改完用 `curl /api/health` 比对 `startYear`
+11. **时间轴起点以 CI 为唯一来源**：改起点只需改 `.github/workflows/deploy.yml` 顶层的 `START_YEAR`（构建期注入前端）+ `server/src/constants.ts` 的 `DEFAULT_START_YEAR`（新环境兜底），推送后发布流程会自动把服务器 `/var/www/weekly/.env` 校准为同一个值并断言生效；**不要**直接改服务器 `.env` 的这两个键——下次发布会覆盖回去
 
 **与同机其他应用共存**：它们共用同一个 pm2 daemon 与同一个 Nginx。`release.sh` 用的是进程级的 `startOrReload`，Nginx 侧只新增 `conf.d/server_weekly.conf` 并用 `reload`，因此互不影响；每次发布后扫一眼 `pm2 status`，确认其他应用的 ↺ 次数没增长。
 
