@@ -29,7 +29,12 @@ export const LOGIN_IP_MAX_FAILURES = 20;
 /** 会话 Cookie 名 */
 export const SESSION_COOKIE_NAME = 'session';
 
-/** 会话 Cookie 配置（统一在此定义，禁止散落各处的字面量） */
+/**
+ * 会话 Cookie 配置（统一在此定义，禁止散落各处的字面量）
+ * 说明：这里刻意不含 maxAge——它必须与 session 表的 expires_at 同源（都由 config.sessionDays 推导），
+ * 写死一个「30 天」会在 SESSION_DAYS 被改动时与服务端有效期脱节，
+ * 出现「Cookie 还在但会话已过期」或反之。取带 maxAge 的完整配置请用 config.sessionCookie。
+ */
 export const SESSION_COOKIE = {
   path: '/',
 
@@ -38,9 +43,6 @@ export const SESSION_COOKIE = {
 
   /** 本项目的 CSRF 防护方案：SameSite=Strict，不引入 CSRF token */
   sameSite: 'strict',
-
-  /** 30 天，必须与 session 表的 expires_at 保持一致 */
-  maxAge: 30 * 24 * 60 * 60,
 
   // secure: true,  // ⚠️ 当前走 HTTP，设为 true 会导致 Cookie 不下发，启用 HTTPS 时必须同步打开
 } as const;

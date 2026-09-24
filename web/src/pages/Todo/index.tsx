@@ -25,6 +25,46 @@ import type { Todo as TodoModel, TodoFilter as TodoFilterValue, WeekRef } from '
 import styles from './index.module.scss';
 
 /**
+ * 把一批待办按给定顺序填回它们原本占据的槽位
+ * @param list - 当前列表
+ * @param order - 目标顺序的待办 ID 数组
+ * @returns 重排后的新列表；不在 order 里的条目位置保持不动
+ * @remarks 乐观更新与失败回滚共用同一套「按槽位填充」逻辑，保证两次变换互为逆操作。
+ */
+const applyOrder = (list: TodoModel[], order: number[]): TodoModel[] => {
+  const rank = new Map(order.map((id, index) => [id, index]));
+  const affected = list.filter((item) => rank.has(item.id));
+  const sorted = [...affected].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+
+  let cursor = 0;
+  return list.map((item) => (rank.has(item.id) ? sorted[cursor++] : item));
+};
+
+/**
+ * 回退一条待办的乐观更新
+ * @param current - 乐观更新后的当前条目
+ * @param before - 乐观更新前的条目
+ * @param optimistic - 本次乐观写入的完整提交体
+ * @returns 回退后的条目
+ * @remarks 只回退「值仍等于本次乐观写入值」的字段：
+ * 用户在该请求失败前又改过的字段保持不动，不会把新输入一起吞掉。
+ */
+const rollbackTodo = (
+  current: TodoModel,
+  before: TodoModel,
+  optimistic: UpdateTodoBody,
+): TodoModel => {
+  const next = { ...current };
+  if (next.text === optimistic.text) next.text = before.text;
+  if (next.done === optimistic.done) next.done = before.done;
+  if (next.pinned === optimistic.pinned) next.pinned = before.pinned;
+  if (next.year === optimistic.year) next.year = before.year;
+  if (next.week === optimistic.week) next.week = before.week;
+  if (next.category === optimistic.category) next.category = before.category;
+  return next;
+};
+
+/**
  * 工作台（待办）
  * @returns 页面节点
  */
@@ -157,10 +197,12 @@ const Todo = () => {
   }, [newText, newCategory, pending, defaultWeek, refreshUndoneCount]);
 
   /**
-   * 局部更新某条待办（乐观更新，失败回滚）
+   * 局部更新某条待办（乐观更新，失败按条回滚）
    * @param todo - 目标待办
    * @param patch - 需要变更的字段
    * @returns 无
+   * @remarks 回滚只针对这一条，不能用整表快照：并发操作（例如连点两个勾选框）时，
+   * 后一次失败会把前一次已经落库成功的改动在界面上一起退回。
    */
   const handleUpdate = useCallback(
     async (todo: TodoModel, patch: Partial<UpdateTodoBody>): Promise<void> => {
@@ -174,7 +216,7 @@ const Todo = () => {
         category: patch.category ?? todo.category,
       };
 
-      const snapshot = todos;
+      const before = todos.find((item) => item.id === todo.id);
       setError('');
       setTodos((prev) => prev.map((item) => (item.id === todo.id ? { ...item, ...body } : item)));
 
@@ -183,7 +225,13 @@ const Todo = () => {
         // 勾选 / 取消勾选会改变未完成条数，刷新页签角标（M-09）
         refreshUndoneCount();
       } catch (err) {
-        setTodos(snapshot);
+        if (before !== undefined) {
+          setTodos((prev) =>
+            prev.map((item) =>
+              item.id === todo.id ? rollbackTodo(item, before, body) : item,
+            ),
+          );
+        }
         setError(toErrorMessage(err, '更新失败，请稍后重试'));
       }
     },
@@ -191,13 +239,14 @@ const Todo = () => {
   );
 
   /**
-   * 删除某条待办（乐观更新，失败回滚）
+   * 删除某条待办（乐观更新，失败按条回滚）
    * @param todo - 目标待办
    * @returns 无
+   * @remarks 失败时只把这一条插回它原来的下标，理由同 handleUpdate。
    */
   const handleDelete = useCallback(
     async (todo: TodoModel): Promise<void> => {
-      const snapshot = todos;
+      const index = todos.findIndex((item) => item.id === todo.id);
       setError('');
       setTodos((prev) => prev.filter((item) => item.id !== todo.id));
 
@@ -205,7 +254,13 @@ const Todo = () => {
         await deleteTodo(todo.id);
         refreshUndoneCount();
       } catch (err) {
-        setTodos(snapshot);
+        setTodos((prev) => {
+          // 该条已经被重新创建 / 加回来时不再重复插入
+          if (prev.some((item) => item.id === todo.id)) return prev;
+          const next = [...prev];
+          next.splice(index < 0 ? next.length : Math.min(index, next.length), 0, todo);
+          return next;
+        });
         setError(toErrorMessage(err, '删除失败，请稍后重试'));
       }
     },
@@ -226,7 +281,7 @@ const Todo = () => {
    *          2. 落点固定是「目标之前」，与清单画在目标行顶部的插入线一致：
    *             摘掉被拖动项后，向下拖时目标下标会左移一位，减掉这一位才不会差一格。
    *          本地只把该段的条目按新顺序填回原来的槽位，其余条目位置不动；
-   *          服务端按下标重写 sort_order，失败则整体回滚。
+   *          服务端按下标重写 sort_order，失败则把该段恢复成拖拽前的顺序。
    */
   const handleReorder = useCallback(
     async (
@@ -246,23 +301,14 @@ const Todo = () => {
       next.splice(from, 1);
       next.splice(to - (from < to ? 1 : 0), 0, draggedId);
 
-      const snapshot = todos;
-      const orderIndex = new Map(next.map((id, index) => [id, index]));
-
       setError('');
-      setTodos((prev) => {
-        const affected = prev.filter((item) => orderIndex.has(item.id));
-        const sorted = [...affected].sort(
-          (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
-        );
-        let cursor = 0;
-        return prev.map((item) => (orderIndex.has(item.id) ? sorted[cursor++] : item));
-      });
+      setTodos((prev) => applyOrder(prev, next));
 
       try {
         await reorderTodos(next);
       } catch (err) {
-        setTodos(snapshot);
+        // 恢复成拖拽前的顺序：只重排这一段，其它条目与并发操作不受影响
+        setTodos((prev) => applyOrder(prev, ids));
         setError(toErrorMessage(err, '排序失败，请稍后重试'));
       }
     },

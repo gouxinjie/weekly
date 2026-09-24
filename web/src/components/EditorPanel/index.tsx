@@ -72,9 +72,12 @@ const EditorPanel = ({ editor, onApplyTemplate, onExport }: EditorPanelProps) =>
    * 在光标处插入一个二级标题段落
    * @param heading - 标题文本
    * @returns 无
+   * @remarks 必须显式声明 contentType: 'markdown'：insertContent 默认按 HTML/纯文本解析，
+   * 不声明时插进去的是普通段落里的字面文本「## 本周总结」，而不是二级标题
+   * （粘贴处理同理，见 MarkdownEditor 的 handlePaste）。
    */
   const insertHeading = (heading: string): void => {
-    editor?.chain().focus().insertContent(`## ${heading}\n`).run();
+    editor?.chain().focus().insertContent(`## ${heading}\n`, { contentType: 'markdown' }).run();
   };
 
   return (

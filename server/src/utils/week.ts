@@ -17,20 +17,6 @@ export interface WeekRange {
 }
 
 /**
- * 校验 (year, week) 是否为合法的可写周次
- * @param year - ISO 年
- * @param week - ISO 周次
- * @returns 是否合法
- * @remarks 红线 3：起点按「周」判断而不是按「日期」判断。
- * 起点年 2025 的第 1 周周一是 2024-12-30，若写成 date >= '2025-01-01' 会误拒合法数据。
- */
-export const isValidWeek = (year: number, week: number): boolean => {
-  if (!Number.isInteger(year) || !Number.isInteger(week)) return false;
-  if (week < 1 || week > config.maxWeek) return false;
-  return year >= config.startYear;
-};
-
-/**
  * 计算某周的周一与周日
  * @param year - ISO 年
  * @param week - ISO 周次（1-53）
@@ -48,6 +34,35 @@ export const getWeekRange = (year: number, week: number): WeekRange => {
     start: monday.format(ISO_DATE_FORMAT),
     end: monday.add(6, 'day').format(ISO_DATE_FORMAT),
   };
+};
+
+/**
+ * 计算某个 ISO 年实际包含的周数
+ * @param year - ISO 年
+ * @returns 该年的周数（52 或 53）
+ * @remarks 用「该年第 1 周的周一」到「下一年第 1 周的周一」相差的整周数推导：
+ * 2025 年为 52 周，2026 年为 53 周。周次上限不能写死 52（会丢掉 2026 年的第 53 周），
+ * 也不能一律放行到 53（会让 2025 年凭空多出一个与 2026 年第 1 周同区间的第 53 周）。
+ */
+export const getWeekCount = (year: number): number => {
+  const firstMonday = dayjs(getWeekRange(year, 1).start);
+  const nextFirstMonday = dayjs(getWeekRange(year + 1, 1).start);
+  return Math.round(nextFirstMonday.diff(firstMonday, 'day') / 7);
+};
+
+/**
+ * 校验 (year, week) 是否为合法的可写周次
+ * @param year - ISO 年
+ * @param week - ISO 周次
+ * @returns 是否合法
+ * @remarks 红线 3：起点按「周」判断而不是按「日期」判断。
+ * 起点年 2025 的第 1 周周一是 2024-12-30，若写成 date >= '2025-01-01' 会误拒合法数据。
+ * 上限取「MAX_WEEK 与该年实际周数的较小值」，见 getWeekCount。
+ */
+export const isValidWeek = (year: number, week: number): boolean => {
+  if (!Number.isInteger(year) || !Number.isInteger(week)) return false;
+  if (year < config.startYear || week < 1) return false;
+  return week <= Math.min(config.maxWeek, getWeekCount(year));
 };
 
 /**

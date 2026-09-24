@@ -27,10 +27,11 @@ export const verifyPassword = async (hash: string, plain: string): Promise<boole
 };
 
 /**
- * 校验密码强度：必须同时含数字与字母，长度 ≥ 8
+ * 校验密码强度：必须同时含数字与字母，长度不少于 6 位
  * @param plain - 明文密码
  * @returns 是否通过
  * @remarks 前端校验只是体验，服务端必须再校验一遍，否则可被直接绕过。
+ * 长度下限取 PASSWORD_MIN_LENGTH，与 PRD G-01 的「数字 + 字母，≥ 6 位」一致。
  */
 export const isStrongPassword = (plain: string): boolean =>
   plain.length >= PASSWORD_MIN_LENGTH && /[0-9]/.test(plain) && /[a-zA-Z]/.test(plain);

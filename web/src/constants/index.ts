@@ -69,9 +69,6 @@ export const THEMES: ThemeOption[] = [
 /** 默认主题：首次访问（本地无记录）时使用 */
 export const DEFAULT_THEME: ThemeName = 'light';
 
-/** 周报内容字数上限（编辑区底部计数用） */
-export const MAX_CONTENT_CHARS = 2000;
-
 /** 待办分类定义：value 与服务端 TODO_CATEGORIES 保持一致 */
 export interface TodoCategoryOption {
   /** 分类标识，空串表示未分类 */

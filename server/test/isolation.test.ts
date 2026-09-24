@@ -187,6 +187,12 @@ test('红线 3：起点为 2025 年，跨年周不能被误拒', async () => {
   assert.equal(m.isValidWeek(2025, 52), true, '2025 年有 52 周，第 52 周必须合法');
   assert.equal(m.isValidWeek(2024, 52), false, '早于起点的年份必须被拒绝');
   assert.equal(m.isValidWeek(2024, 1), false, '早于起点的年份必须被拒绝');
+
+  // 上限按「该年实际周数」校验：放行到 53 会让 2025 年凭空多出一个第 53 周，
+  // 而它与 2026 年第 1 周是同一区间（2025-12-29 ~ 2026-01-04），时间轴上还会归到 1 月
+  assert.equal(m.getWeekCount(2025), 52, '2025 年应有 52 周');
+  assert.equal(m.getWeekCount(2026), 53, '2026 年应有 53 周');
+  assert.equal(m.isValidWeek(2025, 53), false, '2025 年没有第 53 周，必须被拒绝');
 });
 
 test('红线 3：起点年的周次可写入并原样读回（2025 年第 1 周）', async () => {

@@ -14,8 +14,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
-import { MAX_WEEK, START_YEAR, TODO_CATEGORIES } from '@/constants';
-import { getCurrentWeek, getTodoWeek, getWeekOfDate, isPastWeek } from '@/utils/week';
+import { START_YEAR, TODO_CATEGORIES } from '@/constants';
+import {
+  getCurrentWeek,
+  getTodoWeek,
+  getWeekCount,
+  getWeekOfDate,
+  isPastWeek,
+} from '@/utils/week';
 import { todoGroupKey, todoSegment } from '@/utils/todoGroup';
 import type { TodoSegment } from '@/utils/todoGroup';
 import type { UpdateTodoBody } from '@/types/api';
@@ -129,11 +135,12 @@ const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
   TODO_CATEGORIES.map((item) => [item.value, item.label]),
 );
 
-/** 周次可选项：一年最多 53 周，与 props 和状态无关，放在模块级避免每次渲染重建 */
-const WEEK_OPTIONS: SelectOption[] = Array.from({ length: MAX_WEEK }, (_, index) => ({
-  value: String(index + 1),
-  label: `第 ${index + 1} 周`,
-}));
+/** 周次可选项：按该年实际周数生成（2025 年 52 周、2026 年 53 周），不固定铺 1-53 */
+const buildWeekOptions = (year: number): SelectOption[] =>
+  Array.from({ length: getWeekCount(year) }, (_, index) => ({
+    value: String(index + 1),
+    label: `第 ${index + 1} 周`,
+  }));
 
 /**
  * 生成周分组的标题
@@ -178,6 +185,9 @@ const TodoItem = ({
   const textRef = useRef<HTMLButtonElement | null>(null);
 
   const tagged = todo.year !== null && todo.week !== null;
+
+  /** 周次可选项：跟着上面选中的年份走，该年没有第 53 周时就不会出现这一项 */
+  const weekOptions = useMemo(() => buildWeekOptions(draftYear), [draftYear]);
 
   /*
    * 过期：标记周次已过且未完成。只挂一枚危险色小提示，不动整行底色——
@@ -446,11 +456,17 @@ const TodoItem = ({
             value={String(draftYear)}
             options={yearOptions}
             ariaLabel="选择年份"
-            onChange={(next) => setDraftYear(Number(next))}
+            onChange={(next) => {
+              const nextYear = Number(next);
+              setDraftYear(nextYear);
+              // 切换年份时把周次夹到该年实际范围内：2025 年没有第 53 周，
+              // 否则下拉会显示成空白，直接保存还会被服务端按越界打回
+              setDraftWeek((prev) => Math.min(prev, getWeekCount(nextYear)));
+            }}
           />
           <Select
             value={String(draftWeek)}
-            options={WEEK_OPTIONS}
+            options={weekOptions}
             ariaLabel="选择周次"
             onChange={(next) => setDraftWeek(Number(next))}
           />

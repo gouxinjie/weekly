@@ -49,6 +49,12 @@ interface NoteCardProps {
   note: Note;
   /** 是否自动聚焦内容：本次新建的便签为 true */
   autoFocus: boolean;
+  /**
+   * 自动聚焦完成后的回调
+   * @remarks 父级据此清掉「待聚焦」标记：否则该标记会一直挂着，
+   * 卡片因搜索 / 筛选重新挂载时会再次抢走焦点
+   */
+  onAutoFocused: () => void;
   /** 内容 / 颜色 / 置顶变化时的回调 */
   onChange: (note: Note, patch: Partial<UpdateNoteBody>) => void;
   /** 删除回调 */
@@ -73,6 +79,7 @@ const NoteCard = ({
   onChange,
   onDelete,
   onDiscard,
+  onAutoFocused,
   saveState,
 }: NoteCardProps) => {
   const textRef = useRef<HTMLTextAreaElement | null>(null);
@@ -88,14 +95,15 @@ const NoteCard = ({
     node.style.height = `${node.scrollHeight}px`;
   }, [note.content]);
 
-  // 新建后自动聚焦，并把光标落到已有内容的末尾
+  // 新建后自动聚焦，并把光标落到已有内容的末尾；聚焦完立刻通知父级撤下标记
   useEffect(() => {
     if (!autoFocus) return;
     const node = textRef.current;
     if (node === null) return;
     node.focus();
     node.setSelectionRange(node.value.length, node.value.length);
-  }, [autoFocus]);
+    onAutoFocused();
+  }, [autoFocus, onAutoFocused]);
 
   const colorClass = CARD_COLOR_CLASS[note.color];
   const saveText = SAVE_TEXT[saveState];

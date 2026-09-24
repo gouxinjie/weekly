@@ -3,6 +3,7 @@ import {
   DEFAULT_MAX_WEEK,
   DEFAULT_REGISTER_LIMIT_PER_HOUR,
   DEFAULT_START_YEAR,
+  SESSION_COOKIE,
 } from './constants';
 
 /**
@@ -77,6 +78,21 @@ export interface ServerConfig {
   registerLimitPerHour: number;
   /** 是否为生产环境 */
   isProduction: boolean;
+  /**
+   * 会话 Cookie 配置（含 maxAge）
+   * @remarks maxAge 由 sessionDays 推导，与 createExpiresAt() 写进 session 表的 expires_at 同源；
+   * 两者一旦来自不同的地方，就会出现「Cookie 还在但会话已过期」或反之。
+   */
+  sessionCookie: Readonly<{
+    /** Cookie 作用路径 */
+    path: string;
+    /** 是否禁止 JS 读取 */
+    httpOnly: boolean;
+    /** CSRF 防护方案 */
+    sameSite: 'strict';
+    /** 有效期（秒），与 session.expires_at 保持一致 */
+    maxAge: number;
+  }>;
 }
 
 /**
@@ -84,20 +100,25 @@ export interface ServerConfig {
  * @returns 校验后的配置对象
  * @throws 配置非法时抛错
  */
-const buildConfig = (): ServerConfig => ({
-  port: readIntEnv('PORT', 3701, 1),
-  host: readEnv('HOST', '127.0.0.1'),
-  dbPath: resolveDbPath(readEnv('DB_PATH', 'data/weekly.db')),
-  sessionDays: readIntEnv('SESSION_DAYS', 30, 1),
-  maxWeek: readIntEnv('MAX_WEEK', DEFAULT_MAX_WEEK, 1),
-  startYear: readIntEnv('START_YEAR', DEFAULT_START_YEAR, 1970),
-  registerLimitPerHour: readIntEnv(
-    'REGISTER_LIMIT_PER_HOUR',
-    DEFAULT_REGISTER_LIMIT_PER_HOUR,
-    1,
-  ),
-  isProduction: readEnv('NODE_ENV', 'development') === 'production',
-});
+const buildConfig = (): ServerConfig => {
+  const sessionDays = readIntEnv('SESSION_DAYS', 30, 1);
+
+  return {
+    port: readIntEnv('PORT', 3701, 1),
+    host: readEnv('HOST', '127.0.0.1'),
+    dbPath: resolveDbPath(readEnv('DB_PATH', 'data/weekly.db')),
+    sessionDays,
+    maxWeek: readIntEnv('MAX_WEEK', DEFAULT_MAX_WEEK, 1),
+    startYear: readIntEnv('START_YEAR', DEFAULT_START_YEAR, 1970),
+    registerLimitPerHour: readIntEnv(
+      'REGISTER_LIMIT_PER_HOUR',
+      DEFAULT_REGISTER_LIMIT_PER_HOUR,
+      1,
+    ),
+    isProduction: readEnv('NODE_ENV', 'development') === 'production',
+    sessionCookie: { ...SESSION_COOKIE, maxAge: sessionDays * 24 * 60 * 60 },
+  };
+};
 
 /** 全局唯一配置实例 */
 export const config: ServerConfig = buildConfig();

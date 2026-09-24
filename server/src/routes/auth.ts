@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifySchema } from 'fastify';
-import { PHONE_PATTERN, SESSION_COOKIE, SESSION_COOKIE_NAME } from '../constants';
+import { config } from '../config';
+import { PHONE_PATTERN, SESSION_COOKIE_NAME } from '../constants';
 import {
   createSession,
   deleteExpiredSessions,
@@ -91,7 +92,7 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
         // 注册成功同样计数，否则挡不住批量灌水
         recordAttempt('register', 'ip', ip, true);
-        reply.setCookie(SESSION_COOKIE_NAME, token, { ...SESSION_COOKIE });
+        reply.setCookie(SESSION_COOKIE_NAME, token, { ...config.sessionCookie });
 
         const data: UserDto = { id: userId, phone };
         return reply.code(201).send(ok(data, '注册成功'));
@@ -136,7 +137,7 @@ export const authRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
         recordAttempt('login', 'phone', phone, true);
         recordAttempt('login', 'ip', ip, true);
-        reply.setCookie(SESSION_COOKIE_NAME, token, { ...SESSION_COOKIE });
+        reply.setCookie(SESSION_COOKIE_NAME, token, { ...config.sessionCookie });
 
         const data: UserDto = { id: user.id, phone: user.phone };
         return reply.send(ok(data, '登录成功'));

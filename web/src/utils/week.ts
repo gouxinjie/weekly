@@ -61,11 +61,14 @@ export const getTodoWeek = (todo: Pick<Todo, 'year' | 'week' | 'createdAt'>): We
  * @param week - ISO 周次
  * @returns 是否合法
  * @remarks 红线 3：按「周」判断而不是按日期判断，起点年 2025 的第 1 周周一是 2024-12-30。
+ * 上限取「MAX_WEEK 与该年实际周数的较小值」（见 getWeekCount）：
+ * 2025 年只有 52 周，若一律放行到 53，顶栏跳转与 URL 都能进了「2025 年第 53 周」，
+ * 而它与 2026 年第 1 周是同一区间。
  */
 export const isValidWeek = (year: number, week: number): boolean => {
   if (!Number.isInteger(year) || !Number.isInteger(week)) return false;
-  if (week < 1 || week > MAX_WEEK) return false;
-  return year >= START_YEAR;
+  if (year < START_YEAR || week < 1) return false;
+  return week <= Math.min(MAX_WEEK, getWeekCount(year));
 };
 
 /**

@@ -586,19 +586,22 @@ const userId = request.userId;
 **Cookie 配置规范**（统一在一处定义，不要散落）：
 
 ```ts
+// constants.ts：只放与有效期无关的部分
 /** 会话 Cookie 配置 */
 export const SESSION_COOKIE = {
   path: '/',
   httpOnly: true,        // 禁止 JS 读取，防 XSS 窃取
   sameSite: 'strict',    // CSRF 防护（本项目的方案，不用 CSRF token）
-  maxAge: 30 * 24 * 60 * 60,  // 30 天，与 session.expires_at 保持一致
   // secure: true,       // ⚠️ 当前走 HTTP，设为 true 会导致 Cookie 不下发
 } as const;
+
+// config.ts：maxAge 由 sessionDays 推导，与 createExpiresAt() 写进 session 表的值同源
+sessionCookie: { ...SESSION_COOKIE, maxAge: sessionDays * 24 * 60 * 60 },
 ```
 
 **三条要点：**
 
-1. **`maxAge` 必须与 `session.expires_at` 一致**（都是 30 天）。不一致会出现「Cookie 还在但会话已过期」或反之
+1. **`maxAge` 必须与 `session.expires_at` 同源**（都由 `SESSION_DAYS` 推导），不要在 Cookie 里另写一个「30 天」的常量——`SESSION_DAYS` 一改就会不对齐，出现「Cookie 还在但会话已过期」或反之
 2. **`secure` 必须保持注释状态**——服务走 HTTP，开启后浏览器不会发送 Cookie，会导致登录态完全失效。将来启用 HTTPS 时**必须同步打开**（见 PRD §二 升级路径）
 3. **不带 `domain`**——不显式设置时默认绑定当前域名，避免子域名间串用
 
@@ -1031,7 +1034,7 @@ const w = dayjs(date).isoWeek();      // ISO 周次 1-53
 23. 有无硬编码密钥、密码、URL
 24. `.env` 是否在 `.gitignore` 中，`.env.example` 是否同步更新
 25. 是否有代码把 `HOST` 设成 `0.0.0.0` 或让 Node 直接暴露公网
-26. 是否误开了 Cookie 的 `secure`（HTTP 下会失效）或 `SESSION_COOKIE.maxAge` 与会话有效期不一致
+26. 是否误开了 Cookie 的 `secure`（HTTP 下会失效）或 `config.sessionCookie.maxAge` 与会话有效期不一致
 
 ---
 

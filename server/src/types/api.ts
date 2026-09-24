@@ -50,7 +50,7 @@ export interface CredentialsBody {
 export interface ChangePasswordBody {
   /** 原密码，用于校验身份 */
   oldPassword: string;
-  /** 新密码，必须为数字 + 字母且长度 ≥ 8 */
+  /** 新密码，必须为数字 + 字母且长度不少于 6 位 */
   newPassword: string;
 }
 

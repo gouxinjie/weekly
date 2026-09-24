@@ -47,7 +47,7 @@ const Notes = () => {
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null);
   /** 删除请求是否在处理中 */
   const [deleting, setDeleting] = useState(false);
-  /** 新建后需要自动聚焦的便签 ID */
+  /** 新建后需要自动聚焦的便签 ID；聚焦完成即由 handleAutoFocused 清空 */
   const [focusId, setFocusId] = useState<number | null>(null);
 
   /** 每张便签的自动保存定时器 */
@@ -258,6 +258,13 @@ const Notes = () => {
   }, [creating]);
 
   /**
+   * 便签已完成自动聚焦：撤下「待聚焦」标记
+   * @returns 无
+   * @remarks 标记留着不清，会让这张卡片在因搜索 / 筛选重新挂载时又抢一次焦点。
+   */
+  const handleAutoFocused = useCallback((): void => setFocusId(null), []);
+
+  /**
    * 丢弃一张空白的新便签
    * @param note - 目标便签
    * @returns 无
@@ -455,6 +462,7 @@ const Notes = () => {
                 onChange={handleChange}
                 onDelete={requestDelete}
                 onDiscard={handleDiscard}
+                onAutoFocused={handleAutoFocused}
               />
             ))}
           </div>

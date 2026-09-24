@@ -39,6 +39,29 @@ const start = async (): Promise<void> => {
   // 启动即执行迁移，保证新代码对外服务前表结构已就绪
   migrate();
 
+  /*
+   * 统一错误处理必须在注册路由之前挂上：路由在注册时会捕获当时的错误处理器，
+   * 晚于 register 挂的话这些路由仍会走 Fastify 默认错误体
+   * （形如 { statusCode, code, error, message }，没有 success 字段），
+   * 前端一律按统一响应体解析，会把「参数校验失败」误报成「接口返回格式异常」。
+   */
+  app.setErrorHandler((error: FastifyError, request, reply) => {
+    // 参数校验失败：统一为 INVALID_PARAMS，不透出 ajv 的字段级细节
+    if (error.validation) {
+      return reply.code(400).send(fail(ERROR_CODES.INVALID_PARAMS, '请求参数不合法'));
+    }
+
+    // 其余 4xx 属于请求侧问题（如请求体不是合法 JSON），同样走统一响应体
+    const status = error.statusCode ?? 500;
+    if (status < 500) {
+      request.log.warn({ err: error }, '请求被拒绝');
+      return reply.code(status).send(fail(ERROR_CODES.INVALID_PARAMS, '请求格式不合法'));
+    }
+
+    request.log.error({ err: error }, '未捕获的服务异常');
+    return reply.code(status).send(internalError());
+  });
+
   await app.register(cookie);
 
   /**
@@ -61,15 +84,6 @@ const start = async (): Promise<void> => {
   await app.register(weeklyRoutes, { prefix: '/api/weekly' });
   await app.register(todoRoutes, { prefix: '/api/todo' });
   await app.register(noteRoutes, { prefix: '/api/notes' });
-
-  // 统一错误处理：参数校验失败归为 400，其余异常一律 500 且不透出内部细节
-  app.setErrorHandler((error: FastifyError, request, reply) => {
-    if (error.validation) {
-      return reply.code(400).send(fail(ERROR_CODES.INVALID_PARAMS, '请求参数不合法'));
-    }
-    request.log.error({ err: error }, '未捕获的服务异常');
-    return reply.code(error.statusCode ?? 500).send(internalError());
-  });
 
   await app.listen({ port: config.port, host: config.host });
 };

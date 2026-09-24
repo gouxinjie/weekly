@@ -22,7 +22,7 @@ import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
 import Tree from '@/components/Tree';
 import WeeklyReference from '@/components/WeeklyReference';
-import { AUTOSAVE_DELAY, MAX_CONTENT_CHARS, START_YEAR } from '@/constants';
+import { AUTOSAVE_DELAY, START_YEAR } from '@/constants';
 import {
   countChars,
   formatTimeShort,
@@ -394,7 +394,12 @@ const Weekly = () => {
   }
 
   const charCount = countChars(content);
-  const isWritten = updatedAt !== '';
+  /*
+   * 已写口径必须与服务端 listWrittenWeeks 一致：内容去空白后为空即不算已写。
+   * 不能用 updatedAt !== '' 判断——服务端在内容被清空后仍保留该行、updated_at 非空，
+   * 于是会出现「时间轴绿点已消失、卡片却还挂着『已写』」的自相矛盾（刷新后依旧）。
+   */
+  const isWritten = content.trim() !== '';
   const isEditing = mode === 'edit';
 
   /** 保存态徽标的文案（idle 且已写过时按「已保存」展示） */
@@ -439,10 +444,21 @@ const Weekly = () => {
           />
 
           <div className={styles.topbarRight}>
+            {/* 定位本周（PRD 5.6）：一键回到当前 ISO 周，已在本周时置灰 */}
+            <button
+              type="button"
+              className={styles.todayButton}
+              disabled={year === currentWeek.year && week === currentWeek.week}
+              onClick={() => void goWeek(currentWeek.year, currentWeek.week)}
+            >
+              定位本周
+            </button>
+
             <input
               className={styles.search}
               value={searchInput}
-              placeholder="搜索周次内容…"
+              aria-label="跳转到周次"
+              placeholder={`跳转周次，如 ${START_YEAR} 年第 15 周`}
               onChange={(event) => setSearchInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') handleSearch();
@@ -651,9 +667,8 @@ const Weekly = () => {
               </svg>
               Markdown 编辑
             </span>
-            <span className={styles.statusCount}>
-              {charCount} / {MAX_CONTENT_CHARS}
-            </span>
+            {/* 周报内容没有字数上限（PRD R-12 只要求显示字数），因此不写「/ 上限」 */}
+            <span className={styles.statusCount}>字数 {charCount}</span>
           </footer>
         </>
       )}

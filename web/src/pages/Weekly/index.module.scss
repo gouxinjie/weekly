@@ -35,6 +35,29 @@
   outline: none;
 }
 
+/* 顶栏「定位本周」：快速跳回当前周，已在本周时置灰（PRD 5.6） */
+.todayButton {
+  padding: 7px var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.todayButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.todayButton:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-faint);
+  cursor: not-allowed;
+}
+
 /* 通知铃铛：右上角常驻红点 */
 .bell {
   position: relative;
