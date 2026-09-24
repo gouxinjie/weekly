@@ -9,30 +9,71 @@
  * 若每张都挂着 3 个色块和 2 个图标，便签纸色反而被这些控件压住；已置顶的便签例外，常驻显示。
  */
 
+/*
+ * 立体感由三样东西合起来给，缺一样都会显得是贴在页面上的色块：
+ * 1. 双层投影（--shadow-card）：贴地的一层描接触线，外面一层扩散体积；
+ * 2. 顶边内高光（--note-sheen）：一道 1px 内亮线，像纸面朝上受光的上边缘；
+ * 3. 悬停抬起：整卡上移 2px，投影同步换成更远更散的 --shadow-card-hover。
+ * 注意 inset 那层必须写在每一条 box-shadow 里——box-shadow 是整体覆盖的，
+ * 落一条就会出现「悬停时卡片顶部亮线闪没」。
+ *
+ * position: relative 只为悬停时的 z-index 服务：抬起 2px 会压到上方邻卡的边，
+ * 抬高层级保证被悬停的那张始终画在邻卡之上。
+ */
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 var(--note-sheen);
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 
-/* 鼠标掠过：描边压深一档，提示「这张可以点进去写」 */
+/* 鼠标掠过：描边压深一档 + 整卡抬起 2px，提示「这张可以点进去写」 */
 .card:hover {
+  z-index: 1;
   border-color: var(--color-border-strong);
+  box-shadow:
+    var(--shadow-card-hover),
+    inset 0 1px 0 var(--note-sheen);
+  transform: translateY(-2px);
 }
 
-/* 卡内有焦点（正在写这张便签）：描主色边 + 一圈浅主色光晕，与其它输入控件同一套反馈。
-   底层阴影一并保留，否则聚焦时卡片会像被抽掉厚度一样往下塌 */
+/*
+ * 卡内有焦点（正在写这张便签）：描主色边 + 一圈浅主色光晕，与其它输入控件同一套反馈。
+ * 此时改为落回桌面（transform: none）——正在书写的一张再浮着会跟着光标晃，
+ * 且规则写在 :hover 之后，鼠标没移开也不会盖掉聚焦态。
+ * 底层阴影与内高光一并保留，否则聚焦时卡片会像被抽掉厚度一样往下塌。
+ */
 .card:focus-within {
+  z-index: 1;
   border-color: var(--color-accent);
   box-shadow:
     var(--shadow-card),
-    0 0 0 3px var(--color-accent-soft);
+    0 0 0 3px var(--color-accent-soft),
+    inset 0 1px 0 var(--note-sheen);
+  transform: none;
+}
+
+/* 减弱动效偏好下取消位移，只留描边与阴影的变化（静态的立体感不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .card:hover,
+  .card:focus-within {
+    transform: none;
+  }
 }
 
 /* ===== 便签纸颜色：与 constants 的 NOTE_COLORS 一一对应 ===== */
@@ -90,6 +131,8 @@
  * 长内容只能滚动看源码，「预览」是这类便签唯一的成品出口，藏起来就找不到了。
  * 关掉空白便签的预览：没有内容可渲染，按钮禁用而不是消失，位置保持稳定。
  * 命名带 Button 后缀：MarkdownPreview 里另有一个 .preview（预览容器），避免同名不同义。
+ * 图标色取 --color-text-muted 而非 faint：按钮直接浮在三种便签纸色上，
+ * faint 在黄纸上约 2.4:1，达不到图标这类图形元素 3:1 的对比度下限（与 .time 同一处理）。
  */
 .previewButton {
   display: flex;
@@ -102,7 +145,7 @@
   border: none;
   border-radius: var(--radius-xs);
   background-color: transparent;
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
@@ -161,13 +204,21 @@
 .footer {
   display: flex;
   align-items: center;
-  /* 允许换行：字号与图标放大后，窄列（列宽 240px 起）里「时间 + 保存态 + 操作区」
-     可能一行放不下，换行比撑破卡片右边界更体面 */
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  /*
+   * 不换行：这一行折成两行时卡片会突然长高，便签墙里同一行的卡片跟着重排，
+   * 而「保存中 / 已保存」是随手就会出现的，等于每打一次字墙都在抖。
+   * 因此宁可把宽度抠紧一点，也要保证它始终是一行——腾宽度的四处：
+   * 列宽下限（variables.scss 的 --note-column-width）、行内间距、
+   * 操作区里重复的一处间距（见 .colors）、以及保存态的字号（见 .state）。
+   * 日期反而要从 12px 放大回 14px（见 .time）：宽度优先给要看清楚的信息。
+   * 间隙取 --space-1：时间与保存态靠颜色与字号已经分得开，
+   * 而保存态与操作区之间由 .actions 的 margin-left: auto 撑开，间隙值只作下限用。
+   */
+  flex-wrap: nowrap;
+  gap: var(--space-1);
   flex: 0 0 auto;
   /* 卡片高度由内容决定，auto 在这里通常收到 0——间距实际由 padding-top 提供；
-     留着 auto 是为了卡片万一被拉高时（如窄列下换行、将来再启用等高）这一行仍沉在底部 */
+     留着 auto 是为了卡片万一被拉高时（将来再启用等高）这一行仍沉在底部 */
   margin-top: auto;
   padding-top: var(--space-2);
 }
@@ -177,23 +228,46 @@
  * 便签底色比页面底色浅/深不一（三种便签纸色横跨亮暗），
  * --color-text-faint 在浅色便签上只有约 2.6:1、深色主题下约 3.8:1，达不到 WCAG AA 的 4.5:1；
  * --color-text-muted 在三种底色与三套主题下均 ≥ 4.5:1。
+ *
+ * 字号取 14px（与正文同档）：日期是这张便签的身份，比保存态更该被看清。
+ * flex: 0 0 auto —— 要缩也让保存态先让位，不允许日期被挤掉半截。
+ *
+ * 宽度账（便签墙最窄的一列，内容区 254px；等宽字体按 0.55em 计）：
+ * 日期 77px + 间距 4 + 保存态最长「保存失败」48px + 间距 4 + 操作区 114px ≈ 247px，余 7px。
+ * 换成 macOS 的 SF Mono（0.6em，84px）在「保存失败」那一瞬正好贴边，
+ * 由下面的 .state 先让位兜住，不会折行。
  */
 .time {
+  flex: 0 0 auto;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: 14px;
   white-space: nowrap;
 }
 
+/*
+ * 保存态：可压缩项，是这套「不换行」的保险丝。
+ * 三种文案宽度不同（保存中 / 已保存 / 保存失败），窄列里先由它缩，
+ * 缩到 0 才轮到溢出——而那时列宽已经低于支持的下限了。
+ * 字号留在 12px：这一行里最容易被压缩的就是它，宽度优先让给日期与操作区。
+ */
 .state {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--color-saved-strong);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .stateError {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--color-danger);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -227,11 +301,16 @@
   }
 }
 
+/*
+ * 三个纸色色块。
+ * 这里不再额外加 margin-right 与后面的图标按钮分隔：.actions 的 gap 已经给出了这一段间距，
+ * 叠上去等于 8px，既和操作区内部的 4px 不一致，又白占 4px 宽——
+ * 底部这一行要放下 14px 的日期，每个 px 都得算（见 .time 的宽度账）。
+ */
 .colors {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin-right: var(--space-1);
 }
 
 /*
@@ -240,6 +319,7 @@
  * 尺寸沿用 14px：底部一行本来就在宽度边缘，色块再大一点就会把操作区挤到第二行。
  */
 .swatch {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,6 +333,17 @@
   transition:
     border-color 0.15s ease,
     transform 0.15s ease;
+}
+
+/*
+ * 点击热区：14px 的方块低于 24×24 的点击目标建议值，用不参与布局的伪元素把热区撑到 18×24。
+ * 左右各只扩 2px 是上限——相邻色块间距只有 4px，扩到 2px 时两个热区正好相切，
+ * 再多就会互相压住，点在边缘上落到隔壁那个色；上下没有邻居，可以放心扩到 5px。
+ */
+.swatch::before {
+  content: '';
+  position: absolute;
+  inset: -5px -2px;
 }
 
 /* 悬停：描边压深一档 + 轻微放大，提示可点 */
@@ -288,7 +379,11 @@
   background-color: var(--note-bg-green);
 }
 
-/* 置顶 / 删除：28px 的图标按钮 */
+/*
+ * 置顶 / 删除：28px 的图标按钮（已达 24×24 的点击目标建议值）。
+ * 常态图标色同 .previewButton 取 --color-text-muted：faint 在便签纸色上对比不足，
+ * 两个按钮会一起糊在纸里，反而是「这行有没有操作」都看不清。
+ */
 .action {
   display: flex;
   align-items: center;
@@ -299,7 +394,7 @@
   border: none;
   border-radius: var(--radius-xs);
   background-color: transparent;
-  color: var(--color-text-faint);
+  color: var(--color-text-muted);
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
@@ -313,6 +408,16 @@
 .action:hover {
   background-color: var(--color-bg-active);
   color: var(--color-text);
+}
+
+/*
+ * 删除：悬停转危险色，与待办「⋯」菜单里的删除项（menuItemDanger）同一套语义——
+ * 卡片上只有 17px 的图标，没有文字能说明「这个按钮会删东西」，
+ * 悬停时先红一步，点下去还有二次确认兜底。
+ */
+.actionDanger:hover {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 /* 已置顶：常驻主色，一眼能看出这张在置顶区 */

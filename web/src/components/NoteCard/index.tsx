@@ -216,9 +216,10 @@ const NoteCard = ({
             </svg>
           </button>
 
+          {/* 删除：悬停转危险色（.actionDanger），与待办菜单里的删除项同一套危险语义 */}
           <button
             type="button"
-            className={styles.action}
+            className={`${styles.action} ${styles.actionDanger}`}
             aria-label="删除便签"
             title="删除便签"
             onClick={() => onDelete(note)}

@@ -352,7 +352,7 @@ interface TreeProps {
   --center-min-width:    480px;
   --topbar-height:       56px;
   --settings-max-width:  760px;
-  --note-column-width:   240px;  /* 便签态：便签墙的最小列宽（列数随宽度自适应） */
+  --note-column-width:   280px;  /* 便签态：便签墙的最小列宽（列数随宽度自适应）；须容下卡片底部一整行，见 NoteCard 的 .footer */
   --note-wall-max-width: 1200px; /* 便签态：便签墙的最大宽度 */
   --note-preview-width:  900px;  /* 便签预览弹窗：宽度（读长文的舒适档） */
   --note-preview-max-height: 82vh; /* 便签预览弹窗：高度上限，给屏幕上下留出呼吸空间 */
