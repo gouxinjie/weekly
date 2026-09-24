@@ -69,7 +69,7 @@
   outline: none;
 }
 
-/* 「＋ 新建」主色按钮 */
+/* 「＋ 新建」主色按钮：点开新建弹窗（真正的创建动作在弹窗里，按钮本身不会进入禁用态） */
 .create {
   flex: 0 0 auto;
   padding: 7px var(--space-4);
@@ -81,13 +81,8 @@
   transition: background-color 0.15s ease;
 }
 
-.create:hover:not(:disabled) {
+.create:hover {
   background-color: var(--color-accent-hover);
-}
-
-.create:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .error {

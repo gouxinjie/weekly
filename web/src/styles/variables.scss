@@ -110,6 +110,8 @@
   /* 便签预览弹窗：宽度取「读长文」的舒适档，高度上限给屏幕上下各留出呼吸空间 */
   --note-preview-width: 900px;
   --note-preview-max-height: 82vh;
+  /* 新建便签弹窗：宽度取「写几行正文」的舒适档，比确认弹窗宽、比预览弹窗窄 */
+  --note-create-width: 520px;
 
   /* 登录页：悬浮卡片尺寸与品牌区定位 */
   --login-card-width: 420px;

@@ -1,8 +1,9 @@
 /**
  * @component 工作台（便签）
  * @description 独立模块的便签墙：页签栏 + 中栏，无左列、无右栏。
- * 中栏为「标题 + 搜索 + 新建」与多列网格的便签卡片；卡内直接编辑 Markdown 原文，
- * 长内容交给预览弹窗看渲染成品；输入停止 AUTOSAVE_DELAY 后落库（每张便签各有一套保存态）
+ * 中栏为「标题 + 搜索 + 新建」与多列网格的便签卡片；新建在弹窗里填好标题与正文，
+ * 成功后用顶部 Toast 回执；卡内直接编辑 Markdown 原文，长内容交给预览弹窗看渲染成品；
+ * 输入停止 AUTOSAVE_DELAY 后落库（每张便签各有一套保存态）
  * @author gouxinjie
  * @created 2026-09-23
  * @updated 2026-09-24
@@ -13,10 +14,12 @@ import { createNote, deleteNote, fetchNotes, updateNote } from '@/api/note';
 import AppLayout from '@/components/AppLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import NoteCard from '@/components/NoteCard';
+import NoteCreateDialog from '@/components/NoteCreateDialog';
 import NotePreviewDialog from '@/components/NotePreviewDialog';
+import Toast from '@/components/Toast';
 import { AUTOSAVE_DELAY } from '@/constants';
 import { formatDateShort } from '@/utils/format';
-import type { UpdateNoteBody } from '@/types/api';
+import type { CreateNoteBody, UpdateNoteBody } from '@/types/api';
 import type { Note, SaveState } from '@/types/models';
 import styles from './index.module.scss';
 
@@ -42,13 +45,27 @@ const Notes = () => {
   /** 操作失败（新建 / 保存 / 删除）：就地显示在标题行下方 */
   const [error, setError] = useState('');
   const [keyword, setKeyword] = useState('');
+  /** 新建弹窗是否展示 */
+  const [createOpen, setCreateOpen] = useState(false);
+  /** 新建请求是否在处理中 */
   const [creating, setCreating] = useState(false);
+  /** 新建失败的原因：就地显示在新建弹窗内（弹窗保持打开，已填内容不丢） */
+  const [createError, setCreateError] = useState('');
   /** 每张便签各自的保存态 */
   const [saveStates, setSaveStates] = useState<Record<number, SaveState>>({});
   /** 待删除的便签，非 null 时弹出二次确认 */
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null);
   /** 正在预览的便签，非 null 时展示预览弹窗 */
   const [previewNote, setPreviewNote] = useState<Note | null>(null);
+  /**
+   * 顶部提示
+   * @remarks 只用于「跨区域的短反馈」：新建成功后弹窗关闭、便签落到墙上，
+   * 提示与操作不在同一处，靠 Toast 告知结果；保存失败等仍在原地提示。
+   * 存成「文案 + 递增序号」而不是纯字符串：同一句「已创建便签」连发两次时，
+   * 字符串没变化会让 React 跳过后面的渲染，Toast 的自动消失定时器也不会重跑，
+   * 第二次的提示就只剩第一次剩下的那点时间；序号变化会把 Toast 重新挂载，计时从头开始。
+   */
+  const [toast, setToast] = useState<{ message: string; seq: number }>({ message: '', seq: 0 });
   /** 删除请求是否在处理中 */
   const [deleting, setDeleting] = useState(false);
   /** 新建后需要自动聚焦的便签 ID；聚焦完成即由 handleAutoFocused 清空 */
@@ -246,23 +263,91 @@ const Notes = () => {
     [scheduleSave],
   );
 
-  /** 新建一张空白便签并聚焦，让用户可以直接开始写 */
-  const handleCreate = useCallback(async (): Promise<void> => {
-    if (creating) return;
+  /**
+   * 弹一条顶部提示
+   * @param message - 提示文案
+   * @returns 无
+   */
+  const showToast = useCallback((message: string): void => {
+    setToast((prev) => ({ message, seq: prev.seq + 1 }));
+  }, []);
 
-    setCreating(true);
+  /** 收起顶部提示（由 Toast 的自动消失定时器调用） */
+  const hideToast = useCallback((): void => {
+    setToast((prev) => ({ ...prev, message: '' }));
+  }, []);
+
+  /**
+   * 打开新建弹窗
+   * @returns 无
+   * @remarks 顺手清掉两类上一次的失败提示：弹窗内的新建失败，以及标题行下方的保存 / 删除失败——
+   * 用户已经开始了新一轮操作，旧提示不该继续挂着
+   */
+  const openCreate = useCallback((): void => {
+    setCreateError('');
     setError('');
-    try {
-      const created = await createNote({});
-      freshIdsRef.current.add(created.id);
-      setNotes((prev) => sortNotes([created, ...prev]));
-      setFocusId(created.id);
-    } catch (err) {
-      setError(toErrorMessage(err, '新建失败，请稍后重试'));
-    } finally {
-      setCreating(false);
-    }
-  }, [creating]);
+    setCreateOpen(true);
+  }, []);
+
+  /**
+   * 关闭新建弹窗
+   * @returns 无
+   * @remarks 已填内容随弹窗实例销毁一并丢弃，下次打开是干净的空表单；
+   * 因此取消后要失败提示也一并清掉，否则下次打开会顶着一句陈旧的错误
+   */
+  const closeCreate = useCallback((): void => {
+    setCreateError('');
+    setCreateOpen(false);
+  }, []);
+
+  /**
+   * 按弹窗里填的标题与正文创建一张便签
+   * @param body - 弹窗收集到的标题与正文，两者都可为空串
+   * @returns 无
+   * @remarks 失败时弹窗保持打开并在弹窗内提示，已填内容不丢。
+   */
+  const handleCreate = useCallback(
+    async (body: CreateNoteBody): Promise<void> => {
+      if (creating) return;
+
+      setCreating(true);
+      setCreateError('');
+      try {
+        const created = await createNote(body);
+        /*
+         * 两个字段都还是空的，说明用户就是先要一张空白便签：
+         * 记入 freshIdsRef（从未写过内容，失焦即丢弃），并把光标直接送进卡片的正文里。
+         * 已经在弹窗里写好内容的便签不抢焦点，上墙即完成。
+         */
+        if (created.title.trim() === '' && created.content.trim() === '') {
+          freshIdsRef.current.add(created.id);
+          setFocusId(created.id);
+        }
+        setNotes((prev) => sortNotes([created, ...prev]));
+
+        /*
+         * 关键词过滤下，新便签若命不中关键词就会被挡在墙外，用户建完却看不到它。
+         * 这里只在「不命中」时清空搜索——命中时保留用户正在用的筛选条件，
+         * 免得每建一张便签就把他的搜索框清一次。
+         */
+        const haystack = `${created.title}\n${created.content}`.toLowerCase();
+        setKeyword((prev) => {
+          const text = prev.trim().toLowerCase();
+          if (text === '' || haystack.includes(text)) return prev;
+          return '';
+        });
+
+        setCreateOpen(false);
+        // 弹窗一关，操作与结果就不在同一处了，用 Toast 补一句回执
+        showToast('已创建便签');
+      } catch (err) {
+        setCreateError(toErrorMessage(err, '新建失败，请稍后重试'));
+      } finally {
+        setCreating(false);
+      }
+    },
+    [creating, showToast],
+  );
 
   /**
    * 便签已完成自动聚焦：撤下「待聚焦」标记
@@ -417,12 +502,7 @@ const Notes = () => {
             />
           </label>
 
-          <button
-            type="button"
-            className={styles.create}
-            disabled={creating}
-            onClick={() => void handleCreate()}
-          >
+          <button type="button" className={styles.create} onClick={openCreate}>
             ＋ 新建
           </button>
         </div>
@@ -471,7 +551,7 @@ const Notes = () => {
                   setKeyword('');
                   return;
                 }
-                void handleCreate();
+                openCreate();
               }}
             >
               {/* 图标随文案切换：新建为加号，清空搜索为叉号 */}
@@ -519,6 +599,17 @@ const Notes = () => {
         onCancel={cancelDelete}
       />
 
+      {/* 新建便签：内容在弹窗里一次填好；条件渲染保证每次打开都是干净的空表单 */}
+      {createOpen ? (
+        <NoteCreateDialog
+          open
+          pending={creating}
+          error={createError}
+          onSubmit={(body) => void handleCreate(body)}
+          onCancel={closeCreate}
+        />
+      ) : null}
+
       <NotePreviewDialog
         open={previewNote !== null}
         title={previewNote === null ? '' : previewNote.title}
@@ -526,6 +617,9 @@ const Notes = () => {
         updatedLabel={previewNote === null ? '' : formatDateShort(previewNote.updatedAt)}
         onClose={closePreview}
       />
+
+      {/* key 取序号：同一句提示连发两次时也要重新挂载，让自动消失的计时从头开始 */}
+      <Toast key={toast.seq} message={toast.message} onDismiss={hideToast} />
     </AppLayout>
   );
 };
