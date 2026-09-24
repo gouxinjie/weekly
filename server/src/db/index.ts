@@ -152,5 +152,12 @@ export const migrate = (): number => {
     db.pragma('user_version = 6');
   }
 
+  // v7：便签新增标题，内容改按 Markdown 处理（渲染在预览弹窗里完成，存库仍是原文）。
+  // 默认空串：老便签没有标题，升级后标题为空，卡片上表现为一个空的标题输入框。
+  if (current < 7) {
+    db.exec("ALTER TABLE note ADD COLUMN title TEXT NOT NULL DEFAULT '';");
+    db.pragma('user_version = 7');
+  }
+
   return db.pragma('user_version', { simple: true }) as number;
 };

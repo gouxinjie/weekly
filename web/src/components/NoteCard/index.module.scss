@@ -2,8 +2,9 @@
  * 便签卡片样式
  * 说明：整卡底色即便签纸色，三种纸色（默认底 / 黄 / 绿）由 NOTE_COLORS 映射的类名决定，
  * 取值来自 variables.scss 的 --note-bg-* 变量（三套主题各有一组）。
- * 内容区是无边框的 textarea，随输入自撑高度。
- * 卡片在便签墙的网格中由行内最高的那张定高、等高铺满，尾部时间与操作区因此沉到卡片底部。
+ * 结构：顶部标题输入 + 预览入口，中部无边框 textarea（Markdown 原文，随输入自撑高度、超出上限卡内滚动），
+ * 底部时间 / 保存态 / 操作区。
+ * 卡片高度由自身内容决定：网格里同行的卡片顶部对齐、各自成高，一张长便签不会把整行都拉高。
  * 尾部操作区（纸色色块 + 置顶 + 删除）平时淡出，悬停或卡内有焦点时显形——一面墙几十张便签，
  * 若每张都挂着 3 个色块和 2 个图标，便签纸色反而被这些控件压住；已置顶的便签例外，常驻显示。
  */
@@ -47,12 +48,93 @@
   background-color: var(--note-bg-green);
 }
 
+/* ===== 标题行：标题输入 + 预览入口 ===== */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  margin-bottom: var(--space-2);
+}
+
+/*
+ * 标题输入：无边框单行输入，比正文大一档、加粗，和正文形成层级。
+ * 焦点反馈同样交给整卡（.card:focus-within），自身不画轮廓。
+ */
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.title::placeholder {
+  color: var(--color-text-faint);
+  /* 占位文案不跟着加粗，免得看起来像已经写了标题 */
+  font-weight: 400;
+}
+
+.title:focus {
+  outline: none;
+}
+
+/*
+ * 预览按钮：常显而非随操作区淡出——卡里编辑的是 Markdown 原文，
+ * 长内容只能滚动看源码，「预览」是这类便签唯一的成品出口，藏起来就找不到了。
+ * 关掉空白便签的预览：没有内容可渲染，按钮禁用而不是消失，位置保持稳定。
+ * 命名带 Button 后缀：MarkdownPreview 里另有一个 .preview（预览容器），避免同名不同义。
+ */
+.previewButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background-color: transparent;
+  color: var(--color-text-faint);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.previewButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.previewButton:hover:not(:disabled) {
+  background-color: var(--color-bg-active);
+  color: var(--color-accent);
+}
+
+.previewButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ===== 内容区 ===== */
 .text {
   width: 100%;
   /* 空白便签也留出可写的余地，不至于只有一行高（14px × 1.7 行高下约四行的书写区） */
   min-height: 96px;
-  max-height: 320px;
+  /*
+   * 可视高度上限：约 4 行正文，与 min-height（96px）几乎重合，
+   * 因此不论便签长短，卡片高度基本在 196px 上下，一墙看上去是齐的。
+   * 卡片是「改原文」的地方，读全文走预览弹窗：
+   * 上限每调高一档，长便签那一行就会被整行撑高一档（网格行高由行内最高的卡片决定）。
+   */
+  max-height: 100px;
   padding: 0;
   border: none;
   background-color: transparent;
@@ -84,8 +166,8 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   flex: 0 0 auto;
-  /* margin-top: auto 把这一行压到卡片底部：网格里同行的卡片等高，
-     内容少的那张不至于让时间与操作区浮在半空；最小间距交给 padding-top 兜底 */
+  /* 卡片高度由内容决定，auto 在这里通常收到 0——间距实际由 padding-top 提供；
+     留着 auto 是为了卡片万一被拉高时（如窄列下换行、将来再启用等高）这一行仍沉在底部 */
   margin-top: auto;
   padding-top: var(--space-2);
 }
@@ -111,14 +193,6 @@
 
 .stateError {
   color: var(--color-danger);
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-/* 接近字数上限时的计数：等宽数字，与保存态同档（比更新时间小一号），不去抢保存态的视线 */
-.limit {
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
   font-size: 13px;
   white-space: nowrap;
 }

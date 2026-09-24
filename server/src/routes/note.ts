@@ -1,7 +1,18 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifySchema } from 'fastify';
 import { requireAuth } from '../middleware/session';
-import { countNotes, deleteNote, insertNote, listNotes, updateNote } from '../db/note';
-import { NOTE_MAX_LENGTH, NOTE_MAX_PER_USER } from '../constants';
+import {
+  countNotes,
+  deleteNote,
+  insertNote,
+  listNotes,
+  sumNoteBytes,
+  updateNote,
+} from '../db/note';
+import {
+  NOTE_MAX_PER_USER,
+  NOTE_TITLE_MAX_LENGTH,
+  NOTE_TOTAL_BYTES_MAX_PER_USER,
+} from '../constants';
 import { ERROR_CODES, fail, internalError, ok } from '../utils/response';
 import type { CreateNoteBody, NoteDto, UpdateNoteBody } from '../types/api';
 import type { NoteRow } from '../types/models';
@@ -31,23 +42,35 @@ const colorSchema = (): Record<string, unknown> => ({
   default: '',
 });
 
-/** 便签内容 JSON Schema 片段 */
+/**
+ * 便签内容 JSON Schema 片段
+ * @remarks 刻意不设 maxLength：便签正文不限制字数（长内容在卡内滚动、全文走预览弹窗）。
+ * 唯一的兜底是 Fastify 默认 1MB 的请求体上限，超限时返回 413 而不是静默截断。
+ */
 const contentSchema = (): Record<string, unknown> => ({
   type: 'string',
-  maxLength: NOTE_MAX_LENGTH,
+  default: '',
+});
+
+/** 便签标题 JSON Schema 片段 */
+const titleSchema = (): Record<string, unknown> => ({
+  type: 'string',
+  maxLength: NOTE_TITLE_MAX_LENGTH,
   default: '',
 });
 
 /**
  * 新建便签请求体校验
  * @returns 请求体 JSON Schema
- * @remarks content 允许缺省：便签可以是一张先开出来、稍后再写的空白纸。
+ * @remarks title / content 均允许缺省：便签可以是一张先开出来、稍后再写的空白纸。
+ * 导出供隔离测试断言契约（字段必填性与「正文不设 maxLength」），路由注册不受影响。
  */
-const createNoteSchema = (): FastifySchema => ({
+export const createNoteSchema = (): FastifySchema => ({
   body: {
     type: 'object',
     additionalProperties: false,
     properties: {
+      title: titleSchema(),
       content: contentSchema(),
       color: colorSchema(),
     },
@@ -57,14 +80,16 @@ const createNoteSchema = (): FastifySchema => ({
 /**
  * 更新便签请求体校验（全量提交）
  * @returns 请求体 JSON Schema
+ * @remarks 导出供隔离测试断言契约（title 必填、正文不设 maxLength）。
  */
-const updateNoteSchema = (): FastifySchema => ({
+export const updateNoteSchema = (): FastifySchema => ({
   body: {
     type: 'object',
-    required: ['content', 'color', 'pinned'],
+    required: ['title', 'content', 'color', 'pinned'],
     additionalProperties: false,
     properties: {
-      content: { type: 'string', maxLength: NOTE_MAX_LENGTH },
+      title: { type: 'string', maxLength: NOTE_TITLE_MAX_LENGTH },
+      content: { type: 'string' },
       color: colorSchema(),
       pinned: { type: 'boolean' },
     },
@@ -86,6 +111,25 @@ const noteIdSchema = (): FastifySchema => ({
   },
 });
 
+/** 便签存储上限的展示文案（MB，向上取整，避免出现「0 MB」） */
+const STORAGE_LIMIT_LABEL = `${Math.ceil(NOTE_TOTAL_BYTES_MAX_PER_USER / 1024 / 1024)} MB`;
+
+/**
+ * 校验便签正文总占用是否超出单用户上限
+ * @param userId - 用户 ID，必须传入
+ * @param adding - 本次要写入的正文
+ * @param excludeId - 更新时传自身 ID，避免把该便签的旧内容重复计入
+ * @returns 未超限返回 null；超限返回面向用户的提示文案
+ * @remarks 单张便签的正文字数刻意不设限（见 contentSchema），总量必须兜底：
+ * 单张只受 Fastify 的 1MB 请求体限制，2000 张就是约 2GB，多用户共用一个库文件。
+ */
+const checkStorageLimit = (userId: number, adding: string, excludeId?: number): string | null => {
+  const used = sumNoteBytes(userId, excludeId);
+  const incoming = Buffer.byteLength(adding, 'utf8');
+  if (used + incoming <= NOTE_TOTAL_BYTES_MAX_PER_USER) return null;
+  return `便签占用空间已达上限（${STORAGE_LIMIT_LABEL}），请先清理一些`;
+};
+
 /**
  * 把数据库行转换为接口出参
  * @param row - 便签行
@@ -93,6 +137,7 @@ const noteIdSchema = (): FastifySchema => ({
  */
 const toNoteDto = (row: NoteRow): NoteDto => ({
   id: row.id,
+  title: row.title,
   content: row.content,
   color: normalizeNoteColor(row.color),
   pinned: row.pinned === 1,
@@ -133,11 +178,17 @@ export const noteRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
             );
         }
 
-        const created = insertNote(
-          request.userId,
-          request.body.content ?? '',
-          request.body.color ?? '',
-        );
+        // 存储上限兜底：正文不限单张字数，总量必须有闸门
+        const overflow = checkStorageLimit(request.userId, request.body.content ?? '');
+        if (overflow !== null) {
+          return reply.code(400).send(fail(ERROR_CODES.NOTE_STORAGE_LIMIT_REACHED, overflow));
+        }
+
+        const created = insertNote(request.userId, {
+          title: request.body.title ?? '',
+          content: request.body.content ?? '',
+          color: request.body.color ?? '',
+        });
         return reply.code(201).send(ok(toNoteDto(created), '已添加'));
       } catch (error) {
         request.log.error({ err: error }, '新建便签失败');
@@ -154,14 +205,19 @@ export const noteRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       try {
         const id = Number(request.params.id);
 
+        // 存储上限兜底：排除该便签自身的旧内容，否则长文改写会被自己的旧长度顶掉
+        const overflow = checkStorageLimit(request.userId, request.body.content, id);
+        if (overflow !== null) {
+          return reply.code(400).send(fail(ERROR_CODES.NOTE_STORAGE_LIMIT_REACHED, overflow));
+        }
+
         // 红线 1：以 request.userId 作为归属条件，改别人的记录会返回 changes === 0
-        const updated = updateNote(
-          request.userId,
-          id,
-          request.body.content,
-          request.body.color,
-          request.body.pinned,
-        );
+        const updated = updateNote(request.userId, id, {
+          title: request.body.title,
+          content: request.body.content,
+          color: request.body.color,
+          pinned: request.body.pinned,
+        });
         if (!updated) {
           return reply.code(404).send(fail(ERROR_CODES.NOTE_NOT_FOUND, '便签不存在'));
         }

@@ -92,6 +92,9 @@
   /* 便签态：便签墙的最小列宽与整墙最大宽度（列数随可用宽度自适应） */
   --note-column-width: 240px;
   --note-wall-max-width: 1200px;
+  /* 便签预览弹窗：宽度取「读长文」的舒适档，高度上限给屏幕上下各留出呼吸空间 */
+  --note-preview-width: 900px;
+  --note-preview-max-height: 82vh;
 
   /* 登录页：悬浮卡片尺寸与品牌区定位 */
   --login-card-width: 420px;

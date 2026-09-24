@@ -1,0 +1,184 @@
+/**
+ * 便签预览弹窗样式
+ * 布局要点：遮罩轻微模糊背景并居中弹窗；弹窗为「头部（图标 + 标题 + 时间 + 关闭）+ 正文」的纵向结构，
+ * 正文区自带滚动（MarkdownPreview），所以整体高度限在视口内、长文在弹窗里读。
+ * 与周报预览的差异：正文的内边距、首尾外边距在 .body 里覆盖成弹窗口径——默认那套是给周报编辑区的。
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  /* 遮罩压得比确认弹窗实一点并轻微模糊：弹窗是「读」的场景，背后那墙便签会抢视线 */
+  background-color: rgb(34 48 43 / 46%);
+  backdrop-filter: blur(2px);
+  animation: overlayIn 0.15s ease;
+}
+
+/*
+ * 弹窗卡片：比确认弹窗宽得多——预览是「读」的场景，
+ * 窄卡片会把表格、列表和长行都压变形；窗口不够宽时由 max-width 兜底收窄。
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  /* 宽度与高度上限取自 variables.scss，便于整体调整而不用翻组件 */
+  width: var(--note-preview-width);
+  max-width: 100%;
+  max-height: var(--note-preview-max-height);
+  /* 只裁圆角，不裁内容：滚动交给内部的正文区 */
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-float);
+  animation: panelIn 0.18s ease;
+}
+
+/* 头部：浅一档的底色 + 下方分隔线，让它读起来是「标题栏」而不是正文的一部分 */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-6);
+  background-color: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* 头部图标：浅主色底 + 主色笔画，与页签、卡片的主色语言一致 */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  background-color: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* 标题与时间纵向排列，标题过长时可换行，不被关闭按钮挤压 */
+.heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* 与 30px 的图标在首行视觉居中 */
+  padding-top: 2px;
+}
+
+/* 标题比正文里的 h2 大一档：弹窗标题是这层的名字，正文标题是内容里的层级，不能同号 */
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* 无标题时的占位名：淡一档，别让它看起来像真标题 */
+.titleEmpty {
+  color: var(--color-text-faint);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* 更新时间用等宽字体，与卡片底部同一套口径 */
+.time {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* 关闭按钮：与便签卡片里的图标按钮同尺寸（28px）同交互，全站图标按钮只有这一档 */
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.close svg {
+  width: 17px;
+  height: 17px;
+}
+
+.close:hover {
+  background-color: var(--color-bg-active);
+  color: var(--color-text);
+}
+
+/*
+ * 正文区：在 MarkdownPreview 默认样式（周报编辑区口径）之上覆盖三项。
+ * 用两段选择器提高特异性——两个类名同权重时，谁生效取决于样式表的引入顺序，不能靠运气。
+ */
+.panel .body {
+  /* 左右留白与头部对齐（24px），底部留得比顶部多一档：长文读到底不至于顶住卡片下沿 */
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  /* 只有一两行内容的便签也给弹窗留出呼吸空间，不至于弹出一条细长的横带 */
+  min-height: 120px;
+  /* 长链接、长串编号不撑破弹窗 */
+  overflow-wrap: anywhere;
+  /* 细滚动条：默认的粗滚动条贴在圆角卡片上显得毛糙（不支持该属性的浏览器自动退回默认样式） */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+/* 首尾元素的外边距归零：正文常以 <h2> 开头，默认的 margin-top 会在顶部凭空多出一段空白 */
+.panel .body > :first-child {
+  margin-top: 0;
+}
+
+.panel .body > :last-child {
+  margin-bottom: 0;
+}
+
+/* 遮罩淡入 + 卡片轻微上浮，弱动画不影响可访问性 */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}

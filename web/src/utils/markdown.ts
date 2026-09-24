@@ -284,9 +284,12 @@ interface InlineFrame {
 /**
  * 渲染行内 token 序列
  * @param tokens - inline token 的 children
+ * @param breaks - 是否把单个换行渲染为换行（默认 false，即空格）
  * @returns React 节点数组
+ * @remarks 单换行在 markdown-it 里统一是 softbreak，是否换行由它自带的 renderer 决定；
+ * 本项目手写 token → React 的渲染，走不到那个 renderer，因此必须在这里自己判。
  */
-const renderInline = (tokens: MdToken[]): ReactNode[] => {
+const renderInline = (tokens: MdToken[], breaks: boolean): ReactNode[] => {
   const root: ReactNode[] = [];
   const stack: InlineFrame[] = [];
   let current: ReactNode[] = root;
@@ -339,7 +342,7 @@ const renderInline = (tokens: MdToken[]): ReactNode[] => {
         current.push(createElement('code', { key }, token.content));
         return;
       case 'softbreak':
-        current.push(' ');
+        current.push(breaks ? createElement('br', { key }) : ' ');
         return;
       case 'hardbreak':
         current.push(createElement('br', { key }));
@@ -395,9 +398,15 @@ interface BlockResult {
  * @param tokens - 全部 token
  * @param start - 起始下标
  * @param stopType - 终止的闭合 token 类型，null 表示解析到结尾
+ * @param breaks - 是否把单个换行渲染为换行，透传给行内渲染
  * @returns 渲染节点与下一个待处理下标
  */
-const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null): BlockResult => {
+const parseBlocks = (
+  tokens: MdToken[],
+  start: number,
+  stopType: string | null,
+  breaks: boolean,
+): BlockResult => {
   const nodes: ReactNode[] = [];
   let i = start;
 
@@ -412,7 +421,7 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
     const mapped = BLOCK_TAG_MAP[token.type];
 
     if (mapped !== undefined) {
-      const inner = parseBlocks(tokens, i + 1, mapped.close);
+      const inner = parseBlocks(tokens, i + 1, mapped.close, breaks);
       const meta = token.meta as TaskListMeta | null;
       const task = meta?.task ?? null;
 
@@ -447,13 +456,13 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
 
     switch (token.type) {
       case 'heading_open': {
-        const inner = parseBlocks(tokens, i + 1, 'heading_close');
+        const inner = parseBlocks(tokens, i + 1, 'heading_close', breaks);
         nodes.push(createElement(token.tag, { key }, ...inner.nodes));
         i = inner.next;
         break;
       }
       case 'paragraph_open': {
-        const inner = parseBlocks(tokens, i + 1, 'paragraph_close');
+        const inner = parseBlocks(tokens, i + 1, 'paragraph_close', breaks);
         nodes.push(createElement('p', { key }, ...inner.nodes));
         i = inner.next;
         break;
@@ -461,13 +470,13 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
       case 'th_open':
       case 'td_open': {
         const closeType = token.type === 'th_open' ? 'th_close' : 'td_close';
-        const inner = parseBlocks(tokens, i + 1, closeType);
+        const inner = parseBlocks(tokens, i + 1, closeType, breaks);
         nodes.push(createElement(token.tag, { key }, ...inner.nodes));
         i = inner.next;
         break;
       }
       case 'inline':
-        nodes.push(...renderInline(token.children ?? []));
+        nodes.push(...renderInline(token.children ?? [], breaks));
         i += 1;
         break;
       case 'fence':
@@ -492,7 +501,10 @@ const parseBlocks = (tokens: MdToken[], start: number, stopType: string | null):
 /**
  * 把 Markdown 文本渲染为 React 节点
  * @param source - Markdown 原文
+ * @param breaks - 是否把单个换行也当换行（默认 false，即标准 Markdown：单换行视作空格）
  * @returns React 节点数组，可直接放进 JSX
+ * @remarks 便签那种「一行一条」的随手记靠 breaks 保留换行；周报正文仍走标准语义，
+ * 段落之间必须空行。该开关作用于本文件的渲染过程，不碰 markdown-it 实例配置。
  */
-export const renderMarkdown = (source: string): ReactNode[] =>
-  parseBlocks(md.parse(source, {}), 0, null).nodes;
+export const renderMarkdown = (source: string, breaks = false): ReactNode[] =>
+  parseBlocks(md.parse(source, {}), 0, null, breaks).nodes;

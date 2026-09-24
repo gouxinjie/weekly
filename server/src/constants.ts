@@ -53,8 +53,8 @@ export const PHONE_PATTERN = '^1[3-9]\\d{9}$';
 /** 密码最短长度，与前端校验保持一致 */
 export const PASSWORD_MIN_LENGTH = 6;
 
-/** 单张便签的纯文本长度上限，与前端 constants/index.ts 的 NOTE_MAX_CHARS 保持一致 */
-export const NOTE_MAX_LENGTH = 2000;
+/** 便签标题长度上限，与前端 constants/index.ts 的 NOTE_TITLE_MAX_CHARS 保持一致（标题为单行，无需太长） */
+export const NOTE_TITLE_MAX_LENGTH = 100;
 
 /**
  * 单个用户的便签数量上限
@@ -63,3 +63,12 @@ export const NOTE_MAX_LENGTH = 2000;
  * 达到上限时新建会被拒绝，用户清理几张即可继续。
  */
 export const NOTE_MAX_PER_USER = 2000;
+
+/**
+ * 单个用户的便签正文总字节上限（20 MB）
+ * 说明：便签正文刻意不限制**单张**字数（见 routes/note.ts 的 contentSchema），
+ * 但多用户共用一个库文件，总量必须有个闸门：单张上限只有 Fastify 的 1MB 请求体限制，
+ * 2000 张 × 1MB 意味着一个账号最多能写进约 2GB，磁盘会被单个用户吃掉。
+ * 20MB ≈ 1000 万汉字，对「随手记」远超所需；触顶时写入被拒绝，提示用户清理即可。
+ */
+export const NOTE_TOTAL_BYTES_MAX_PER_USER = 20 * 1024 * 1024;

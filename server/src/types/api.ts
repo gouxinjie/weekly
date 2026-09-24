@@ -140,7 +140,9 @@ export interface TodoSummaryDto {
 export interface NoteDto {
   /** 主键 */
   id: number;
-  /** 纯文本内容，新建后未写时为空串 */
+  /** 标题，单行纯文本，可省时为空串 */
+  title: string;
+  /** Markdown 内容，新建后未写时为空串 */
   content: string;
   /**
    * 便签纸颜色标识，空串表示默认底色
@@ -158,7 +160,9 @@ export interface NoteDto {
 
 /** 新建便签入参 */
 export interface CreateNoteBody {
-  /** 纯文本内容，允许为空串（先开一张空白便签再写） */
+  /** 标题，允许为空串（先开一张空白便签再写） */
+  title?: string;
+  /** Markdown 内容，允许为空串 */
   content?: string;
   /** 便签纸颜色标识，缺省表示默认底色 */
   color?: string;
@@ -166,7 +170,9 @@ export interface CreateNoteBody {
 
 /** 更新便签入参（全量提交，语义简单且天然防字段注入） */
 export interface UpdateNoteBody {
-  /** 纯文本内容 */
+  /** 标题，空串表示无标题 */
+  title: string;
+  /** Markdown 内容 */
   content: string;
   /** 便签纸颜色标识，空串表示默认底色 */
   color: string;

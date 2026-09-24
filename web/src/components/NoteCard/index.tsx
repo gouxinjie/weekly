@@ -1,13 +1,14 @@
 /**
  * @component 便签卡片
- * @description 便签墙上的一张便签：卡内直接编辑纯文本、随输入自撑高度；
+ * @description 便签墙上的一张便签：顶部为标题（可省），卡内直接编辑 Markdown 原文、随输入自撑高度；
+ * 长内容在卡内滚动看原文，「预览」按钮把渲染后的成品交给预览弹窗；
  * 底部提供便签纸颜色、置顶、删除与该张便签自己的保存态
  * @author gouxinjie
  * @created 2026-09-23
- * @updated 2026-09-23
+ * @updated 2026-09-24
  */
 import { memo, useEffect, useLayoutEffect, useRef } from 'react';
-import { NOTE_COLORS, NOTE_MAX_CHARS } from '@/constants';
+import { NOTE_COLORS, NOTE_TITLE_MAX_CHARS } from '@/constants';
 import { formatDateShort } from '@/utils/format';
 import type { UpdateNoteBody } from '@/types/api';
 import type { Note, NoteColor, SaveState } from '@/types/models';
@@ -35,14 +36,6 @@ const SWATCH_COLOR_CLASS: Record<NoteColor, string> = {
   green: styles.swatchGreen,
 };
 
-/**
- * 字数接近上限的提示阈值（占 NOTE_MAX_CHARS 的比例）
- * @remarks 便签写满上限后输入会被 maxLength 静默拦掉，接近上限时提前把计数显示出来，
- * 用户才知道为什么打不出字。0.9 表示「还剩约 200 字」。
- * 内容区的高度上限由样式表的 max-height 负责，这里不再重复一份数字。
- */
-const LIMIT_WARN_RATIO = 0.9;
-
 /** NoteCard 属性 */
 interface NoteCardProps {
   /** 便签数据，内容受控于页面状态 */
@@ -55,8 +48,10 @@ interface NoteCardProps {
    * 卡片因搜索 / 筛选重新挂载时会再次抢走焦点
    */
   onAutoFocused: () => void;
-  /** 内容 / 颜色 / 置顶变化时的回调 */
+  /** 标题 / 内容 / 颜色 / 置顶变化时的回调 */
   onChange: (note: Note, patch: Partial<UpdateNoteBody>) => void;
+  /** 预览回调：打开预览弹窗，看 Markdown 渲染后的成品 */
+  onPreview: (note: Note) => void;
   /** 删除回调 */
   onDelete: (note: Note) => void;
   /**
@@ -77,6 +72,7 @@ const NoteCard = ({
   note,
   autoFocus,
   onChange,
+  onPreview,
   onDelete,
   onDiscard,
   onAutoFocused,
@@ -108,8 +104,6 @@ const NoteCard = ({
   const colorClass = CARD_COLOR_CLASS[note.color];
   const saveText = SAVE_TEXT[saveState];
   const updatedLabel = formatDateShort(note.updatedAt);
-  /** 接近字数上限：把计数显示出来，避免输入被 maxLength 静默拦掉时不明原因 */
-  const nearLimit = note.content.length >= NOTE_MAX_CHARS * LIMIT_WARN_RATIO;
 
   return (
     <article
@@ -121,12 +115,41 @@ const NoteCard = ({
         onDiscard(note);
       }}
     >
+      {/* 标题行：左侧标题输入（可省），右侧预览入口 */}
+      <div className={styles.head}>
+        <input
+          className={styles.title}
+          value={note.title}
+          placeholder="标题（可省）"
+          maxLength={NOTE_TITLE_MAX_CHARS}
+          aria-label="便签标题"
+          onChange={(event) => onChange(note, { title: event.target.value })}
+        />
+
+        {/* 空白便签没有可渲染的内容，按钮禁用而不是藏起来：位置固定，长内容时才找得到 */}
+        <button
+          type="button"
+          className={styles.previewButton}
+          disabled={note.content.trim() === ''}
+          aria-label="预览便签（Markdown 渲染）"
+          title="预览"
+          onClick={() => onPreview(note)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path
+              d="M2.7 12S6.4 6 12 6s9.3 6 9.3 6-3.7 6-9.3 6-9.3-6-9.3-6Z"
+              strokeLinejoin="round"
+            />
+            <circle cx="12" cy="12" r="2.9" />
+          </svg>
+        </button>
+      </div>
+
       <textarea
         ref={textRef}
         className={styles.text}
         value={note.content}
-        placeholder="随手记点什么…"
-        maxLength={NOTE_MAX_CHARS}
+        placeholder="随手记点什么，支持 Markdown…"
         // 多张便签在页面里是并列的，读屏时靠更新时间区分是哪一张
         aria-label={updatedLabel === '' ? '便签内容' : `便签内容（更新于 ${updatedLabel}）`}
         onChange={(event) => onChange(note, { content: event.target.value })}
@@ -140,11 +163,6 @@ const NoteCard = ({
             aria-live="polite"
           >
             {saveText}
-          </span>
-        ) : null}
-        {nearLimit ? (
-          <span className={styles.limit} title={`单张便签最多 ${NOTE_MAX_CHARS} 字`}>
-            {note.content.length} / {NOTE_MAX_CHARS}
           </span>
         ) : null}
 

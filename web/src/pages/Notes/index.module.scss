@@ -108,7 +108,7 @@
  * 便签墙：等宽多列网格，按行从左到右排列。
  * 不用 CSS 多列（column-count / column-width）：多列是「按列自上而下」填充，
  * 卡片的先后顺序会变成竖着走的，与墙内「置顶优先、新的在前」的顺序对不上。
- * grid 让顺序回到正常的行优先，列与行都对齐；同一行的卡片由行内最高的那张定高、等高铺满。
+ * grid 让顺序回到正常的行优先，列与行都对齐；同一行的卡片顶部对齐、各自成高（见下面的 align-items）。
  * 最小列宽固定（有富余时列内均分撑满），列数随可用宽度自适应；
  * 墙本身限宽，超宽屏下不至于拉出一排过窄的列。
  */
@@ -116,6 +116,12 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--note-column-width), 1fr));
   gap: var(--space-4);
+  /*
+   * 卡片各自成高、顶部对齐，不做默认的 stretch：
+   * 拉伸会让同一行里内容少的便签跟着最高的那张一起变高，
+   * 一张两千字的长便签足以把整行都撑起来。
+   */
+  align-items: start;
   max-width: var(--note-wall-max-width);
 }
 

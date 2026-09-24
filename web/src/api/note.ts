@@ -15,7 +15,7 @@ export const fetchNotes = (): Promise<NoteListResponse> =>
 
 /**
  * 新建便签
- * @param body - 便签内容与颜色，均可缺省（先开一张空白便签）
+ * @param body - 标题、正文与纸色，均可缺省（先开一张空白便签）
  * @returns 新建的便签
  */
 export const createNote = (body: CreateNoteBody): Promise<Note> =>

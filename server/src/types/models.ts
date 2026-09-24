@@ -83,7 +83,9 @@ export interface NoteRow {
   id: number;
   /** 归属用户 ID */
   user_id: number;
-  /** 纯文本内容，允许为空串（新建后还没写） */
+  /** 标题，单行纯文本，允许为空串（标题可省） */
+  title: string;
+  /** Markdown 内容，允许为空串（新建后还没写） */
   content: string;
   /** 便签纸颜色标识：空串表示默认底色，其余取值见 routes/note.ts 的 NOTE_COLORS */
   color: string;

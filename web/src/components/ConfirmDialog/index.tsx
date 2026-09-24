@@ -9,6 +9,7 @@
  */
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { cx } from '@/utils/classNames';
 import styles from './index.module.scss';
 
 /** 弹窗语气：danger 用于不可逆操作，确认按钮取危险色 */
@@ -35,14 +36,6 @@ interface ConfirmDialogProps {
   /** 取消 / 关闭回调 */
   onCancel: () => void;
 }
-
-/**
- * 拼接类名，过滤掉条件表达式产生的假值
- * @param names - 类名或假值
- * @returns 以空格连接的类名字符串
- */
-const cx = (...names: (string | false | undefined)[]): string =>
-  names.filter((name) => typeof name === 'string' && name !== '').join(' ');
 
 /**
  * 二次确认弹窗

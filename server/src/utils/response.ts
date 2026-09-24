@@ -24,6 +24,8 @@ export const ERROR_CODES = {
   NOTE_NOT_FOUND: 'NOTE_NOT_FOUND',
   /** 便签数量已达单用户上限 */
   NOTE_LIMIT_REACHED: 'NOTE_LIMIT_REACHED',
+  /** 便签正文总占用已达单用户上限 */
+  NOTE_STORAGE_LIMIT_REACHED: 'NOTE_STORAGE_LIMIT_REACHED',
   /** 服务异常 */
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;

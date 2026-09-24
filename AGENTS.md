@@ -354,6 +354,8 @@ interface TreeProps {
   --settings-max-width:  760px;
   --note-column-width:   240px;  /* 便签态：便签墙的最小列宽（列数随宽度自适应） */
   --note-wall-max-width: 1200px; /* 便签态：便签墙的最大宽度 */
+  --note-preview-width:  900px;  /* 便签预览弹窗：宽度（读长文的舒适档） */
+  --note-preview-max-height: 82vh; /* 便签预览弹窗：高度上限，给屏幕上下留出呼吸空间 */
 
   /* 便签纸色：--note-bg-default / -yellow / -green，三种在每套主题里各定义一组 */
   --note-bg-default:     #ffffff;
@@ -800,7 +802,10 @@ export const getWeekly = (year: number, week: number): Promise<Weekly> => {
 
 - `weekly`：`UNIQUE (user_id, year, week)` —— **每人每周一篇**（不是 `UNIQUE (year, week)`）
 - `todo`：`year` / `week` 可为 `NULL`；为 null 时不影响任何行为，不是「未分类」的特殊状态
-- `note`（便签）：**没有任何唯一约束**（一人多张）；**没有 `done`**（便签无完成语义）；**没有 `year` / `week`**（不归属任何周次）；**没有 `sort_order`**（不做拖拽排序，列表固定按 `pinned DESC, id DESC` 即「置顶优先、新的在前」）。这三处「没有」是刻意与 `todo` 拉开距离，不要为了「将来可能用到」补上
+- `note`（便签）：**没有任何唯一约束**（一人多张）；**没有 `done`**（便签无完成语义）；**没有 `year` / `week`**（不归属任何周次）；**没有 `sort_order`**（不做拖拽排序，列表固定按 `pinned DESC, id DESC` 即「置顶优先、新的在前」）。这几处「没有」是刻意与 `todo` 拉开距离，不要为了「将来可能用到」补上
+- `note` 的 `title` 由 v7 迁移补上（`TEXT NOT NULL DEFAULT ''`），老便签升级后标题为空；标题**不参与排序**，只用于在一墙碎片里认人
+- `note.content` **不限字数**：服务端 schema 刻意不设 `maxLength`，前端也不再有字数计数与 `maxLength` 截断（长内容在卡内滚动、全文走预览弹窗）。单张的兜底是 Fastify 默认 1MB 的请求体上限，超限返回 413；不要「顺手」把单张上限补回去
+- `note` 的**总量**有闸门：单用户正文总占用不超过 `NOTE_TOTAL_BYTES_MAX_PER_USER`（20 MB）。单张不设限意味着 2000 张 × 1MB ≈ 2GB，多用户共用一个库文件时这是真实风险，因此写入前必须用 `sumNoteBytes` 校验（更新时把自身 `id` 传进 `excludeId`，否则长文改写会被自己的旧内容顶掉），超出返回 400 `NOTE_STORAGE_LIMIT_REACHED`
 - `note` 另有单用户 2000 张的数量上限（`constants.ts` 的 `NOTE_MAX_PER_USER`）：便签是唯一允许「空白即存在」的模块，创建成本最低，新建前必须 `countNotes` 校验，超过返回 400 `NOTE_LIMIT_REACHED`
 - `session`：有效期 30 天，支持「登出所有设备」（清空该用户全部 session）
 - 修改密码后**使其他会话失效**
@@ -838,9 +843,11 @@ const w = dayjs(date).isoWeek();      // ISO 周次 1-53
 - **过期待办**：标记周次已过且未完成 → 该条挂**「过期」危险色小标签**（不染整行底色：`--color-bg-active` 是选中态专用色，拿它做过期提示会让整片补写的往期待办看着像被选中），**仅视觉，不推提醒**
 - **待办清单按「所属周」分组**（手动标记的周优先，未标记按创建时间推导），周次由分组标题表达、行上不重复；行上只留「未标记」（不进周报「本周待办」）与「过期」两枚状态小标签
 - **所属周只有一个来源**：`utils/week.ts` 的 `getTodoWeek()`。清单分组与左侧「本周」筛选都必须调它——两处各写一套判断，就会出现「这条在『本周』分组里，却不在『本周』筛选里」的自相矛盾
-- **便签是纯文本**：卡内直接编辑（`textarea`），按普通文本渲染，**不走 Markdown 渲染器**；颜色只有 `NOTE_COLORS` 白名单里的三种，服务端 `enum` 兜底，出参再经 `normalizeNoteColor` 归一化（白名单收敛前的历史取值一律退回默认底色，否则那些便签会因 `enum` 校验而永远存不下）
+- **便签正文是 Markdown 原文**：卡内编辑的是原文（`textarea`），**渲染只发生在预览弹窗里**，走 `utils/markdown.ts` 的 `renderMarkdown`（token → React 元素，天然满足红线 2，禁止改用 `dangerouslySetInnerHTML`）；标题是单行纯文本，不渲染 Markdown
+- **便签预览保留单换行**：`renderMarkdown(source, breaks)` 传 `true`，`MarkdownPreview` 的 `breaks` 透传——便签是「一行一条」的随手记，单换行必须换行；周报正文**不要**开这个开关，保持标准语义（段落之间空行）
+- **便签颜色**只有 `NOTE_COLORS` 白名单里的三种，服务端 `enum` 兜底，出参再经 `normalizeNoteColor` 归一化（白名单收敛前的历史取值一律退回默认底色，否则那些便签会因 `enum` 校验而永远存不下）
 - **便签自动保存**：同样是输入停止 800ms 落库，但**每张便签各有一套「保存中 / 已保存」**；离开便签页时把尚未落库的改动补发一次，不能丢掉最后几个字
-- **空白便签**：本次会话新建、且从未写过内容的便签，失焦即丢弃（不在便签墙上留空白卡片）；本来就存在、后来被清空的便签保留为一张可继续写的空纸
+- **空白便签**：本次会话新建、且从未写过标题与正文的便签，失焦即丢弃（不在便签墙上留空白卡片）；本来就存在、后来被清空的便签保留为一张可继续写的空纸
 - **便签不与周报 / 待办互转**：模块之间不做任何桥接，便签只进不出
 - **多标签页**：仅检测并提示刷新，**不做 WebSocket 实时同步**
 - **窄屏**：视口 < 1024px 时提示「请在桌面端使用」，不提供移动端布局

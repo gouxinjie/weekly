@@ -63,7 +63,9 @@ export interface ReorderTodosBody {
 
 /** 新建便签入参 */
 export interface CreateNoteBody {
-  /** 纯文本内容，缺省视为空串（先开一张空白便签再写） */
+  /** 标题，缺省视为空串（先开一张空白便签再写） */
+  title?: string;
+  /** Markdown 原文，缺省视为空串 */
   content?: string;
   /** 便签纸颜色标识，缺省表示默认底色 */
   color?: NoteColor;
@@ -71,7 +73,9 @@ export interface CreateNoteBody {
 
 /** 更新便签入参（全量提交） */
 export interface UpdateNoteBody {
-  /** 纯文本内容 */
+  /** 标题，空串表示无标题 */
+  title: string;
+  /** Markdown 原文 */
   content: string;
   /** 便签纸颜色标识，空串表示默认底色 */
   color: NoteColor;

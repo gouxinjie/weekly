@@ -227,9 +227,9 @@ test('红线 3：周次上限是 53，2027-01-01 归属 2026 年第 53 周', asy
 
 test('A 读 B 的便签：查不到，列表里也不出现', async () => {
   const m = await modulesPromise;
-  const bNote = m.insertNote(bId, 'B 的便签', 'yellow');
+  const bNote = m.insertNote(bId, { content: 'B 的便签', color: 'yellow' });
   // 先给 A 建一张：否则下面的列表断言作用在空数组上，恒真而失去意义
-  const aNote = m.insertNote(aId, 'A 自己的便签');
+  const aNote = m.insertNote(aId, { content: 'A 自己的便签' });
 
   assert.equal(m.findNote(aId, bNote.id), undefined, 'A 不应读到 B 的便签');
 
@@ -253,20 +253,26 @@ test('便签计数只统计自己的：B 新增的便签不计入 A 的张数', 
   const m = await modulesPromise;
   const before = m.countNotes(aId);
 
-  m.insertNote(bId, 'B 又一张便签');
-  m.insertNote(aId, 'A 又一张便签');
+  m.insertNote(bId, { content: 'B 又一张便签' });
+  m.insertNote(aId, { content: 'A 又一张便签' });
 
   assert.equal(m.countNotes(aId), before + 1, '计数不应包含他人的记录');
 });
 
-test('A 改 B 的便签：失败，且 B 的内容与颜色不变', async () => {
+test('A 改 B 的便签：失败，且 B 的标题、内容与颜色都不变', async () => {
   const m = await modulesPromise;
-  const bNote = m.insertNote(bId, 'B 的另一张便签', 'green');
+  const bNote = m.insertNote(bId, { content: 'B 的另一张便签', color: 'green', title: 'B 的标题' });
 
-  const changed = m.updateNote(aId, bNote.id, '被篡改', 'yellow', true);
+  const changed = m.updateNote(aId, bNote.id, {
+    content: '被篡改',
+    color: 'yellow',
+    pinned: true,
+    title: '被篡改的标题',
+  });
 
   assert.equal(changed, false, '改别人的便签必须返回 false');
   const after = m.findNote(bId, bNote.id);
+  assert.equal(after?.title, 'B 的标题', '标题也不应被他人改动');
   assert.equal(after?.content, 'B 的另一张便签');
   assert.equal(after?.color, 'green');
   assert.equal(after?.pinned, 0, '置顶状态也不应被他人改动');
@@ -274,7 +280,7 @@ test('A 改 B 的便签：失败，且 B 的内容与颜色不变', async () => 
 
 test('A 删 B 的便签：失败，且 B 的记录仍在', async () => {
   const m = await modulesPromise;
-  const bNote = m.insertNote(bId, 'B 待删除的便签');
+  const bNote = m.insertNote(bId, { content: 'B 待删除的便签' });
 
   const deleted = m.deleteNote(aId, bNote.id);
 
@@ -284,13 +290,23 @@ test('A 删 B 的便签：失败，且 B 的记录仍在', async () => {
 
 test('本人改自己的便签：成功，且置顶项排在列表最前', async () => {
   const m = await modulesPromise;
-  const note = m.insertNote(aId, 'A 的便签');
+  const note = m.insertNote(aId, { content: 'A 的便签', title: 'A 的标题' });
 
-  assert.equal(m.updateNote(aId, note.id, 'A 改过的便签', 'green', true), true, '本人更新应成功');
+  assert.equal(
+    m.updateNote(aId, note.id, {
+      content: 'A 改过的便签',
+      color: 'green',
+      pinned: true,
+      title: 'A 改过的标题',
+    }),
+    true,
+    '本人更新应成功',
+  );
 
   const list = m.listNotes(aId);
   assert.equal(list[0]?.id, note.id, '置顶的便签应排在最前');
   assert.equal(list[0]?.content, 'A 改过的便签');
+  assert.equal(list[0]?.title, 'A 改过的标题', '标题应一并写入并读回');
 });
 
 test('便签纸色白名单只有三种：白名单外的历史取值归一为默认底色', async () => {
@@ -309,4 +325,60 @@ test('便签纸色白名单只有三种：白名单外的历史取值归一为�
   assert.equal(noteRoute.normalizeNoteColor('pink'), '', 'pink 应归一为默认底色');
   assert.equal(noteRoute.normalizeNoteColor('yellow'), 'yellow', '白名单内的取值应原样保留');
   assert.equal(noteRoute.normalizeNoteColor(''), '', '空串即默认底色，应原样保留');
+});
+
+test('便签正文按 UTF-8 字节统计，且不计入他人的便签', async () => {
+  const m = await modulesPromise;
+  const beforeA = m.sumNoteBytes(aId);
+  const beforeB = m.sumNoteBytes(bId);
+
+  // 4 个汉字 = 12 字节：验证统计的是字节数而不是字符数
+  const note = m.insertNote(aId, { content: '中文字符' });
+
+  assert.equal(m.sumNoteBytes(aId), beforeA + 12, '应按 UTF-8 字节统计正文占用');
+  assert.equal(m.sumNoteBytes(bId), beforeB, '统计不应把他人的便签算进来');
+  assert.equal(
+    m.sumNoteBytes(aId, note.id),
+    beforeA,
+    'excludeId 应排除该便签自身的旧内容（更新时才不会被自己的旧长度顶掉）',
+  );
+});
+
+test('便签正文不设长度上限：超长内容可以写入并原样读回', async () => {
+  const m = await modulesPromise;
+  const long = '长'.repeat(5000);
+  const note = m.insertNote(aId, { content: long });
+
+  assert.equal(m.findNote(aId, note.id)?.content.length, 5000, '5 千字正文应完整落库');
+});
+
+test('便签接口契约：更新必须带 title，正文刻意不设 maxLength', async () => {
+  const noteRoute = await import('../src/routes/note.js');
+
+  const updateBody = noteRoute.updateNoteSchema().body as {
+    required: string[];
+    properties: Record<string, { maxLength?: number }>;
+  };
+  assert.deepEqual(
+    [...updateBody.required].sort(),
+    ['color', 'content', 'pinned', 'title'],
+    '更新接口必须要求 title，缺字段会被 schema 打回 400',
+  );
+  assert.equal(updateBody.properties['title']?.maxLength, 100, '标题上限 100 字，与前端常量一致');
+  assert.equal(
+    updateBody.properties['content']?.maxLength,
+    undefined,
+    '正文刻意不设长度上限（总量由 checkStorageLimit 兜底）',
+  );
+
+  const createBody = noteRoute.createNoteSchema().body as {
+    required?: string[];
+    properties: Record<string, { maxLength?: number }>;
+  };
+  assert.equal(createBody.required, undefined, '新建允许空白便签：三个字段都可缺省');
+  assert.equal(
+    createBody.properties['content']?.maxLength,
+    undefined,
+    '新建同样不给正文设长度上限',
+  );
 });

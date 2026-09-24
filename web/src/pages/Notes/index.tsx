@@ -1,11 +1,11 @@
 /**
  * @component 工作台（便签）
  * @description 独立模块的便签墙：页签栏 + 中栏，无左列、无右栏。
- * 中栏为「标题 + 搜索 + 新建」与多列网格的便签卡片；卡内直接编辑纯文本，
- * 输入停止 AUTOSAVE_DELAY 后落库（每张便签各有一套保存态）
+ * 中栏为「标题 + 搜索 + 新建」与多列网格的便签卡片；卡内直接编辑 Markdown 原文，
+ * 长内容交给预览弹窗看渲染成品；输入停止 AUTOSAVE_DELAY 后落库（每张便签各有一套保存态）
  * @author gouxinjie
  * @created 2026-09-23
- * @updated 2026-09-23
+ * @updated 2026-09-24
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, toErrorMessage } from '@/api/client';
@@ -13,7 +13,9 @@ import { createNote, deleteNote, fetchNotes, updateNote } from '@/api/note';
 import AppLayout from '@/components/AppLayout';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import NoteCard from '@/components/NoteCard';
+import NotePreviewDialog from '@/components/NotePreviewDialog';
 import { AUTOSAVE_DELAY } from '@/constants';
+import { formatDateShort } from '@/utils/format';
 import type { UpdateNoteBody } from '@/types/api';
 import type { Note, SaveState } from '@/types/models';
 import styles from './index.module.scss';
@@ -45,6 +47,8 @@ const Notes = () => {
   const [saveStates, setSaveStates] = useState<Record<number, SaveState>>({});
   /** 待删除的便签，非 null 时弹出二次确认 */
   const [pendingDelete, setPendingDelete] = useState<Note | null>(null);
+  /** 正在预览的便签，非 null 时展示预览弹窗 */
+  const [previewNote, setPreviewNote] = useState<Note | null>(null);
   /** 删除请求是否在处理中 */
   const [deleting, setDeleting] = useState(false);
   /** 新建后需要自动聚焦的便签 ID；聚焦完成即由 handleAutoFocused 清空 */
@@ -224,12 +228,15 @@ const Notes = () => {
         return patch.pinned === undefined ? next : sortNotes(next);
       });
 
-      // 写过内容就不再是「空白新便签」，之后即使清空也不会被自动丢弃
-      if (patch.content !== undefined && patch.content.trim() !== '') {
+      // 写标题或正文就不再是「空白新便签」，之后即使清空也不会被自动丢弃
+      const wroteTitle = patch.title !== undefined && patch.title.trim() !== '';
+      const wroteContent = patch.content !== undefined && patch.content.trim() !== '';
+      if (wroteTitle || wroteContent) {
         freshIdsRef.current.delete(note.id);
       }
 
       const body: UpdateNoteBody = {
+        title: patch.title !== undefined ? patch.title : note.title,
         content: patch.content !== undefined ? patch.content : note.content,
         color: patch.color !== undefined ? patch.color : note.color,
         pinned: patch.pinned !== undefined ? patch.pinned : note.pinned,
@@ -268,7 +275,7 @@ const Notes = () => {
    * 丢弃一张空白的新便签
    * @param note - 目标便签
    * @returns 无
-   * @remarks 只处理「本次新建、从未写过内容、也没被特意保留（未置顶、未改色）」的便签。
+   * @remarks 只处理「本次新建、从未写过标题与正文、也没被特意保留（未置顶、未改色）」的便签。
    * 服务端那张也一并删除；删除失败就让它留着（用户可手动删），不为此打断当前操作。
    */
   const handleDiscard = useCallback((note: Note): void => {
@@ -276,7 +283,9 @@ const Notes = () => {
     // 若不拦住，便签会在用户点「确认」之前就先消失，确认时还会收到一个「便签不存在」
     if (pendingDeleteIdRef.current === note.id) return;
     if (!freshIdsRef.current.has(note.id)) return;
-    if (note.content.trim() !== '' || note.pinned || note.color !== '') return;
+    if (note.title.trim() !== '' || note.content.trim() !== '' || note.pinned || note.color !== '') {
+      return;
+    }
 
     freshIdsRef.current.delete(note.id);
     pendingRef.current.delete(note.id);
@@ -288,6 +297,22 @@ const Notes = () => {
 
     setNotes((prev) => prev.filter((item) => item.id !== note.id));
     void deleteNote(note.id).catch(() => undefined);
+  }, []);
+
+  /**
+   * 打开某张便签的预览弹窗
+   * @param note - 目标便签
+   * @returns 无
+   * @remarks 用 useCallback 保持引用稳定，配合 NoteCard 的 memo，
+   * 否则每次击键都会因回调换了引用而重渲染整面便签墙。
+   */
+  const openPreview = useCallback((note: Note): void => {
+    setPreviewNote(note);
+  }, []);
+
+  /** 关闭预览弹窗（Esc / 遮罩 / 关闭按钮共用） */
+  const closePreview = useCallback((): void => {
+    setPreviewNote(null);
   }, []);
 
   /**
@@ -328,6 +353,8 @@ const Notes = () => {
       freshIdsRef.current.delete(target.id);
 
       setNotes((prev) => prev.filter((item) => item.id !== target.id));
+      // 正在预览的就是这一张时顺手关掉弹窗，免得它停留在一条已删除的记录上
+      setPreviewNote((prev) => (prev !== null && prev.id === target.id ? null : prev));
       setSaveStates((prev) => {
         const next = { ...prev };
         delete next[target.id];
@@ -342,11 +369,22 @@ const Notes = () => {
     }
   }, [pendingDelete]);
 
-  /** 关键词只在已加载的便签里做前端过滤，不额外请求接口 */
+  /** 关键词只在已加载的便签里做前端过滤，不额外请求接口；标题与正文都在匹配范围内 */
   const filtered = useMemo(() => {
     const text = keyword.trim().toLowerCase();
     if (text === '') return notes;
-    return notes.filter((item) => item.content.toLowerCase().includes(text));
+
+    /**
+     * 判断单个字段是否命中关键词
+     * @param value - 便签的标题或正文
+     * @returns 命中返回 true
+     * @remarks 形参刻意放宽到 undefined：跨版本部署的空窗里服务端可能还没返回 title，
+     * 直接对 undefined 调 toLowerCase 会让整页崩掉。
+     */
+    const matched = (value: string | undefined): boolean =>
+      (value ?? '').toLowerCase().includes(text);
+
+    return notes.filter((item) => matched(item.title) || matched(item.content));
   }, [notes, keyword]);
 
   const searching = keyword.trim() !== '';
@@ -373,8 +411,8 @@ const Notes = () => {
             <input
               className={styles.searchInput}
               value={keyword}
-              placeholder="搜索便签内容…"
-              aria-label="搜索便签内容"
+              placeholder="搜索标题或内容…"
+              aria-label="搜索便签标题或内容"
               onChange={(event) => setKeyword(event.target.value)}
             />
           </label>
@@ -460,6 +498,7 @@ const Notes = () => {
                 autoFocus={focusId === note.id}
                 saveState={saveStates[note.id] ?? 'idle'}
                 onChange={handleChange}
+                onPreview={openPreview}
                 onDelete={requestDelete}
                 onDiscard={handleDiscard}
                 onAutoFocused={handleAutoFocused}
@@ -478,6 +517,14 @@ const Notes = () => {
         pending={deleting}
         onConfirm={() => void confirmDelete()}
         onCancel={cancelDelete}
+      />
+
+      <NotePreviewDialog
+        open={previewNote !== null}
+        title={previewNote === null ? '' : previewNote.title}
+        content={previewNote === null ? '' : previewNote.content}
+        updatedLabel={previewNote === null ? '' : formatDateShort(previewNote.updatedAt)}
+        onClose={closePreview}
       />
     </AppLayout>
   );

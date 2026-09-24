@@ -103,11 +103,11 @@ export const NOTE_COLORS: NoteColorOption[] = [
 ];
 
 /**
- * 单张便签的纯文本长度上限
- * 说明：与服务端 constants.ts 的 NOTE_MAX_LENGTH 必须一致，
- * 前端计数器与该上限对齐，服务端另有一道 schema 兜底。
+ * 便签标题字数上限
+ * 说明：与服务端 constants.ts 的 NOTE_TITLE_MAX_LENGTH 必须一致。
+ * 标题是单行索引，不承载长文本，超出上限的输入由 maxLength 拦下。
  */
-export const NOTE_MAX_CHARS = 2000;
+export const NOTE_TITLE_MAX_CHARS = 100;
 
 /** 新周报首次进入时注入的模板 */
 export const WEEKLY_TEMPLATE = `### 本周进展
