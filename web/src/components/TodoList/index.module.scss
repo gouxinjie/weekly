@@ -617,6 +617,19 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
     flex-wrap: wrap;
   }
 
+  /*
+   * 文本必须把 flex-basis 归零。
+   * 三者共用的基础样式是 flex: 1 1 auto，而 flex-basis: auto 会按「内容的最大宽度」参与换行判断：
+   * 一条长待办的 max-content 远超首行剩余宽度，文本自己就掉到第二行、从行首起排，勾选框被留在第一行；
+   * 随后的标签区仍按 $row-lead 缩进，于是标签比正文整整右移 46px（下方那行「没对齐」即由此而来）。
+   * 归零后文本只按剩余宽度生长（grow 撑满），始终与勾选框同行，落到第二行的才是标签区。
+   */
+  .text,
+  .textDone,
+  .textInput {
+    flex-basis: 0;
+  }
+
   .meta {
     flex: 1 1 100%;
     /* 与正文左对齐：缩进量等于行首占位宽度（手柄 + 勾选框 + 行内间距） */

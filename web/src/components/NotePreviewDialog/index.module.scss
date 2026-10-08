@@ -206,6 +206,16 @@
     padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4);
   }
 
+  /*
+   * 正文区的细滚动条同样只在桌面端保留：scrollbar-width 非 auto 会让 Android Chrome
+   * 把滚动条从「滚动时浮现」切成「常驻占位」，弹窗里多出一条灰线很显眼。
+   * 用标准属性覆盖回 auto 是有效的（auto 即初始值）。
+   */
+  .body {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
   /* 关闭按钮是这张弹窗唯一的出口，触屏上要够大 */
   .close {
     width: 34px;

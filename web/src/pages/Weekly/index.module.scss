@@ -564,15 +564,6 @@
 
   /* ===== 展示态卡片 ===== */
 
-  /*
-   * 显式关掉横向滚动：overflow-y: auto 按规范会把另一个方向也算成 auto，
-   * 一旦有宽内容（代码块、宽表格）溢出，这层就多出一条横向滚动条，
-   * 手机上既碍眼又容易在滑动时误触。横向溢出交由卡片内部各自的容器处理。
-   */
-  .displayScroll {
-    overflow-x: hidden;
-  }
-
   .displayBody {
     padding: var(--space-2);
   }

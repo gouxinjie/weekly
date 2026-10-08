@@ -242,6 +242,14 @@
   .textarea {
     min-height: 120px;
     max-height: 36dvh;
+    /*
+     * 桌面端给这个输入框设了细滚动条（见上面的 .textarea），移动端要撤回去：
+     * 只要 scrollbar-width 不是 auto，Android Chrome 就会把滚动条从「滚动时浮现」
+     * 切成「常驻占位」的经典滚动条。这里用标准属性覆盖是有效的（auto 就是初始值），
+     * 与 global.scss 里那套伪元素的不同——那套一旦写了就撤不回来。
+     */
+    scrollbar-width: auto;
+    scrollbar-color: auto;
   }
 
   .cancel,

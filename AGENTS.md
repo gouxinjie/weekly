@@ -442,7 +442,10 @@ interface TreeProps {
 - 中栏取消 `--center-min-width`，`.layout` 与 `.contentRow` 不再横向滚动——桌面端的 480px 下限正是窄屏溢出感的来源
 - 高度用 `100dvh` 而不是 `100vh`：移动浏览器地址栏伸缩时 `100vh` 会把底部页签栏推出屏幕
 - 需要脚本判断的分支只有一处——移动端右栏默认收起（桌面端习惯常驻展开），由 `useIsMobile` 决定；其余差异一律交给 CSS 媒体查询，不引入额外重渲染
-- 触屏通病在 `global.scss` 的移动端块里统一处理：输入框字号抬到 16px（防 iOS 聚焦缩放，用 `:root input` 提高特异性压过组件里的单类选择器）、去掉系统点按高亮、内部滚动容器 `overscroll-behavior: contain`。**16px 是硬约束**（iOS 只对 < 16px 的表单控件做聚焦缩放且不自动缩回），占位文字可以另用 `:root input::placeholder`（特异性 0-1-2）单独收小
+- 触屏通病在 `global.scss` 的移动端块里统一处理：输入框字号抬到 16px（防 iOS 聚焦缩放，用 `:root input` 提高特异性压过组件里的单类选择器）、去掉系统点按高亮。**16px 是硬约束**（iOS 只对 < 16px 的表单控件做聚焦缩放且不自动缩回），占位文字可以另用 `:root input::placeholder`（特异性 0-1-2）单独收小
+- **禁止给滚动与缩放手势相关的属性铺全局**。`touch-action` / `overscroll-behavior` / `-webkit-overflow-scrolling` 单独看都像滚动优化，但一起铺到 `*` 上之后，真机上出现过「完全不能向下滚动」——容器自身可滚（`scrollTop` 能写入、`scrollHeight > clientHeight`），手势却推不动，且桌面浏览器里完全复现不出来。移动端的滚动手感交给浏览器原生实现；真要加，只能逐个滚动容器小范围地加
+- 同理，**禁用缩放不要用 `touch-action`**：Android 由 `index.html` 的 viewport（`user-scalable=no` + `maximum-scale=1`）拦，iOS 由 `main.tsx` 拦截 Safari 专有的 `gesturestart`，两条都不碰滚动
+- **滚动条不做全局自定义**：自定义样式（`scrollbar-width` / `scrollbar-color` / `::-webkit-scrollbar`）会让 Android Chrome 把滚动条从「滚动时浮现的 overlay」切成「常驻占位」的经典滚动条。这类样式要包在 `@media (min-width: 1024px)` 里；组件里零散写的（如便签的输入框、预览弹窗正文区）要在该组件的移动端块里用 `scrollbar-width: auto` 覆盖回来——**标准属性可以覆盖，`::-webkit-scrollbar` 伪元素不行**，它一旦写了就撤不回来
 - 抬高输入框字号会连带抬高它的行高：与固定行高的按钮并排时（如待办 / 便签的「搜索框 + ＋新建」），输入框会明显高出一截，需要在该页的移动端块里单独收 `line-height` 才能与两侧齐平
 - 触摸设备上 HTML5 拖拽不触发（iOS Safari 尤甚），待办排序在「⋯」菜单里提供上移 / 下移；hover 才显现的操作区一律在移动端常显
 

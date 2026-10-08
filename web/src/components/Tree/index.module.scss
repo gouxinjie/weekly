@@ -370,8 +370,6 @@ $track-x: $track-gutter + math.div($dot-col, 2);
 
   .years {
     padding: var(--space-2) var(--mobile-gutter) var(--space-4);
-    /* 抽屉内滚到底后不要穿透成页面级滚动 */
-    overscroll-behavior: contain;
   }
 
   .yearHeader {
