@@ -79,44 +79,52 @@ select {
 }
 
 /**
- * 滚动条
- * 说明：优先用标准属性（Chrome 121+ / Edge / Firefox，且对 overlay 滚动条同样生效）——
- * 细档宽度 + 浅灰拇指 + 透明轨道，不抢内容视线。
- * 只有不支持标准属性的旧 WebKit 才退回 ::-webkit-scrollbar 伪元素；
- * 两者不能并存：一旦声明了标准属性，浏览器会忽略伪元素样式。
+ * 滚动条（只作用于桌面端）
+ * 说明：细档宽度 + 浅灰拇指 + 透明轨道，不抢内容视线。
+ * 优先用标准属性（Chrome 121+ / Edge / Firefox），只有不支持标准属性的旧 WebKit
+ * 才退回 ::-webkit-scrollbar 伪元素；两者不能并存：一旦声明了标准属性，浏览器会忽略伪元素样式。
+ *
+ * 整块包在 min-width 断点里是刻意的：移动端必须保持系统默认的 overlay 滚动条。
+ * 只要给 scrollbar-width 指定了非默认宽度，或给 ::-webkit-scrollbar 系列伪元素写了样式，
+ * Android Chrome 就会把滚动条从「滚动时才浮现」切成「常驻并占位的经典滚动条」——
+ * 手机上就是一条一直挂着的灰线，还吃掉一截内容宽度。
+ * 注意这件事没法在移动端「覆盖回来」：只把伪元素的 width 改回 auto 是无效的，
+ * thumb / track 的样式只要还在，浏览器就仍按经典滚动条绘制；所以只能整块限定到桌面端。
  */
-@supports (scrollbar-color: auto) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-strong) transparent;
-  }
-}
-
-@supports not (scrollbar-color: auto) {
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+@media (min-width: 1024px) {
+  @supports (scrollbar-color: auto) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-border-strong) transparent;
+    }
   }
 
-  ::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
 
-  ::-webkit-scrollbar-thumb {
-    /* 10px 轨道 - 3px×2 透明边框 = 4px 视觉拇指 */
-    border: 3px solid transparent;
-    border-radius: 999px;
-    background-color: var(--color-border-strong);
-    background-clip: padding-box;
-  }
+    ::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-text-faint);
-  }
+    ::-webkit-scrollbar-thumb {
+      /* 10px 轨道 - 3px×2 透明边框 = 4px 视觉拇指 */
+      border: 3px solid transparent;
+      border-radius: 999px;
+      background-color: var(--color-border-strong);
+      background-clip: padding-box;
+    }
 
-  /* 横竖滚动条交会处：不要出现一块白方块 */
-  ::-webkit-scrollbar-corner {
-    background-color: transparent;
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: var(--color-text-faint);
+    }
+
+    /* 横竖滚动条交会处：不要出现一块白方块 */
+    ::-webkit-scrollbar-corner {
+      background-color: transparent;
+    }
   }
 }
 
@@ -313,23 +321,45 @@ select {
 
 /**
  * ===== 移动端全局（≤ 1023px）=====
- * 说明：以下规则全部包在断点内，桌面端一个字都不改。只解决三类触屏通病：
+ * 说明：以下规则全部包在断点内，桌面端一个字都不改。只解决四类触屏通病：
  * 1. 点按反馈：去掉系统给可点元素叠的灰色高亮块，并抬高小号输入框的字号——
  *    iOS Safari 对字号 < 16px 的表单控件会在聚焦瞬间把整页放大，且不会自动缩回来。
  *    这条 16px 是硬约束，不能为了「看起来小」而调低；所以占位文字另按紧凑尺寸收敛
  *    （占位符是静态展示、聚焦后就被真实输入取代，不参与缩放判定）。
  *    字体用 `:root input`（特异性 0-1-1）压过组件里的单类选择器（0-1-0），
  *    不必逐个组件改字号，也不必动用 !important。
- * 2. 文字缩放：横竖屏切换时系统不得擅自调整字号。
- * 3. 内部滚动：编辑器与长清单滚到底后不要穿透成整个页面的滚动，否则移动端地址栏反复伸缩。
+ * 2. 缩放：横竖屏切换时系统不得擅自调整字号，双指与双击缩放整体禁用（移动端按 App 用）。
+ *    注意与第 1 条的区别——那条防的是「输入框聚焦时的自动放大」，这条禁的是用户的手势缩放；
+ *    两者要各管各的，禁用缩放并不能替代 16px 字号（iOS 会忽略 viewport 里的缩放限制）。
+ * 3. 滚动：滚到底不要把滚动传给外层，否则会触发地址栏伸缩甚至下拉刷新（表现就是「滑不动」）；
+ *    同时打开触摸惯性滚动。
+ * 4. 排版：代码块在窄屏改为自动换行，避免它自己的横向滚动抢走垂直滑动的手势。
+ * 另：滚动条不在本块处理——自定义滚动条已整块限定在 min-width: 1024px 内（见文件开头）。
  */
 @media (max-width: 1023px) {
   html {
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * 触屏基础：去掉系统给可点元素叠的灰色高亮块，并把滚动体验补齐。
+   * overscroll-behavior 不可继承，必须逐个设在真正的滚动容器上，而骨架里的滚动容器
+   * 散落在多个组件（时间轴、筛选、清单、便签墙、周报正文、设置页），逐个列举必然漏掉，
+   * 索性用 * 兜底——它对非滚动元素没有副作用。作用是滚到底后不再把滚动传给外层：
+   * 否则会触发地址栏伸缩甚至下拉刷新，页面跟着上下窜，手感就是「滑不动」。
+   * -webkit-overflow-scrolling 是旧版 iOS 开启惯性滚动所需，现代版本已默认开启。
+   */
   * {
     -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /*
+     * 禁止双指缩放与双击缩放，保留单指滚动。
+     * viewport 里的 user-scalable=no / maximum-scale 拦不住 iOS，而 touch-action 是
+     * 跨浏览器的第二道闸（iOS 13+ / Android Chrome 都认），顺带去掉双击缩放的判定延迟。
+     * 用 * 是因为要覆盖整页；我们没有自定义的触摸手势，不会误伤长按选词与滚动。
+     */
+    touch-action: pan-x pan-y;
   }
 
   :root input,
@@ -357,9 +387,15 @@ select {
     font-size: 15px;
   }
 
-  .weekly-editor pre,
-  .weekly-editor table {
-    /* 宽代码块与宽表格在窄屏只能横向滚动，滚到底不要把页面一起带着走 */
-    overscroll-behavior-x: contain;
+  /*
+   * 代码块改为自动换行。
+   * 手机上垂直滑动时，落在 <pre> 上的手势会被它自己的横向滚动抢走——
+   * 表现为「这一片怎么滑都不动」，而代码块正是周报里最常见的内容之一（命令与 URL）。
+   * word-break 已从 .weekly-editor 继承 break-word，这里再补 overflow-wrap: anywhere
+   * 兜住长 URL 这类没有空格的串。
+   */
+  .weekly-editor pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 }

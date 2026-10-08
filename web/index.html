@@ -2,8 +2,16 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <!-- viewport-fit=cover：让页面铺满刘海屏，配合样式里的 env(safe-area-inset-*) 留出安全区 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      viewport-fit=cover：让页面铺满刘海屏，配合样式里的 env(safe-area-inset-*) 留出安全区。
+      maximum-scale + user-scalable：禁止双指 / 双击缩放——移动端是按 App 用的，
+      不接受把页面放大后左右横拖。iOS 10+ 的 Safari 会忽略这两个值（由 main.tsx 的
+      gesture 兜底补上），Android Chrome 与多数国产浏览器仍然认。
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>weekly</title>
     <script>

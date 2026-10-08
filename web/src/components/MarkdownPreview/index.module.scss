@@ -176,7 +176,17 @@
 @media (max-width: 1023px) {
   .preview {
     padding: var(--space-3);
-    overscroll-behavior: contain;
+  }
+
+  /*
+   * 代码块改为自动换行。
+   * 手机上在 <pre> 上垂直滑动时，手势会被它自己的横向滚动抢走，表现为「这一片怎么滑都不动」；
+   * 周报里的代码块多是命令与 URL，换行比横滑更好读，也把垂直手势还给外层滚动。
+   * word-break 从 .preview 继承 break-word，这里再补 overflow-wrap: anywhere 兜住长 URL。
+   */
+  .preview pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .preview th,
