@@ -8,7 +8,7 @@
  * @created 2026-09-18
  * @updated 2026-10-09
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
 import { toErrorMessage } from '@/api/client';
@@ -331,11 +331,19 @@ const Weekly = () => {
   /*
    * 右栏形态随模式走：编辑态展开成常驻列（模板 / 插入 / 导出随手可用），
    * 展示态收起成右边缘那枚入口按钮。
-   * 只认模式变化——用户手动收起编辑态的面板后，这段逻辑不会把它再顶开。
+   *
+   * 两处刻意的写法：
+   * 1. 用 useLayoutEffect 而不是 useEffect。mode 与抽屉开合是同一批渲染里的两个状态，
+   *    切模式时若等到「绘制之后再修正抽屉」，展示态会先按编辑态的展开态画出一帧浮层
+   *    （还会连带播一次滑入动画），看上去是「浮层闪了一下就没了」。
+   *    layout effect 在绘制前跑完，这一帧根本不会出现。
+   * 2. 加载期间不动它。进入页面时 mode 的初值是 'edit'，而它要等周报取回来才能确定
+   *    （空周才留在编辑态）；若此时就按 'edit' 展开，展示态的首屏会先闪出一列编辑面板。
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (loading) return;
     setDrawerCollapsed(mode !== 'edit');
-  }, [mode]);
+  }, [mode, loading]);
 
   // 切换周次后把内容区滚回顶部：新一周的内容从头看起，
   // 否则会停在上一周的滚动位置，看上去像「内容突然跳到了中间」。

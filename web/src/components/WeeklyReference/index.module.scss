@@ -116,8 +116,9 @@
 
 /*
  * 断行用 overflow-wrap: anywhere 而不是 word-break: break-word：
- * 待办正文里常见没有空格的长 URL，两者虽都能在任意位置截断，
- * 但 only anywhere 会把这类长串算进 min-content 宽度，flex 行因此不会被撑破。
+ * 待办正文里常见没有空格的长 URL，两者都能在任意位置截断，
+ * 但只有 anywhere 会影响元素的 min-content 宽度——正因如此，这一行（勾选框 + 文本）
+ * 才不会被一条长 URL 顶破。断行效果相同而 min-content 更小，所以统一用前者。
  * （与 global.scss 里编辑器代码块的处理保持一致。）
  */
 .item,
