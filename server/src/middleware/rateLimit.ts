@@ -3,6 +3,7 @@ import {
   LOGIN_IP_MAX_FAILURES,
   LOGIN_PHONE_MAX_FAILURES,
   RATE_LIMIT_WINDOW_MINUTES,
+  REGISTER_LIMIT_WINDOW_MINUTES,
 } from '../constants';
 import { config } from '../config';
 import { cleanOldAttempts, countFailures, countSuccesses } from '../db/loginAttempt';
@@ -46,8 +47,10 @@ const windowStart = (minutes: number): string =>
  * @returns 无
  */
 const cleanExpired = (): void => {
-  // 保留一个窗口长度以上的记录没有意义，顺手清理避免表无限增长
-  cleanOldAttempts(new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString());
+  // 保留时长取所有限流窗口的最大值：注册限流用 60 分钟窗口，登录失败用 15 分钟。
+  // 若这里仍只按 15 分钟清理，注册计数只能统计到最近 15 分钟的记录，「每小时上限」会退化成「每 15 分钟上限」。
+  const retentionMinutes = Math.max(RATE_LIMIT_WINDOW_MINUTES, REGISTER_LIMIT_WINDOW_MINUTES);
+  cleanOldAttempts(new Date(Date.now() - retentionMinutes * 60 * 1000).toISOString());
 };
 
 /**
@@ -86,7 +89,7 @@ export const checkLoginRateLimit = (phone: string, ip: string): RateLimitResult 
  */
 export const checkRegisterRateLimit = (ip: string): RateLimitResult => {
   cleanExpired();
-  const since = windowStart(60);
+  const since = windowStart(REGISTER_LIMIT_WINDOW_MINUTES);
 
   const failures = countFailures('register', 'ip', ip, since);
   const successes = countSuccesses('register', 'ip', ip, since);

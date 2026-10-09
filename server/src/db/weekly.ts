@@ -110,18 +110,3 @@ export const listWrittenWeeklyInRange = (
        ORDER BY year, week`,
     )
     .all(userId, fromYear * 100 + fromWeek, toYear * 100 + toWeek) as WeeklyRow[];
-
-/**
- * 统计某用户已写的周数
- * @param userId - 用户 ID，必须传入
- * @returns 已写周数
- */
-export const countWrittenWeeks = (userId: number): number => {
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS total FROM weekly
-       WHERE user_id = ? AND content <> '' AND TRIM(content) <> ''`,
-    )
-    .get(userId) as { total: number };
-  return row.total;
-};

@@ -164,11 +164,3 @@ export const toErrorMessage = (error: unknown, fallback = '操作失败，请稍
   if (error instanceof Error && error.message !== '') return error.message;
   return fallback;
 };
-
-/**
- * 判断异常是否为未登录
- * @param error - 捕获到的异常
- * @returns 是否为 401
- */
-export const isUnauthorized = (error: unknown): boolean =>
-  error instanceof ApiError && error.status === 401;

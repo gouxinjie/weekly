@@ -17,8 +17,16 @@ export const DEFAULT_MAX_WEEK = 53;
 /** 环境变量默认值：同 IP 每小时注册上限，防批量灌水 */
 export const DEFAULT_REGISTER_LIMIT_PER_HOUR = 10;
 
-/** 限流统计窗口（分钟） */
+/** 登录失败限流统计窗口（分钟） */
 export const RATE_LIMIT_WINDOW_MINUTES = 15;
+
+/**
+ * 注册限流统计窗口（分钟）
+ * 说明：注册的窗口比登录失败更长——登录失败按 15 分钟防暴力破解，
+ * 注册按 1 小时防批量灌水。清理登录尝试记录时必须取「所有窗口的最大值」，
+ * 否则注册计数会被提前清掉，限流形同虚设。
+ */
+export const REGISTER_LIMIT_WINDOW_MINUTES = 60;
 
 /** 同手机号在限流窗口内允许的最大登录失败次数，防针对单账号的暴力破解 */
 export const LOGIN_PHONE_MAX_FAILURES = 5;
