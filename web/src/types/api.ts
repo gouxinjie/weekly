@@ -27,6 +27,12 @@ export interface SaveWeeklyBody {
   content: string;
 }
 
+/** 周报批量导出出参 */
+export interface WeeklyExportResponse {
+  /** 指定周区间内全部「已写」周报，按年、周升序 */
+  items: Weekly[];
+}
+
 /** 新建待办入参 */
 export interface CreateTodoBody {
   /** 待办文本 */

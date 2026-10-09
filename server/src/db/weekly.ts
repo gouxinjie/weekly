@@ -82,6 +82,36 @@ export const listWrittenWeeks = (userId: number): WeekRef[] =>
     .all(userId) as WeekRef[];
 
 /**
+ * 按 ISO 周序号区间批量取「已写」周报（批量导出用）
+ * @param userId - 用户 ID，从会话推导，禁止来自前端
+ * @param fromYear - 起始 ISO 年
+ * @param fromWeek - 起始 ISO 周次
+ * @param toYear - 结束 ISO 年
+ * @param toWeek - 结束 ISO 周次
+ * @returns 区间内全部已写周报，按年、周升序；闭区间
+ * @remarks 红线 1：WHERE 必须带 user_id，否则导出会把别人的周报一起读出来。
+ * 区间比较用「年 × 100 + 周」的合序号而不是 (year, week) 元组：合序号在同年内是连续的，
+ * 跨年时也只需一次 BETWEEN 就能表达闭区间，不会出现 (2026, 1) 小于 (2025, 53) 这类元组比较陷阱。
+ * 「已写」口径与 listWrittenWeeks 完全一致：内容去空白后非空。
+ */
+export const listWrittenWeeklyInRange = (
+  userId: number,
+  fromYear: number,
+  fromWeek: number,
+  toYear: number,
+  toWeek: number,
+): WeeklyRow[] =>
+  db
+    .prepare(
+      `SELECT * FROM weekly
+       WHERE user_id = ?
+         AND content <> '' AND TRIM(content) <> ''
+         AND year * 100 + week BETWEEN ? AND ?
+       ORDER BY year, week`,
+    )
+    .all(userId, fromYear * 100 + fromWeek, toYear * 100 + toWeek) as WeeklyRow[];
+
+/**
  * 统计某用户已写的周数
  * @param userId - 用户 ID，必须传入
  * @returns 已写周数

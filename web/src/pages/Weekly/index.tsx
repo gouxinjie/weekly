@@ -14,6 +14,7 @@ import { fetchWeekly, fetchWrittenWeeks, saveWeekly } from '@/api/weekly';
 import AppLayout from '@/components/AppLayout';
 import EditorPanel from '@/components/EditorPanel';
 import EditorToolbar from '@/components/EditorToolbar';
+import ExportDialog from '@/components/ExportDialog';
 import MarkdownEditor from '@/components/MarkdownEditor';
 import type { MarkdownEditorHandle } from '@/components/MarkdownEditor';
 import MarkdownPreview from '@/components/MarkdownPreview';
@@ -32,6 +33,7 @@ import {
   formatWeekRangeShort,
 } from '@/utils/format';
 import { getCurrentWeek, getWeekCount, getWeekRange, isValidWeek } from '@/utils/week';
+import { buildExportFileName, downloadMarkdown } from '@/utils/export';
 import { navigateWithTransition } from '@/utils/routeTransition';
 import type { EditorMode, SaveState } from '@/types/models';
 import styles from './index.module.scss';
@@ -96,6 +98,8 @@ const Weekly = () => {
   const [searchInput, setSearchInput] = useState('');
   const [toast, setToast] = useState('');
   const [editor, setEditor] = useState<Editor | null>(null);
+  /** 批量导出弹窗是否打开（本年度 / 最近几个月 / 自定义区间） */
+  const [exportOpen, setExportOpen] = useState(false);
 
   const editorRef = useRef<MarkdownEditorHandle | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -311,22 +315,15 @@ const Weekly = () => {
     };
   }, [mode]);
 
-  /** 导出当前周报为 Markdown 文件 */
+  /** 导出当前这一周为 Markdown 文件 */
   const handleExport = useCallback((): void => {
     const header = `# ${formatWeekLabel(year, week)}（${range.start} ~ ${range.end}）\n\n`;
-    const blob = new Blob([header + content], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `weekly-${year}-W${week}.md`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
+    downloadMarkdown(buildExportFileName(`${year}-W${week}`), header + content);
     setToast('已导出 Markdown 文件');
   }, [year, week, range, content]);
+
+  /** 打开批量导出弹窗（本年度 / 最近几个月 / 自定义区间） */
+  const openExportRange = useCallback((): void => setExportOpen(true), []);
 
   /**
    * 发布：把当前内容立即落库后回到展示态
@@ -447,6 +444,34 @@ const Weekly = () => {
           />
 
           <div className={styles.topbarRight}>
+            {/*
+              批量导出周报：跨周操作（整年 / 最近几个月），与「当前这一周」无关，
+              因此不放右栏的逐周编辑辅助里（那里只在编辑态渲染，展示态就够不到了），
+              而是常驻顶栏——周报态下编辑与展示两态都能直达。
+              移动端顶栏排不下文字，只保留图标（见样式里的 .exportLabel 隐藏）。
+            */}
+            <button
+              type="button"
+              className={styles.exportButton}
+              aria-label="导出周报"
+              title="把整年或最近几个月的周报合并为一个 Markdown 文件"
+              onClick={openExportRange}
+            >
+              <svg
+                className={styles.exportIcon}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden
+              >
+                <path d="M12 4.5v9.6" strokeLinecap="round" />
+                <path d="m8.2 10.6 3.8 3.6 3.8-3.6" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 18.5h14" strokeLinecap="round" />
+              </svg>
+              <span className={styles.exportLabel}>导出周报</span>
+            </button>
+
             {/* 定位本周（PRD 5.6）：一键回到当前 ISO 周，已在本周时置灰 */}
             <button
               type="button"
@@ -677,6 +702,16 @@ const Weekly = () => {
       )}
 
       {saveError !== '' ? <p className={styles.saveError}>{saveError}</p> : null}
+
+      {/* 批量导出弹窗：条件渲染，每次打开都是新实例，范围会回到默认的「本年度」 */}
+      {exportOpen ? (
+        <ExportDialog
+          open
+          year={year}
+          onClose={() => setExportOpen(false)}
+          onExported={setToast}
+        />
+      ) : null}
 
       <Toast message={toast} onDismiss={hideToast} />
     </AppLayout>

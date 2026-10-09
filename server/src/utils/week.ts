@@ -66,6 +66,30 @@ export const isValidWeek = (year: number, week: number): boolean => {
 };
 
 /**
+ * 统计两个周次之间覆盖的周数（闭区间，含两端）
+ * @param fromYear - 起始 ISO 年
+ * @param fromWeek - 起始 ISO 周次
+ * @param toYear - 结束 ISO 年
+ * @param toWeek - 结束 ISO 周次
+ * @returns 覆盖的周数；起始晚于结束时返回 0
+ * @remarks 用「两个周的周一相差多少天 ÷ 7」推导：跨年时中间各年的 52 / 53 周会自动算准，不必枚举年份。
+ * 不能改用「年 × 100 + 周」的合序号相减——合序号在跨年处会虚增跨度（2025 年第 52 周与 2026 年第 1 周
+ * 实际相邻，合序号却相差 49），拿它给导出设上限会把合法请求误判为超量。
+ * 起点与终点都由 (年, 周) 推出，仍是按「周」而不是按日期判断，与红线 3 的口径一致。
+ */
+export const countWeeksBetween = (
+  fromYear: number,
+  fromWeek: number,
+  toYear: number,
+  toWeek: number,
+): number => {
+  const fromMonday = dayjs(getWeekRange(fromYear, fromWeek).start);
+  const toMonday = dayjs(getWeekRange(toYear, toWeek).start);
+  const diff = Math.round(toMonday.diff(fromMonday, 'day') / 7);
+  return diff < 0 ? 0 : diff + 1;
+};
+
+/**
  * 取当前日期所属的 ISO 年与周次
  * @returns 当前 ISO 年与周次
  * @remarks 必须用 isoWeekYear() 而非 year()：2027-01-01 的 ISO 年是 2026。

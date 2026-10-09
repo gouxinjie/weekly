@@ -76,6 +76,12 @@ export interface SaveWeeklyBody {
   content: string;
 }
 
+/** 周报批量导出出参 */
+export interface WeeklyExportDto {
+  /** 指定周区间内全部「已写」周报，按年、周升序 */
+  items: WeeklyDto[];
+}
+
 /** 待办出参 */
 export interface TodoDto {
   /** 主键 */

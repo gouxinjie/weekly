@@ -1,0 +1,265 @@
+/**
+ * 批量导出弹窗样式
+ * 布局要点：遮罩铺满视口并居中卡片；卡片为「标题 + 说明 + 范围单选列表 + （自定义时）三个下拉 + 范围摘要 + 双按钮」的
+ * 纵向结构，左对齐（内容含表单，居中对齐会让选项行长短不一、难以扫读）。
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgb(34 48 43 / 42%);
+  animation: overlayIn 0.15s ease;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: var(--export-dialog-width);
+  max-width: 100%;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  box-shadow: var(--shadow-float);
+  animation: panelIn 0.18s ease;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.description {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* 范围单选列表：每行一枚单选钮 + 名称 + 右侧一句说明 */
+.scopeGroup {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: none;
+}
+
+/*
+ * 共有样式必须同时挂在两个类上：元素身上永远只有其中一个类，
+ * 只写在 .scopeOption 上的话，选中态一整套底色与内边距都会丢失。
+ */
+.scopeOption,
+.scopeOptionActive {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.scopeOption:hover {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg-subtle);
+}
+
+.scopeOptionActive {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-soft);
+}
+
+/* 单选钮：外观完全自绘，不依赖系统控件样式（各浏览器差异过大） */
+.radio {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  appearance: none;
+  background-color: var(--color-bg);
+  cursor: pointer;
+}
+
+.radio:checked {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  /* 内层白环 3px，中心因此留出主色实心圆点，即标准的单选钮外观 */
+  box-shadow: inset 0 0 0 3px var(--color-bg);
+}
+
+.radio:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.scopeLabel {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 说明文字靠右收尾，与左侧名称拉开距离，扫读时不会混成一句 */
+.scopeHint {
+  margin-left: auto;
+  color: var(--color-text-faint);
+  font-size: 12px;
+  text-align: right;
+}
+
+/* 自定义范围：年份 + 起始周 + 结束周并排 */
+.customRow {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.customField {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.customLabel {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+/* 范围摘要：导出前让用户核对将要落在文件里的周区间与周数 */
+.summary {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bannerError {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 按钮组：等宽两列，取消在左、导出在右 */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+.cancel,
+.confirm {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cancel {
+  border-color: var(--color-border-strong);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.cancel:hover:not(:disabled) {
+  border-color: var(--color-text-faint);
+  background-color: var(--color-bg-subtle);
+}
+
+.confirm {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.confirm:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.cancel:disabled,
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 遮罩淡入 + 卡片轻微上浮，弱动画不影响可访问性 */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}
+
+/**
+ * ===== 移动端（≤ 1023px）=====
+ * 说明：卡片吃满可用宽度；三个下拉在窄屏并排会挤到看不清，改为纵向堆叠。
+ */
+@media (max-width: 1023px) {
+  .panel {
+    width: 100%;
+    padding: var(--space-4);
+  }
+
+  .customRow {
+    flex-direction: column;
+  }
+
+  .cancel,
+  .confirm {
+    padding: var(--space-3);
+  }
+
+  .cancel:active:not(:disabled) {
+    background-color: var(--color-bg-active);
+  }
+
+  .confirm:active:not(:disabled) {
+    background-color: var(--color-accent-hover);
+  }
+}

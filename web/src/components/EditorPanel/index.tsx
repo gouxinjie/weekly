@@ -1,9 +1,9 @@
 /**
  * @component 编辑辅助面板
- * @description 右栏抽屉（周报编辑态）：模板应用、快速插入常用段落、导出为 Markdown / 打印为 PDF
+ * @description 右栏抽屉（周报编辑态）：模板应用、快速插入常用段落、导出本周为 Markdown / 打印为 PDF
  * @author gouxinjie
  * @created 2026-09-20
- * @updated 2026-09-22
+ * @updated 2026-10-09
  */
 import { useState } from 'react';
 import type { Editor } from '@tiptap/core';
@@ -56,7 +56,7 @@ interface EditorPanelProps {
   editor: Editor | null;
   /** 应用模板（覆盖当前内容），由页面实现并给出确认 */
   onApplyTemplate: (template: string) => void;
-  /** 导出 Markdown 文件 */
+  /** 导出当前这一周为 Markdown 文件 */
   onExport: () => void;
 }
 
@@ -123,14 +123,14 @@ const EditorPanel = ({ editor, onApplyTemplate, onExport }: EditorPanelProps) =>
         </ul>
       </section>
 
-      {/* 导出 */}
+      {/* 导出：只针对当前这一周 */}
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>导出</h3>
         <ul className={styles.list}>
           <li>
             <button type="button" className={styles.rowButton} onClick={onExport}>
               <DocIcon />
-              导出为 Markdown
+              导出本周为 Markdown
             </button>
           </li>
           <li>

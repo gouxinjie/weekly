@@ -40,6 +40,13 @@ export interface SelectProps {
   disabled?: boolean;
   /** 外层额外类名，供父级控制定位 */
   className?: string;
+  /**
+   * 面板层级覆盖，传 CSS 变量引用（如 `var(--z-modal-pop)`）
+   * @remarks 面板是 portal 到 body 的 fixed 浮层，默认取 --z-pop；
+   * 放在弹窗里的下拉必须盖过弹窗自身（--z-modal），此时由调用方显式指定更高级别。
+   * 不传时不内联 z-index，沿用样式文件里的默认值。
+   */
+  panelZIndex?: string;
 }
 
 /** 面板定位结果（相对视口的 fixed 坐标） */
@@ -114,6 +121,7 @@ const Select = ({
   block = false,
   disabled = false,
   className,
+  panelZIndex,
 }: SelectProps) => {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -306,6 +314,8 @@ const Select = ({
                 left: position.left,
                 minWidth: position.minWidth,
                 maxHeight: position.maxHeight,
+                // 未传 panelZIndex 时该键为 undefined，React 不会输出内联样式，沿用样式文件里的 --z-pop
+                zIndex: panelZIndex,
               }}
             >
               {options.map((option, index) => {

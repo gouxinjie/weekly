@@ -35,15 +35,31 @@
   outline: none;
 }
 
-/* 顶栏「定位本周」：快速跳回当前周，已在本周时置灰（PRD 5.6） */
-.todayButton {
+/*
+ * 顶栏两枚按钮共用骨架（内边距、圆角、字号、图标与文字的间距），
+ * 底色与描边各自定义：定位本周是次要动作（描边），导出周报是主动作（主色实底）。
+ */
+.todayButton,
+.exportButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 7px var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background-color: var(--color-bg);
-  color: var(--color-text-muted);
   font-size: 12px;
   white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+/* 定位本周：次要动作，描边样式；已在本周时置灰 */
+.todayButton {
+  border-color: var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-muted);
 }
 
 .todayButton:hover:not(:disabled) {
@@ -56,6 +72,28 @@
   background-color: var(--color-bg-subtle);
   color: var(--color-text-faint);
   cursor: not-allowed;
+}
+
+/*
+ * 导出周报：顶栏的主动作，用主色实底与「定位本周」的描边样式拉开层级。
+ * 之前两者同为一枚描边小按钮，它混在搜索框、铃铛、头像之间几乎看不见，入口等于没有。
+ * 实底上的文字与图标取 --color-on-accent（亮色主题为反白、深色主题为深色），三套主题都够对比。
+ */
+.exportButton {
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+
+.exportButton:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* 行内图标：跟随后景色，取 14px 与 12px 文字齐平 */
+.exportIcon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
 }
 
 /* 通知铃铛：右上角常驻红点 */
@@ -517,12 +555,31 @@
     display: none;
   }
 
+  /*
+   * 顶栏一行放不下「两个抽屉入口 + 年份切换 + 定位本周 + 带文字的导出按钮」，
+   * 导出按钮在移动端只留图标：文字收起，退化成与铃铛同尺寸的圆形按钮。
+   * 保留它而不是整体隐藏，是为了让展示态也能直达导出——
+   * 右栏的编辑面板只在编辑态渲染，那里不能当唯一入口（详见 .exportButton 的桌面样式注释）。
+   */
+  .exportButton {
+    width: var(--mobile-nav-button);
+    height: var(--mobile-nav-button);
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  /* 图标按钮没有文字位，用 aria-label 与 title 承担可读名称 */
+  .exportLabel {
+    display: none;
+  }
+
   .todayButton {
     padding: 5px var(--space-2);
   }
 
   /*
-   * 顶栏一行要放下「时间轴 / 待办 / 年份切换 / 定位本周」四件东西，
+   * 顶栏一行要放下「时间轴 / 待办 / 年份切换 / 导出（图标）/ 定位本周」五件东西，
    * 窄于 360px 时（如 320px 的小屏）合计宽度会超出可用宽度，此时收起「定位本周」——
    * 跳周仍可由左列的时间轴抽屉完成，编辑态另有「上一周 / 下一周」两个按钮。
    */

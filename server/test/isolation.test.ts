@@ -352,6 +352,75 @@ test('便签正文不设长度上限：超长内容可以写入并原样读回',
   assert.equal(m.findNote(aId, note.id)?.content.length, 5000, '5 千字正文应完整落库');
 });
 
+test('A 批量导出：只拿到自己的周报，B 的周报不出现', async () => {
+  const m = await modulesPromise;
+
+  m.upsertWeekly(aId, 2026, 30, '2026-07-20', '2026-07-26', 'A 的第 30 周');
+  m.upsertWeekly(bId, 2026, 30, '2026-07-20', '2026-07-26', 'B 的第 30 周');
+  m.upsertWeekly(bId, 2026, 31, '2026-07-27', '2026-08-02', 'B 的第 31 周');
+
+  const items = m.listWrittenWeeklyInRange(aId, 2026, 1, 2026, 53);
+
+  assert.ok(items.length > 0, '前置条件：A 应能导出自己的周报');
+  assert.ok(
+    items.every((item) => item.user_id === aId),
+    '导出结果里不应出现他人的记录',
+  );
+  assert.ok(
+    items.some((item) => item.week === 30 && item.content === 'A 的第 30 周'),
+    'A 自己的周报应出现在导出结果里',
+  );
+  assert.ok(
+    items.every((item) => item.content !== 'B 的第 30 周' && item.content !== 'B 的第 31 周'),
+    'B 的周报不应出现在 A 的导出结果里',
+  );
+});
+
+test('批量导出按闭区间过滤：区间两端包含，区间外排除', async () => {
+  const m = await modulesPromise;
+
+  m.upsertWeekly(aId, 2026, 10, '2026-03-02', '2026-03-08', 'A 的第 10 周');
+  m.upsertWeekly(aId, 2026, 11, '2026-03-09', '2026-03-15', 'A 的第 11 周');
+  m.upsertWeekly(aId, 2026, 12, '2026-03-16', '2026-03-22', 'A 的第 12 周');
+
+  const items = m.listWrittenWeeklyInRange(aId, 2026, 10, 2026, 11);
+
+  assert.deepEqual(
+    items.map((item) => item.week),
+    [10, 11],
+    '区间两端应包含、区间外应排除，且按周升序返回',
+  );
+});
+
+test('批量导出跳过内容为空白的周：空白不算已写', async () => {
+  const m = await modulesPromise;
+
+  m.upsertWeekly(aId, 2026, 44, '2026-10-26', '2026-11-01', '   ');
+
+  assert.equal(
+    m.listWrittenWeeklyInRange(aId, 2026, 44, 2026, 44).length,
+    0,
+    '内容去空白后为空的行不应被导出',
+  );
+});
+
+test('导出跨度按真实周数计算：跨年不被合序号虚增，单周为 1，倒序为 0', async () => {
+  const m = await modulesPromise;
+
+  // 同年：1 到 53（2026 年共 53 周）恰好 53 周，也就是上限本身
+  assert.equal(m.countWeeksBetween(2026, 1, 2026, 53), 53);
+  assert.equal(m.countWeeksBetween(2026, 20, 2026, 20), 1, '同一周应算 1 周而不是 0');
+
+  // 跨年相邻：2025 年第 52 周与 2026 年第 1 周实际相邻，只有 2 周。
+  // 若改用「年 × 100 + 周」的合序号相减会算出 50，据此设 200 周上限时三天跨度的请求也会被误判
+  assert.equal(m.countWeeksBetween(2025, 52, 2026, 1), 2, '跨年相邻的两周不能被虚增');
+
+  // 跨整年：2025 年 52 周 + 2026 年 53 周 = 105 周
+  assert.equal(m.countWeeksBetween(2025, 1, 2026, 53), 105);
+
+  assert.equal(m.countWeeksBetween(2026, 5, 2026, 1), 0, '起始晚于结束应返回 0，而不是负数');
+});
+
 test('便签接口契约：更新必须带 title，正文刻意不设 maxLength', async () => {
   const noteRoute = await import('../src/routes/note.js');
 

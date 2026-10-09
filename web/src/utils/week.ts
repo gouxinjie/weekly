@@ -144,3 +144,73 @@ export const isPastWeek = (year: number, week: number): boolean => {
   if (year !== current.year) return year < current.year;
   return week < current.week;
 };
+
+/**
+ * 列出某个 ISO 年的全部合法周次（用于「导出本年度」）
+ * @param year - ISO 年
+ * @returns 该年周次列表，升序
+ * @remarks 上限取「MAX_WEEK 与该年实际周数的较小值」（见 isValidWeek）：
+ * 2025 年只有 52 周，一律列到 53 会让导出范围里凭空多出一个与 2026 年第 1 周同区间的周次。
+ */
+export const listWeeksOfYear = (year: number): WeekRef[] => {
+  const total = Math.min(MAX_WEEK, getWeekCount(year));
+  const weeks: WeekRef[] = [];
+  for (let week = 1; week <= total; week += 1) {
+    if (isValidWeek(year, week)) weeks.push({ year, week });
+  }
+  return weeks;
+};
+
+/**
+ * 列出某个年份内指定周次闭区间（用于「导出自定义区间」）
+ * @param year - ISO 年
+ * @param fromWeek - 起始 ISO 周次
+ * @param toWeek - 结束 ISO 周次
+ * @returns 区间内合法周次列表，升序；起止越界或倒序时返回空数组
+ */
+export const listWeeksInRange = (year: number, fromWeek: number, toWeek: number): WeekRef[] => {
+  const weeks: WeekRef[] = [];
+  for (let week = fromWeek; week <= toWeek; week += 1) {
+    if (isValidWeek(year, week)) weeks.push({ year, week });
+  }
+  return weeks;
+};
+
+/**
+ * 列出「最近 N 个月」覆盖的周次（用于「导出最近几个月」）
+ * @param months - 月份数，至少按 1 处理
+ * @returns 归属月份落在该范围内的周次列表，升序
+ * @remarks 月份归属按周四判定（见 getWeekMonth），与左栏时间轴的月份分组同一口径——
+ * 若改用「周一起止日期落入区间」，会出现同一周在导出里归 8 月、在树里归 9 月的自相矛盾。
+ * 枚举起点取「起始月月初所在周的上一周」，避免漏掉「周一落在上月末、周四落在起始月」的跨月首周；
+ * 早于时间轴起点（START_YEAR）的周由 isValidWeek 过滤掉。
+ */
+export const listWeeksInRecentMonths = (months: number): WeekRef[] => {
+  const now = dayjs();
+  const span = Math.max(Math.floor(months), 1);
+  const current = getCurrentWeek();
+
+  // 目标月份集合，形如 { '2026-8', '2026-9', '2026-10' }
+  const targetMonths = new Set<string>();
+  for (let offset = 0; offset < span; offset += 1) {
+    const point = now.subtract(offset, 'month');
+    targetMonths.add(`${point.year()}-${point.month() + 1}`);
+  }
+
+  // 按周推进：起点为起始月月初所在周再往前一周，终点为当前周的周一
+  const startPoint = now.subtract(span - 1, 'month').startOf('month');
+  const startRef = getWeekOfDate(startPoint.format(ISO_DATE_FORMAT));
+  let cursor = dayjs(getWeekRange(startRef.year, startRef.week).start).subtract(7, 'day');
+  const lastMonday = dayjs(getWeekRange(current.year, current.week).start);
+
+  const weeks: WeekRef[] = [];
+  while (!cursor.isAfter(lastMonday, 'day')) {
+    const ref = getWeekOfDate(cursor.format(ISO_DATE_FORMAT));
+    const monthKey = `${ref.year}-${getWeekMonth(ref.year, ref.week)}`;
+    if (isValidWeek(ref.year, ref.week) && targetMonths.has(monthKey)) {
+      weeks.push(ref);
+    }
+    cursor = cursor.add(7, 'day');
+  }
+  return weeks;
+};
