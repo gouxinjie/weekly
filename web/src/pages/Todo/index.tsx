@@ -1,11 +1,12 @@
 /**
  * @component 工作台（待办）
  * @description 三栏骨架：左栏页签、左列筛选（占据周报态时间轴那一列）、
- * 中栏标题 + 常驻新建输入框 + 「按周分组、组内分置顶 / 未完成 / 已完成」的清单；
+ * 中栏标题 + 常驻新建输入框 + 「未完成按周分组、已完成汇总到末尾」的清单；
+ * 勾选 / 取消勾选用顶部轻提示交代条目去向（主干只放未完成，条目会当场离开原位）；
  * 此态下右栏整栏移除；增删改后刷新页签的未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-10-09
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -15,6 +16,7 @@ import AppLayout, { MobileDrawerEntry } from '@/components/AppLayout';
 import TodoFilter from '@/components/TodoFilter';
 import TodoList from '@/components/TodoList';
 import Select from '@/components/Select';
+import Toast from '@/components/Toast';
 import { TODO_CATEGORIES } from '@/constants';
 import { useTodoCount } from '@/contexts/TodoCountContext';
 import { getCurrentWeek, getTodoWeek, isValidWeek } from '@/utils/week';
@@ -79,10 +81,26 @@ const Todo = () => {
   const [newCategory, setNewCategory] = useState('');
   const [pending, setPending] = useState(false);
 
+  /*
+   * 顶部轻提示：文案 + 序号。序号用来让同一句提示连发时也重新挂载，
+   * 自动消失的计时从头开始——否则第二次只剩第一次没走完的那点时间。
+   */
+  const [toast, setToast] = useState<{ message: string; seq: number }>({ message: '', seq: 0 });
+
   /** 路由查询参数：承载从周报页「＋ 新建」带过来的目标周次 */
   const [searchParams] = useSearchParams();
 
   const newInputRef = useRef<HTMLInputElement | null>(null);
+
+  /** 弹出顶部轻提示 */
+  const showToast = useCallback((message: string): void => {
+    setToast((prev) => ({ message, seq: prev.seq + 1 }));
+  }, []);
+
+  /** 收起顶部轻提示（由 Toast 的自动消失定时器调用） */
+  const hideToast = useCallback((): void => {
+    setToast((prev) => ({ ...prev, message: '' }));
+  }, []);
 
   // 首次加载全部待办
   useEffect(() => {
@@ -197,6 +215,28 @@ const Todo = () => {
   }, [newText, newCategory, pending, defaultWeek, refreshUndoneCount]);
 
   /**
+   * 生成勾选 / 取消勾选的轻提示文案
+   * @param done - 本次操作之后的完成状态
+   * @returns 提示文案
+   * @remarks 这几句的重点是交代「这条去哪了」：主干只放未完成，勾选后条目会离开原位，
+   *          不说明的话用户很容易以为它被删了。反过来，当前筛选本身就把它挡在外面时，
+   *          说「已移到末尾」同样是错的——那时末尾连「已完成」区都不会出现。
+   */
+  const doneToastText = useCallback(
+    (done: boolean): string => {
+      if (done) {
+        if (filter === 'undone') return '已完成，已移出「未完成」筛选';
+        // 「已完成」筛选与搜索下条目留在原地（平铺模式），不存在「移到末尾」这回事
+        if (filter === 'done' || keyword.trim() !== '') return '已完成';
+        return '已完成，已移到末尾「已完成」区';
+      }
+      if (filter === 'done') return '已恢复为未完成，已移出「已完成」筛选';
+      return '已恢复为未完成';
+    },
+    [filter, keyword],
+  );
+
+  /**
    * 局部更新某条待办（乐观更新，失败按条回滚）
    * @param todo - 目标待办
    * @param patch - 需要变更的字段
@@ -216,6 +256,15 @@ const Todo = () => {
         category: patch.category ?? todo.category,
       };
 
+      /*
+       * 勾选 / 取消勾选：条目会当场离开原位（进末尾「已完成」区、或移出当前筛选），
+       * 提示与这次视觉移动同时发出——晚于它出现会有「东西先没了、提示才来解释」的割裂感。
+       */
+      const doneChanged = patch.done !== undefined && patch.done !== todo.done;
+      if (doneChanged) {
+        showToast(doneToastText(patch.done === true));
+      }
+
       const before = todos.find((item) => item.id === todo.id);
       setError('');
       setTodos((prev) => prev.map((item) => (item.id === todo.id ? { ...item, ...body } : item)));
@@ -225,6 +274,11 @@ const Todo = () => {
         // 勾选 / 取消勾选会改变未完成条数，刷新页签角标（M-09）
         refreshUndoneCount();
       } catch (err) {
+        /*
+         * 上面那句提示是跟着乐观更新一起发的，回滚之后它就说不通了（条目已经回到原位），
+         * 这里补一句纠正，避免顶部留着「已移到末尾」、条目却还在眼前。
+         */
+        if (doneChanged) showToast('未保存，已还原');
         if (before !== undefined) {
           setTodos((prev) =>
             prev.map((item) =>
@@ -235,7 +289,7 @@ const Todo = () => {
         setError(toErrorMessage(err, '更新失败，请稍后重试'));
       }
     },
-    [todos, refreshUndoneCount],
+    [todos, refreshUndoneCount, showToast, doneToastText],
   );
 
   /**
@@ -445,10 +499,20 @@ const Todo = () => {
           }
           emptyHint={emptyHint}
           emptyAction={emptyAction}
-          // 筛选为「已完成」时整屏都是已完成段，默认折叠等于看不到内容，故强制展开
-          expandDone={filter === 'done'}
+          /*
+            已完成平铺的两种场景：
+            1. 筛选为「已完成」——整屏都是已完成，收进末尾折叠区等于看不到内容；
+            2. 正在搜索——命中的条目若藏在折叠区里，界面上就像「一条都没搜到」。
+          */
+          expandDone={filter === 'done' || keyword.trim() !== ''}
         />
       </div>
+
+      {/*
+        key 取序号：同一句提示连发两次时也要重新挂载，让自动消失的计时从头开始。
+        勾选是高频动作，时长压到 1.8s——它只是「这条去哪了」的一句交代，不该赖着不走。
+      */}
+      <Toast key={toast.seq} message={toast.message} duration={1800} onDismiss={hideToast} />
     </AppLayout>
   );
 };

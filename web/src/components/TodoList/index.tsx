@@ -1,16 +1,19 @@
 /**
  * @component 待办清单
- * @description 外层按「所属周」分组（新周在前），组内按状态分三段：置顶 / 未完成 / 已完成，
- * 已完成段默认折叠、标题可点开（M-02）；同一周分组的同一状态段内支持拖拽调整顺序（M-05）；
+ * @description 主干按「所属周」分组（新周在前），只呈现待办事项：置顶段 + 未完成段，
+ * 一条未完成都没有的周整组不渲染；已完成统一下沉到清单末尾的「已完成」汇总区，
+ * 全清单只有这一个折叠控件，展开后内部仍按周倒序分段（M-02 / Q4）；
+ * 同一周分组的同一状态段内支持拖拽调整顺序（M-05）；
  * 条目支持勾选、就地编辑、删除、置顶、周次标记与分类标签（产品 / 开发 / 测试 / 文档 / 生活）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-22
+ * @updated 2026-10-09
  * @remarks PRD 4.2 的 M-02 写「三段分组」，5.6 写「按所属周分组」，两处口径冲突。
- *          这里取两者的并集：外层仍是按周分组（与筛选、周报右栏同一口径），
- *          组内再按状态分三段，已完成默认折叠——两边的要求都不丢。
+ *          这里按「计划与归档分层」落地：主干继承 5.6 的按周分组，只留未完成；
+ *          M-02 的已完成段整体上提到清单末尾一处折叠——折叠控件由「有已完成的周数」
+ *          降为 1 个，历史周清空后也不会再留下「光标题 + 折叠条」的空壳。
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import Select from '@/components/Select';
 import type { SelectOption } from '@/components/Select';
@@ -48,8 +51,6 @@ interface WeekGroup {
   undoneItems: Todo[];
   /** 已完成段条目 */
   doneItems: Todo[];
-  /** 该组总条数，用于组标题计数 */
-  total: number;
 }
 
 /** 拖拽排序绑定：清单持有拖拽状态，条目只负责把它挂到 DOM 上 */
@@ -99,7 +100,12 @@ interface TodoListProps {
   emptyHint: string;
   /** 空态附带的动作，可选 */
   emptyAction?: EmptyAction;
-  /** 是否默认展开「已完成」段，默认 false；筛选为「已完成」时应传 true，否则整屏折叠、看不到内容 */
+  /**
+   * 已完成是否平铺展示，默认 false
+   * @remarks 为 true 时不套末尾汇总区，直接按周平铺——两种场景要传它：
+   *          1. 筛选为「已完成」，那时已完成就是清单主轴，收进折叠区等于整屏看不到内容；
+   *          2. 关键词非空，命中的条目若藏在折叠区里，界面上就像「一条都没搜到」。
+   */
   expandDone?: boolean;
 }
 
@@ -117,6 +123,8 @@ interface TodoItemProps {
   menuOpen: boolean;
   /** 切换菜单展开状态 */
   onToggleMenu: () => void;
+  /** 收起菜单（点击菜单之外的区域或按 Esc 时调用） */
+  onCloseMenu: () => void;
   /** 拖拽排序绑定（M-05） */
   drag: TodoDragBinding;
   /**
@@ -174,6 +182,7 @@ const TodoItem = ({
   yearOptions,
   menuOpen,
   onToggleMenu,
+  onCloseMenu,
   drag,
   onMoveUp,
   onMoveDown,
@@ -193,6 +202,8 @@ const TodoItem = ({
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   /** 展示态文本引用：用于量出文本是否被行数限制截断 */
   const textRef = useRef<HTMLButtonElement | null>(null);
+  /** 「⋯」菜单容器引用：用于判断点击是否落在触发按钮与菜单面板之内 */
+  const menuWrapRef = useRef<HTMLDivElement | null>(null);
 
   const tagged = todo.year !== null && todo.week !== null;
 
@@ -266,6 +277,28 @@ const TodoItem = ({
     };
   }, [expanded, editing, todo.text]);
 
+  /*
+   * 点击「⋯」按钮与菜单面板之外的任何位置都收起菜单。
+   * 用 mousedown 而不是 click：mousedown 先到达，先收掉旧菜单，再由新目标的 click 决定
+   * 要不要开新菜单；若监听 click，点另一条的「⋯」会变成「新菜单刚打开就被旧监听关掉」。
+   * 与下拉选择、底部账号菜单同一套做法。
+   */
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const handlePointerDown = (event: MouseEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuWrapRef.current?.contains(target) === true) return;
+      onCloseMenu();
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [menuOpen, onCloseMenu]);
+
   /**
    * 菜单项公共行为：先收起菜单再执行动作
    * @param action - 菜单动作
@@ -295,6 +328,24 @@ const TodoItem = ({
     <li
       className={itemClass}
       draggable={canDrag}
+      /*
+       * Esc 逐层退出：菜单开着先收菜单，其次是「改标记」面板。
+       * 挂在这一层而不是菜单容器上——标记面板渲染在菜单容器之外，
+       * 只挂在菜单上时，键盘用户打开面板后就没有退路。
+       */
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return;
+        /*
+         * 下层的 Esc 已经被消费过时不再重复处理：标记面板里的年 / 周下拉自己也认 Esc，
+         * 少了这道判断，按一次会同时收起下拉与整个面板。
+         */
+        if (event.defaultPrevented) return;
+        if (menuOpen) {
+          onCloseMenu();
+          return;
+        }
+        if (tagging) setTagging(false);
+      }}
       onDragStart={drag.onDragStart}
       onDragOver={drag.onDragOver}
       onDragLeave={drag.onDragLeave}
@@ -391,8 +442,8 @@ const TodoItem = ({
             </span>
           ) : null}
 
-          {/* 「⋯」菜单 */}
-          <div className={styles.menuWrap}>
+          {/* 「⋯」菜单：容器带 ref 供「点击外部收起」判断（Esc 由所在行统一处理） */}
+          <div ref={menuWrapRef} className={styles.menuWrap}>
             <button
               type="button"
               className={styles.menuButton}
@@ -545,8 +596,13 @@ const TodoList = ({
 }: TodoListProps) => {
   /** 当前展开菜单的待办 ID，null 表示全部收起 */
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
-  /** 已展开「已完成」段的分组键；不在集合里即折叠（M-02 要求默认折叠） */
-  const [expandedDoneKeys, setExpandedDoneKeys] = useState<Set<string>>(new Set());
+
+  /** 收起当前展开的菜单 */
+  const closeMenu = useCallback((): void => setOpenMenuId(null), []);
+  /** 末尾「已完成」汇总区是否展开，默认 false（M-02 要求默认折叠） */
+  const [doneExpanded, setDoneExpanded] = useState(false);
+  /** 「已完成」汇总区展开容器的 id，供折叠按钮的 aria-controls 引用 */
+  const doneBodyId = useId();
   /** 正在被拖动的条目及其所属分组 / 状态段（M-05） */
   const [dragState, setDragState] = useState<{
     /** 被拖动的待办 ID */
@@ -587,11 +643,9 @@ const TodoList = ({
         pinnedItems: [],
         undoneItems: [],
         doneItems: [],
-        total: 0,
       };
       buckets.set(key, bucket);
 
-      bucket.total += 1;
       const segment = todoSegment(todo);
       if (segment === 'pinned') bucket.pinnedItems.push(todo);
       else if (segment === 'undone') bucket.undoneItems.push(todo);
@@ -608,28 +662,26 @@ const TodoList = ({
   }, [todos]);
 
   /*
-   * 筛选为「已完成」时默认全部展开：那种筛选下整屏都是已完成段，
-   * 若仍默认折叠就等于看不到任何内容。
-   * 只对「首次出现的分组」自动展开——否则用户手动折叠某组后，
-   * 任何一次增删改都会让 groups 变化，把折叠好的分组又强行展开。
+   * 主干分组：只保留还有未完成条目的周。
+   * 一条未完成都没有的周整组不渲染——那种周的历史条目此时已在末尾汇总区里，
+   * 再留一个标题就成了「光标题 + 折叠条」的空壳，滚动时纯属占位。
    */
-  const autoExpandedKeys = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!expandDone) return;
-    setExpandedDoneKeys((prev) => {
-      const next = new Set(prev);
-      let changed = false;
-      for (const group of groups) {
-        if (autoExpandedKeys.current.has(group.key)) continue;
-        autoExpandedKeys.current.add(group.key);
-        if (!next.has(group.key)) {
-          next.add(group.key);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [expandDone, groups]);
+  const activeGroups = useMemo(
+    () => groups.filter((group) => group.pinnedItems.length > 0 || group.undoneItems.length > 0),
+    [groups],
+  );
+
+  /** 有已完成条目的周分组（沿用 groups 的倒序），末尾汇总区与「已完成」平铺模式共用 */
+  const doneGroups = useMemo(
+    () => groups.filter((group) => group.doneItems.length > 0),
+    [groups],
+  );
+
+  /** 已完成总条数：汇总区标题上的计数 */
+  const doneTotal = useMemo(
+    () => doneGroups.reduce((sum, group) => sum + group.doneItems.length, 0),
+    [doneGroups],
+  );
 
   /** 清空所有拖拽态 */
   const resetDrag = useCallback((): void => {
@@ -812,6 +864,7 @@ const TodoList = ({
         yearOptions={yearOptions}
         menuOpen={openMenuId === todo.id}
         onToggleMenu={() => setOpenMenuId(openMenuId === todo.id ? null : todo.id)}
+        onCloseMenu={closeMenu}
         drag={buildDrag(group.key, segment, todo)}
         onMoveUp={
           prev === undefined ? undefined : () => onReorder(todo.id, prev.id, group.key, segment)
@@ -845,18 +898,24 @@ const TodoList = ({
     );
   }
 
-  return (
-    <div className={styles.list}>
-      {groups.map((group) => {
-        const doneExpanded = expandedDoneKeys.has(group.key);
-        return (
+  /*
+   * 「已完成」平铺模式：筛选为「已完成」或正在搜索时走这里，已完成不再下沉到末尾汇总区。
+   * 注意这里必须遍历 groups 而不是 doneGroups——搜索时命中的未完成与已完成混在一起，
+   * 只渲染已完成会让未完成条目凭空消失：filtered 非空所以不会走空态，
+   * 界面上只剩一个空白容器，用户连「一条都没搜到」都看不到。
+   */
+  if (expandDone) {
+    return (
+      <div className={styles.list}>
+        {groups.map((group) => (
           <section key={group.key} className={styles.group}>
             <h3 className={styles.groupTitle}>
               {group.label}
-              <span className={styles.groupCount}>（{group.total}）</span>
+              <span className={styles.groupCount}>
+                （{group.pinnedItems.length + group.undoneItems.length + group.doneItems.length}）
+              </span>
             </h3>
 
-            {/* 置顶段：置顶且未完成；该段为空时整段不出现，不占一行说明 */}
             {group.pinnedItems.length > 0 ? (
               <>
                 <p className={styles.segmentTitle}>置顶</p>
@@ -864,53 +923,94 @@ const TodoList = ({
               </>
             ) : null}
 
-            {/* 未完成段：清单主体，不加段标题，避免每个分组都挂一行说明 */}
             {group.undoneItems.length > 0 ? (
               <ul>{group.undoneItems.map((todo) => renderItem(group, 'undone', todo))}</ul>
             ) : null}
 
-            {/* 已完成段：永久保留，默认折叠，标题可点开（M-02 / Q4） */}
             {group.doneItems.length > 0 ? (
-              <>
-                <button
-                  type="button"
-                  className={styles.doneToggle}
-                  aria-expanded={doneExpanded}
-                  onClick={() =>
-                    setExpandedDoneKeys((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(group.key)) {
-                        next.delete(group.key);
-                      } else {
-                        next.add(group.key);
-                      }
-                      return next;
-                    })
-                  }
-                >
-                  <svg
-                    className={doneExpanded ? styles.doneCaretOpen : styles.doneCaret}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <path d="m9 6 6 6-6 6" />
-                  </svg>
-                  已完成（{group.doneItems.length}）
-                </button>
-
-                {doneExpanded ? (
-                  <ul>{group.doneItems.map((todo) => renderItem(group, 'done', todo))}</ul>
-                ) : null}
-              </>
+              <ul>{group.doneItems.map((todo) => renderItem(group, 'done', todo))}</ul>
             ) : null}
           </section>
-        );
-      })}
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.list}>
+      {activeGroups.map((group) => (
+        <section key={group.key} className={styles.group}>
+          {/*
+            标题计数取「未完成条数」而不是该周全部条数：
+            主干表达的是「这周还剩什么事」，已完成已另在末尾汇总，混进来会让数字对不上阅读预期。
+          */}
+          <h3 className={styles.groupTitle}>
+            {group.label}
+            <span className={styles.groupCount}>
+              （{group.pinnedItems.length + group.undoneItems.length}）
+            </span>
+          </h3>
+
+          {/* 置顶段：置顶且未完成；该段为空时整段不出现，不占一行说明 */}
+          {group.pinnedItems.length > 0 ? (
+            <>
+              <p className={styles.segmentTitle}>置顶</p>
+              <ul>{group.pinnedItems.map((todo) => renderItem(group, 'pinned', todo))}</ul>
+            </>
+          ) : null}
+
+          {/* 未完成段：清单主体，不加段标题，避免每个分组都挂一行说明；只有置顶条目时整段不出现 */}
+          {group.undoneItems.length > 0 ? (
+            <ul>{group.undoneItems.map((todo) => renderItem(group, 'undone', todo))}</ul>
+          ) : null}
+        </section>
+      ))}
+
+      {/*
+        已完成汇总区：全清单唯一的折叠控件，永久保留、默认折叠（M-02 / Q4）。
+        展开后内部仍按周倒序分段——「哪一周做完了什么」正是写周报要的视角，
+        分段键沿用所属周，因此段内拖拽排序与条目自身的逻辑全部原样复用。
+        用 div 而不是 section：区名由里面那个按钮承载，section 取不到有意义的名字。
+        主干一条未完成都没有时（整屏都是已完成）上方没有内容可分隔，
+        此时不画分隔线也不留上间距，免得屏幕顶部孤零零挂着一条线。
+      */}
+      {doneGroups.length > 0 ? (
+        <div className={activeGroups.length > 0 ? styles.doneSection : styles.doneSectionSolo}>
+          <button
+            type="button"
+            className={styles.doneToggle}
+            aria-expanded={doneExpanded}
+            aria-controls={doneBodyId}
+            onClick={() => setDoneExpanded((prev) => !prev)}
+          >
+            <svg
+              className={doneExpanded ? styles.doneCaretOpen : styles.doneCaret}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+            已完成（{doneTotal}）
+          </button>
+
+          {doneExpanded ? (
+            <div id={doneBodyId} className={styles.doneBody}>
+              {doneGroups.map((group) => (
+                <div key={group.key} className={styles.doneGroup}>
+                  {/* 段内周次小标题：比主干分组低一级，只作分段提示（用标题标签保证文档大纲连续） */}
+                  <h4 className={styles.doneGroupTitle}>{group.label}</h4>
+                  <ul>{group.doneItems.map((todo) => renderItem(group, 'done', todo))}</ul>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 };

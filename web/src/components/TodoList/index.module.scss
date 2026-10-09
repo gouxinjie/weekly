@@ -1,6 +1,7 @@
 /**
  * 待办清单样式
- * 说明：外层按「所属周」分组，组内再分「置顶 / 未完成 / 已完成」三段，已完成段默认折叠；
+ * 说明：主干按「所属周」分组，组内分「置顶 / 未完成」两段；已完成统一下沉到清单末尾的
+ * 「已完成」汇总区（默认折叠，展开后内部按周倒序分段），与主干之间用一条分隔线隔开；
  * 条目为「拖拽手柄 + 自绘勾选框 + 文本 + 右侧标签区（置顶 / 分类 / 未标记 / 过期 / ⋯ 菜单）」；
  * 勾选框与标签对齐首行，长文本默认折 3 行并可展开，
  * 整行悬停浅底高亮，过期与未标记只染各自的小标签、不染整行底色；
@@ -63,8 +64,14 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
   font-weight: 400;
 }
 
-/* 段标题（置顶）：比周分组低一级，只作分段提示，不与「本周 · 第 39 周」抢视线 */
-.segmentTitle {
+/*
+ * 段标题（主干置顶 / 已完成区内的周次）：比周分组低一级，只作分段提示，不与「本周 · 第 39 周」抢视线。
+ * 两类共用这一套样式，但标签不同（前者是 p、后者是 h4），所以必须显式清掉 margin——
+ * h4 自带 1.33em 上下外边距，不清掉会把段间距整个撑开。
+ */
+.segmentTitle,
+.doneGroupTitle {
+  margin: 0;
   padding: var(--space-1) var(--space-2) 0;
   color: var(--color-text-muted);
   font-size: 12px;
@@ -72,7 +79,34 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
   line-height: 18px;
 }
 
-/* 已完成段：默认折叠，标题（箭头 + 计数）整行可点开 */
+/*
+ * 已完成汇总区：与主干之间用一条分隔线隔开，明确「以下是归档，不是待办」。
+ * 分隔线画在本区顶部而不是上一组的底部——主干里某周一条未完成都没有时那一组不渲染，
+ * 画在组底的线会跟着一起消失。
+ * 两个类名共用上内边距，差异各自写：.doneSection 用于与主干同屏的情形；
+ * .doneSectionSolo 用于主干一条未完成都没有的时候（整屏都是已完成），
+ * 那时上方没有内容可分隔，画线就成了屏幕顶部一条孤零零的横线。
+ */
+.doneSection,
+.doneSectionSolo {
+  padding-top: var(--space-3);
+}
+
+.doneSection {
+  margin-top: var(--space-6);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+/* 展开后的已完成正文：内部按周分段，段与段之间留一档比条目更大的间隔 */
+.doneBody {
+  padding-top: var(--space-1);
+}
+
+.doneGroup + .doneGroup {
+  margin-top: var(--space-4);
+}
+
+/* 已完成汇总区：默认折叠，标题（箭头 + 计数）整行可点开 */
 .doneToggle {
   display: flex;
   align-items: center;
@@ -481,6 +515,16 @@ $row-lead: calc(14px + 16px + var(--space-2) * 2);
 .menuItem:disabled:hover {
   background-color: transparent;
   color: var(--color-text-faint);
+}
+
+/*
+ * 删除：破坏性操作，常态即用危险色标出，不等悬停才变红——
+ * 只在 hover 时才红的话，扫一眼菜单时它和普通项没有任何差别，红的那一下来得太晚。
+ * hover 处必须再写一次 color：它要盖掉上面 .menuItem:hover 的 --color-text
+ * （两者特异性同为 0-2-0，靠源码顺序在后取胜）。
+ */
+.menuItemDanger {
+  color: var(--color-danger);
 }
 
 .menuItemDanger:hover {
