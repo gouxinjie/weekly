@@ -95,6 +95,12 @@
   /* 左列：周报态为时间轴（年 / 月 / 周树），待办态为筛选列表；两态同宽，切换不跳动 */
   --left-column-width: 220px;
   --drawer-width: 220px;
+  /*
+   * 周报态右栏改为浮层后，收起态只剩右边缘一枚竖排入口按钮（「查看本周待办」），
+   * 它同样脱离文档流、不占中栏宽度，因此这个值只决定按钮本身的粗细：
+   * 要容下 12px 竖排文字 + 上下内边距，24px 会把字挤到贴边，取 30px 留出呼吸。
+   */
+  --drawer-entry-width: 30px;
   --center-min-width: 480px;
   --settings-max-width: 760px;
   --topbar-height: 56px;

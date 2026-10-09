@@ -4,11 +4,11 @@
  * 桌面端（> 1023px）为左栏（logo + 纵向页签 + 账号区）+ 可选顶栏 + 左列 + 中栏 + 右栏；
  * 移动端（≤ 1023px）左栏落到底部变成横向页签栏，左列与右栏各自变成覆盖式抽屉，
  * 入口按钮由顶栏承担；没有顶栏的页面用导出的 MobileDrawerEntry 把它放进自己的标题行。
- * 周报态为「左列（时间轴）+ 中栏 + 右栏」，待办态为「左列（筛选）+ 中栏」，
- * 「待办」页签带未完成计数角标（M-09）
+ * 周报展示态为「左列（时间轴）+ 中栏 + 浮层右栏」，编辑态为「左列 + 中栏 + 常驻右栏」，
+ * 待办态为「左列（筛选）+ 中栏」，「待办」页签带未完成计数角标（M-09）
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-24
+ * @updated 2026-10-09
  */
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -96,6 +96,17 @@ interface AppLayoutProps {
   drawerCollapsed?: boolean;
   /** 切换右栏收起状态的回调（移动端不调用，抽屉的开合由骨架内部管理） */
   onToggleDrawer?: () => void;
+  /**
+   * 右栏是否以浮层抽屉呈现（周报展示态桌面端），默认 false 即常驻一列。
+   * @remarks 为 true 时右栏彻底脱离文档流：展开态盖在中栏之上、收起态只在右边缘
+   * 留一枚竖排入口按钮，两种状态都不占中栏宽度——这正是常驻列会把周报挤窄的根因。
+   * 移动端本来就以覆盖式抽屉出现，因此该属性只影响桌面端。
+   */
+  drawerFloating?: boolean;
+  /** 浮层入口按钮的文案（仅桌面端浮层模式使用，宜为 4-6 个字的动词短语）；移动端顶栏仍用更短的 drawerLabel */
+  drawerEntryLabel?: string;
+  /** 浮层入口按钮是否高亮（如本周确实有待办时）；默认 false，不高亮时是一枚素净的描边按钮 */
+  drawerEntryActive?: boolean;
   /** 移动端左列抽屉的入口文案，默认「筛选」；周报态传「时间轴」 */
   leftColumnLabel?: string;
   /** 移动端右栏抽屉的入口文案，默认「详情」；文案要短，窄屏顶栏只放得下两个字 */
@@ -152,6 +163,9 @@ const AppLayout = ({
   drawer,
   drawerCollapsed = false,
   onToggleDrawer,
+  drawerFloating = false,
+  drawerEntryLabel = '详情',
+  drawerEntryActive = false,
   leftColumnLabel = '筛选',
   drawerLabel = '详情',
 }: AppLayoutProps) => {
@@ -386,7 +400,7 @@ const AppLayout = ({
 
             {hasDrawer ? (
               drawerVisible ? (
-                <aside className={styles.drawer}>
+                <aside className={drawerFloating ? styles.drawerFloating : styles.drawer}>
                   <button
                     type="button"
                     className={styles.drawerToggle}
@@ -398,6 +412,21 @@ const AppLayout = ({
                   </button>
                   <div className={styles.drawerBody}>{drawer}</div>
                 </aside>
+              ) : drawerFloating ? (
+                /*
+                 * 浮层模式的收起态：右边缘一枚竖排按钮（「查看本周待办」），
+                 * 绝对定位、不参与 flex 分配，因此中栏吃满整行——这是与常驻列最本质的差别。
+                 * 本周确有未完成待办时按钮高亮（主色实底），否则是一枚素净的描边按钮。
+                 */
+                <button
+                  type="button"
+                  className={drawerEntryActive ? styles.drawerEntryActive : styles.drawerEntry}
+                  onClick={onToggleDrawer}
+                  aria-expanded={false}
+                  title={drawerEntryLabel}
+                >
+                  {drawerEntryLabel}
+                </button>
               ) : (
                 <aside className={styles.drawerCollapsed}>
                   <button

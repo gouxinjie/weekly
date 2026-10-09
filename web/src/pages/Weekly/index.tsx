@@ -1,15 +1,18 @@
 /**
  * @component 工作台（周报）
  * @description 三栏骨架：左栏时间轴、中栏周报（展示态为封面卡片 + 渲染内容，编辑态为工具条 + 编辑器）、
- * 右栏抽屉（展示态为本周待办，编辑态为模板 / 插入 / 导出面板）
+ * 右栏（展示态为本周待办，编辑态为模板 / 插入 / 导出面板）。
+ * 展示态的右栏是浮层——收起时右边缘只有一枚竖排入口按钮（本周有待办时高亮），点它才滑出，不占中栏宽度；
+ * 常驻一列会把周报正文压到逐字换行。编辑态仍用常驻列，编辑辅助随手可用
  * @author gouxinjie
  * @created 2026-09-18
- * @updated 2026-09-23
+ * @updated 2026-10-09
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { Editor } from '@tiptap/core';
 import { toErrorMessage } from '@/api/client';
+import { fetchTodosByWeek } from '@/api/todo';
 import { fetchWeekly, fetchWrittenWeeks, saveWeekly } from '@/api/weekly';
 import AppLayout from '@/components/AppLayout';
 import EditorPanel from '@/components/EditorPanel';
@@ -35,7 +38,7 @@ import {
 import { getCurrentWeek, getWeekCount, getWeekRange, isValidWeek } from '@/utils/week';
 import { buildExportFileName, downloadMarkdown } from '@/utils/export';
 import { navigateWithTransition } from '@/utils/routeTransition';
-import type { EditorMode, SaveState } from '@/types/models';
+import type { EditorMode, SaveState, Todo } from '@/types/models';
 import styles from './index.module.scss';
 
 /** 各保存状态的展示文案 */
@@ -90,7 +93,20 @@ const Weekly = () => {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveError, setSaveError] = useState('');
   const [mode, setMode] = useState<EditorMode>('edit');
-  const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+  /*
+   * 右栏是否收起，默认收起。两种模式下的右栏形态不同（见 AppLayout 的 drawerFloating）：
+   * - 展示态是浮层：收起时只有右边缘一枚竖排入口按钮（本周有待办时高亮），点它才滑出
+   * - 编辑态是常驻列：模板 / 插入 / 导出随手可用，因此切到编辑态时自动展开
+   * 开合跟着模式走，见下面的「右栏形态随模式」effect。
+   */
+  const [drawerCollapsed, setDrawerCollapsed] = useState(true);
+  /*
+   * 本周待办清单：由本页统一加载。右栏浮层的清单与入口按钮的高亮判断共用这一份数据，
+   * 这样同一屏里不会出现两个数据源（组件各取一次会导致多一次请求，还可能不同步）。
+   */
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todosLoading, setTodosLoading] = useState(true);
+  const [todosError, setTodosError] = useState('');
   const [written, setWritten] = useState<Set<string>>(new Set());
   const [range, setRange] = useState(() => getWeekRange(year, week));
   const [updatedAt, setUpdatedAt] = useState('');
@@ -167,6 +183,34 @@ const Weekly = () => {
       active = false;
     };
   }, []);
+
+  /*
+   * 加载本周待办：右栏浮层的清单与右边缘入口按钮的高亮都用这一份数据。
+   * 依赖只看周次、不看编辑 / 展示态——两种模式来回切时不必重新请求，
+   * 这一周的待办在页面停留期间是同一份。
+   */
+  useEffect(() => {
+    if (!valid) return undefined;
+
+    let active = true;
+    setTodosLoading(true);
+    setTodosError('');
+
+    void fetchTodosByWeek(year, week)
+      .then((list) => {
+        if (active) setTodos(list);
+      })
+      .catch((error: unknown) => {
+        if (active) setTodosError(toErrorMessage(error, '本周待办加载失败'));
+      })
+      .finally(() => {
+        if (active) setTodosLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [year, week, valid]);
 
   /** 立即保存当前内容 */
   const persist = useCallback(async (): Promise<void> => {
@@ -284,6 +328,15 @@ const Weekly = () => {
     [mode],
   );
 
+  /*
+   * 右栏形态随模式走：编辑态展开成常驻列（模板 / 插入 / 导出随手可用），
+   * 展示态收起成右边缘那枚入口按钮。
+   * 只认模式变化——用户手动收起编辑态的面板后，这段逻辑不会把它再顶开。
+   */
+  useEffect(() => {
+    setDrawerCollapsed(mode !== 'edit');
+  }, [mode]);
+
   // 切换周次后把内容区滚回顶部：新一周的内容从头看起，
   // 否则会停在上一周的滚动位置，看上去像「内容突然跳到了中间」。
   // 顺带清掉模式切换遗留的滚动恢复值，避免它在这之后把位置又设回去。
@@ -294,6 +347,11 @@ const Weekly = () => {
     const preview = previewRef.current;
     if (preview !== null) preview.scrollTop = 0;
     editorRef.current?.setScrollTop(0);
+    /*
+     * 右栏的开合不在这里动：它由模式决定（见上面的模式 effect）。
+     * 切周次时若浮层正开着，清单会先落到「加载中…」（todosLoading），
+     * 不会把上一周的内容留在浮层里——因此没必要为了清屏把它收起来。
+     */
   }, [year, week]);
 
   // 模式切换后恢复滚动位置
@@ -399,6 +457,19 @@ const Weekly = () => {
   const isWritten = content.trim() !== '';
   const isEditing = mode === 'edit';
 
+  /*
+   * 本周确实有待办时，右边缘那枚入口按钮高亮（主色实底 + 反白）：
+   * 让「这一周有东西可看」在收起态就透出来，不必先点开才知道是空的。
+   * 加载中与加载失败都不高亮——否则按钮会先亮起再灭掉，像一次误报。
+   */
+  const hasTodos = !todosLoading && todosError === '' && todos.length > 0;
+
+  /*
+   * 右栏浮层入口的文案。编辑态是常驻列、没有这枚按钮，因此不需要按模式分叉。
+   * 竖排显示，四到六个字最好认，再长按钮就要垂到大半个屏幕高。
+   */
+  const drawerEntryLabel = '查看本周待办';
+
   /** 保存态徽标的文案（idle 且已写过时按「已保存」展示） */
   const saveChipText =
     saveState === 'idle' ? (isWritten ? '已保存' : '未保存') : SAVE_TEXT[saveState];
@@ -420,6 +491,14 @@ const Weekly = () => {
       // 移动端顶栏的两个抽屉入口文案：左列固定是时间轴，右栏随编辑 / 展示态变化
       leftColumnLabel="时间轴"
       drawerLabel={isEditing ? '插入' : '待办'}
+      /*
+       * 右栏在两种模式下的形态不同：
+       * - 展示态用浮层：不占中栏宽度，收起时只在右边缘留一枚入口按钮
+       * - 编辑态用常驻列：模板 / 插入 / 导出是编辑时的常用入口，收进浮层会平白多一次点击
+       */
+      drawerFloating={!isEditing}
+      drawerEntryLabel={drawerEntryLabel}
+      drawerEntryActive={hasTodos}
       leftColumn={
         <Tree
           year={year}
@@ -528,6 +607,9 @@ const Weekly = () => {
           <WeeklyReference
             year={year}
             week={week}
+            todos={todos}
+            loading={todosLoading}
+            error={todosError}
             onGoTodo={() => navigateWithTransition(navigate, `/todo?year=${year}&week=${week}`)}
           />
         )

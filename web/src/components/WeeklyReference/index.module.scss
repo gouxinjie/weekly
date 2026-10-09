@@ -2,6 +2,8 @@
  * 本周待办样式
  * 说明：右栏抽屉内容。标题行、周次副标题、只读清单与进度整体收在一张白卡片里，
  * 卡片下方另置引言卡；抽屉底色是浅灰，靠白卡与投影拉开层次。
+ * 桌面端这一列由骨架以浮层呈现（AppLayout 的 drawerFloating），宽度与定位都由骨架给，
+ * 本文件只负责内容排版——因此这里不写任何跟列宽有关的规则。
  */
 
 /* 抽屉内容外层：只负责内边距与两张卡之间的间距 */
@@ -112,6 +114,12 @@
   margin-top: var(--space-3);
 }
 
+/*
+ * 断行用 overflow-wrap: anywhere 而不是 word-break: break-word：
+ * 待办正文里常见没有空格的长 URL，两者虽都能在任意位置截断，
+ * 但 only anywhere 会把这类长串算进 min-content 宽度，flex 行因此不会被撑破。
+ * （与 global.scss 里编辑器代码块的处理保持一致。）
+ */
 .item,
 .itemDone {
   display: flex;
@@ -121,7 +129,7 @@
   color: var(--color-text);
   font-size: 12px;
   line-height: 1.6;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .itemDone {
